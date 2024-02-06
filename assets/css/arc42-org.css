@@ -42,6 +42,6 @@
 }
 
 hr {
-    border-top: 3px dashed grey !important;
+    border-top: 2px solid rgba(0,0,255,0.2) !important;
 }
 
