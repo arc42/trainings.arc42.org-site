@@ -1,6 +1,6 @@
 ---
 title: "arc42 training dates"
-layout: splash
+layout: splash  
 permalink: /
 header:
   overlay_color: "#d7ecf8"
