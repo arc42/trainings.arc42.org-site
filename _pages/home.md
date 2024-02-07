@@ -17,23 +17,4 @@ excerpt: "All you ever need to construct, **communicate and document your softwa
 Free and open source, **takes the pain out of documentation**."
 ---    
 
-<script src="https://unpkg.com/htmx.org@1.9.6"
-        integrity="sha384-FhXw7b6AlE/jyjlZH5iHa/tTe9EpJ1Y55RjcgPbjeWMskSxZt1v9qkxLJWNJaGni"
-        crossorigin="anonymous"></script>
-
-<div hx-get="https://arc42-subtle-ads-backend.vercel.app/api"
-     hx-trigger="load delay"
-     hx-swap="outerHTML"
-     hx-target="#subtle-ads">
-</div>
-
-<div id="subtle-ads">
-  <h4>arc42 offers architecture training.</h4>
-  <p>
-    The data is currently loaded from the backend and should display here shortly.
-    If not, please check your internet connection. If that's not where the issue lies, 
-    <a href="/contact">
-      please contact us!
-    </a>.
-  </p>
-</div>
+{% include _subtle-ads.html %}
