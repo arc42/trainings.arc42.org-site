@@ -20,8 +20,8 @@ url                      : "https://trainings.arc42.org" # the base hostname & p
 baseurl                  : # the subpath of your site, e.g. "/blog"
 imageurl: /images
 
-repository               : "arc42/arc42.org-site" # GitHub username/repo-name
-teaser                   : /images/arc42-splash-landingpage.jpg # path of fallback teaser image, e.g. "/images/500x300.png"
+repository               : "arc42/trainings.arc42.org-site" # GitHub username/repo-name
+teaser                   : /images/splash/arc42-splash-landingpage.jpg # path of fallback teaser image, e.g. "/images/500x300.png"
 breadcrumbs            : false # true, false (default)
 words_per_minute         : 200
 comments:
