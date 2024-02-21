@@ -1,31 +1,41 @@
-<div class="page__footer-follow footer-center">
-  <ul class="social-icons">
+<div class="page__footer-follow">
 
-    <a href="https://www.innoq.com" target="_blank" rel="noopener noreferrer nofollow"><img class="supported-by-innoq" src="/images/supported-by-innoq--petrol-apricot.svg"></a><br>
-    
-      <li><a href="https://linkedin.com/in/gernotstarke">
-      <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i>LinkedIn</a></li>
+  <a href="https://www.innoq.com" target="_blank" rel="noopener noreferrer nofollow"><img class="supported-by-innoq" src="/images/supported-by-innoq--petrol-apricot.svg"></a>
 
-    {% if site.author.github %}
-      <li><a href="https://github.com/{{ site.author.github }}"><i class="fab fa-fw fa-github" aria-hidden="true"></i>GitHub</a></li>
+  <ul class="socials">
+
+    <li></li>
+
+    {% for link in site.footer.links %}
+    {% if link.url %}
+    <li class="socials__item">
+      <a href="{{link.url}}" rel="noopener noreferrer nofollow" target="_blank" class="socials__item__link" title="{{link.label}}">
+        <i class="{{link.icon}} footer-icon" aria-hidden="true"></i>
+      </a>
+    </li>
     {% endif %}
+    {% endfor %}
 
-    <li><a href="https://www.youtube.com/arc42-video/"><i class="fab fa-fw fa-youtube" aria-hidden="true"></i>YouTube</a></li><br>
+    <li class="socials__item">
+      <a href="https://status.arc42.org/" rel="noopener noreferrer nofollow" target="_blank" class="socials__item__link" title="Status">
+        <i class="fas fa-chart-bar footer-icon" aria-hidden="true"></i>
+      </a>
+    </li>
 
-    <li><a href="https://dev.to/gernotstarke/"><i class="fab fa-dev" aria-hidden="true"></i>Dev</a></li>
+    <li class="socials__item">
+      <a href="/imprint" rel="noopener noreferrer nofollow" target="_blank" class="socials__item__link" title="Imprint">
+        <i class="fas fa-gavel footer-icon" aria-hidden="true"></i>
+      </a>
+    </li>
 
-
-    <li><a href="{{ '/imprint' | absolute_url }}"><i class="fas fa-fw fa-gavel" style="color:Tomato" aria-hidden="true"></i>Imprint & Privacy </a></li>
-
-    <li><a href="{{ '/license' | absolute_url }}"><i class="fas fa-balance-scale-right" style="color:Tomato" aria-hidden="true"></i>License</a></li>
-
-    <li><a href="https://status.arc42.org">
-      <i class="fas fa-chart-bar fa-fw" style="color:#50C878;" ></i>Status</a><i>&nbsp;&nbsp;</i></li>
+    <li class="socials__item">
+      <a href="https://oneflow-jekyll-theme.github.io/" rel="noopener noreferrer nofollow" target="_blank" class="socials__item__link" title="Created with OneFlow Jekyll Theme">
+        <i class="fas fa-file-waveform footer-icon" aria-hidden="true"></i>
+      </a>
+    </li>
 
   </ul>
-</div>
 
-<div class="page__footer-copyright footer-center copyright-size">
-  &copy; {{ site.time | date: '%Y' }} Dr. Peter Hruschka and Dr. Gernot Starke. <br class="mobile">
-  Supported by <a href="https://perstarke-webdev.de/">Per Starke Web Development</a>.
-</div>
+  </div>
+
+  <div class="page__footer-copyright">&copy; {{ site.time | date: '%Y' }} {{ site.footer.copyright | default: site.title }}. {% if site.footer.creator %} Supported by <a rel="noopener noreferrer nofollow" target="_blank"href="{{site.footer.creator.url}}">{{site.footer.creator.name}}</a>{% endif %}</div>

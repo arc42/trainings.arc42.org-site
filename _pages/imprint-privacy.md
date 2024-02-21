@@ -1,5 +1,5 @@
 ---
-layout: single
+layout: page
 title: Imprint & Privacy
 permalink: /imprint/
 order: 90

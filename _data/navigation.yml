@@ -1,6 +1,8 @@
 # main links
 main:
   - title: "Training dates"
-    url: /
+    url: /#training-dates
   - title: "Contact"
-    url: /contact
+    url: /#contact
+  - title: "License"
+    url: /#license

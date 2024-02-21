@@ -1,18 +1,13 @@
 ---
 # Only the main Sass file needs front matter (the dashes are enough)
+search: false
 ---
 
 @charset "utf-8";
 
-@import "minimal-mistakes/skins/{{ site.minimal_mistakes_skin | default: 'default' }}"; // skin
-@import "minimal-mistakes"; // main partials
+@import "oneflow/skins/{{ site.oneflow-skin | default: 'default' }}"; // skin
+@import "oneflow"; // main partials
 
-/*
-  arc42 custom styles
-*/
-@import 'arc42-org.css';
+@import "all.min.css"; // fontawesome
 
-/*
-  fontawesome
-*/
-@import 'all.css';
+@import "custom-styles.css" // custom css stylesheet

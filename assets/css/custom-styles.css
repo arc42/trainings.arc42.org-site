@@ -1,0 +1,35 @@
+/* Custom stylesheet, add your own styles here */
+
+ul {
+    list-style: inside;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+}
+
+li {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+}
+
+.supported-by-innoq {
+    margin-bottom: 13px;
+    width: 140px;
+    margin-left: 20px;
+}
+
+.supported-by-innoq:hover {
+    opacity: 0.8;
+}
+
+
+@media (max-width: 900px) {
+    .supported-by-innoq {
+        width: 120px;
+    }
+}
+
+@media (max-width: 600px) {
+    .supported-by-innoq {
+        width: 100px;
+    }
+}
