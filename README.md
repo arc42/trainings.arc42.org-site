@@ -7,3 +7,5 @@ The backend api for displaying these training dates on various other arc42-relat
 ### Change Dates (requires write-access)
 To change the upcoming training dates, navigate to `/includes/_subtle-ads.html` and change the HTML there.   
 It will automatically be updated on the frontend of this site, via jekyll includes, and on all other sites via the backend api deployed automatically each commit/push on Vercel.  
+
+### Created with [OneFlow Jekyl Theme](https://oneflow-jekyll-theme.github.io/)
