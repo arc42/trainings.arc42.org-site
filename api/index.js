@@ -25,6 +25,7 @@ const handler = async (req, res) => {
     const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');
     const htmlContent = await fs.readFile(filePath, 'utf8');
     res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
     res.status(200).end(htmlContent);
   } catch (error) {
     res.status(500).end('Error loading the HTML file.');
