@@ -12,8 +12,8 @@ li {
 }
 
 .supported-by-innoq {
-    margin-bottom: 13px;
-    width: 140px;
+    margin-bottom: 0;
+    width: 120px;
     margin-left: 20px;
 }
 
@@ -24,12 +24,12 @@ li {
 
 @media (max-width: 900px) {
     .supported-by-innoq {
-        width: 120px;
+        width: 105px;
     }
 }
 
 @media (max-width: 600px) {
     .supported-by-innoq {
-        width: 100px;
+        width: 95px;
     }
 }
