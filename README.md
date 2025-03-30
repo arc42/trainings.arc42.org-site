@@ -40,7 +40,7 @@ The endpoint returns the HTML with appropriate CORS and caching headers. The bac
 ## Frontend Integration
 
 - **trainings.arc42.org** includes `_subtle-ads.html` directly via Jekyll and does *not* use the backend. This ensures availability even if the backend fails.
-- **All other arc42 sites** load the training data dynamically using HTMX, which fetches the HTML from the backend API and replaces a placeholder div on page load. On these sites, the HTMX snippet is contained in a Jekyll include as well, and can be inserted via `{% include subtle-ads/subtle-ads.html %}`.
+- **All other arc42 sites** load the training data dynamically using HTMX, which fetches the HTML from the backend API and replaces a placeholder div. On these sites, the HTMX snippet is contained in a Jekyll include as well, and can be inserted via `{% include subtle-ads/subtle-ads.html %}`.
 
 ## Fallback Behavior
 
