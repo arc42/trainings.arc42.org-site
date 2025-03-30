@@ -27,15 +27,15 @@ This automatically updates the content:
 
 ## Backend API
 
-The backend is deployed on Vercel.
+The backend is deployed on Vercel as a simple serverless function, written in the format Vercel expects for [Next.js API routes](https://nextjs.org/docs/api-routes/introduction).
 
-It serves the contents of `_subtle-ads.html` as raw HTML via this endpoint:
+It reads the contents of `_subtle-ads.html` from the filesystem and serves it as raw HTML via this endpoint:
 
 ```
 https://arc42-subtle-ads-backend.vercel.app/api
 ```
 
-The endpoint returns the HTML with appropriate CORS and caching headers. The backend is automatically redeployed on each push to this repository.
+The endpoint returns the HTML with appropriate CORS and caching headers. The backend is automatically redeployed on each push to this repository, ensuring that updates to the training data are reflected across all consuming sites.
 
 ## Frontend Integration
 
