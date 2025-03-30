@@ -2,11 +2,11 @@
 
 This repository powers [trainings.arc42.org](https://trainings.arc42.org), which displays a list of upcoming arc42 training dates, and includes backend functionality to dynamically serve these dates on other arc42-related sites.
 
-## Overview
+# Overview
 
 This project includes both frontend and backend functionality, used by multiple arc42-related sites to show consistent, up-to-date training info.
 
-### Key Process
+## Key Process
 
 All training dates are maintained in a single HTML include ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) and distributed across sites via:
 
@@ -46,4 +46,4 @@ The endpoint returns the HTML with appropriate CORS and caching headers. The bac
 
 If the backend is unreachable or blocked (e.g. by browser settings), users are directed to [trainings.arc42.org](https://trainings.arc42.org), which always reflects the latest content via the static include.
 
-### Created with [OneFlow Jekyl Theme](https://oneflow-jekyll-theme.github.io/)
+## Created with [OneFlow Jekyl Theme](https://oneflow-jekyll-theme.github.io/)
