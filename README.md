@@ -8,7 +8,7 @@ This project includes both frontend and backend functionality, used by multiple 
 
 ## Key Process
 
-All training dates are maintained in a single HTML include ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) and distributed across sites via:
+All training dates are maintained in a single HTML file ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) and distributed across sites via:
 
 - A static Jekyll include on trainings.arc42.org
 - A backend API used by other sites (served via Vercel)
