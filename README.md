@@ -37,6 +37,64 @@ https://arc42-subtle-ads-backend.vercel.app/api
 
 The endpoint returns the HTML with appropriate CORS and caching headers. The backend is automatically redeployed on each push to this repository, ensuring that updates to the training data are reflected across all consuming sites.
 
+### Further Details
+
+The function for the backend is located in [`/api/index.js`](/api/index.js).  
+Here’s the full implementation:
+
+```
+const fs = require('fs').promises;
+const path = require('path');
+
+// Enable CORS headers for browser access
+const allowCors = fn => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, hx-target, hx-current-url, hx-request, hx-trigger'
+  );
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  return await fn(req, res);
+};
+
+const handler = async (req, res) => {
+  try {
+    const delay = (duration) => new Promise(resolve => setTimeout(resolve, duration));
+    await delay(6000); // artificial delay for testing
+
+    const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');
+    const htmlContent = await fs.readFile(filePath, 'utf8');
+
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.status(200).end(htmlContent);
+  } catch (error) {
+    res.status(500).end('Error loading the HTML file.');
+  }
+};
+
+module.exports = allowCors(handler);
+```
+
+Because the backend is part of the same repository as the `_subtle-ads.html` file, we can access the training data at runtime using a relative path:
+
+`const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');`
+
+### How Deployment Works
+
+When you commit and push changes to the repo:
+
+- **GitHub** rebuilds the Jekyll frontend (`trainings.arc42.org`)
+- **Vercel** detects the push and automatically re-deploys the serverless backend
+
+During that deployment, the contents of the repository (including `_subtle-ads.html`) are bundled and made available in the serverless function’s read-only filesystem. This ensures the backend API always serves the latest training data—without any additional steps.
+
+
 ## Frontend Integration
 
 - **trainings.arc42.org** includes `_subtle-ads.html` directly via Jekyll and does *not* use the backend. This ensures availability even if the backend fails.
