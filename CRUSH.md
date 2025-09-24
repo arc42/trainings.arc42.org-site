@@ -1,3 +1,7 @@
+---
+layout: null
+sitemap: false
+---
 # CRUSH.md - arc42 Trainings Site
 
 ## Build/Development Commands
@@ -15,7 +19,6 @@
 
 ### Jekyll/Liquid Templates
 - Use Jekyll front matter with `---` delimiters
-- Prefer `{% include %}` over direct HTML for reusable components
 - Store reusable content in `_includes/` directory
 - Use semantic HTML5 elements
 
