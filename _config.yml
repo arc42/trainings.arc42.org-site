@@ -55,9 +55,7 @@ footer:
     - label: "Instagram"
       icon: "fab fa-instagram"
       # url: "https://www.instagram.com/per.starke/"
-    - label: "YouTube"
-      icon: "fab fa-youtube"
-      url: "https://www.youtube.com/channel/UCG2Ndo4IEH8Fa0oIv2FBRMA"
+  
     - label: "Dev"
       icon: "fab fa-dev"
       url: "https://www.youtube.com/arc42-video/"
@@ -97,6 +95,7 @@ exclude:
   - Rakefile
   - README
   - tmp
+  - CRUSH.md
 keep_files:
   - .git
   - .svn
