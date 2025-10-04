@@ -22,7 +22,7 @@ const handler = async (req, res) => {
 
     await delay(6000);
 
-    const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');
+    const filePath = path.join(__dirname, '..', '_includes', 'subtle-ads.html');
     const htmlContent = await fs.readFile(filePath, 'utf8');
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'public, max-age=3600');

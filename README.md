@@ -8,7 +8,7 @@ This project includes both frontend and backend functionality, used by multiple 
 
 ## Key Process
 
-All training dates are maintained in a single HTML file ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) and distributed across sites via:
+All training dates are maintained in a single HTML file ([`/_includes/subtle-ads.html`](/_includes/subtle-ads.html)) and distributed across sites via:
 
 - A static Jekyll include on trainings.arc42.org
 - A backend API used by other sites (served via Vercel)
@@ -17,7 +17,7 @@ All training dates are maintained in a single HTML file ([`/_includes/_subtle-ad
 
 To change or add training dates:
 
-1. Edit [`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)
+1. Edit [`/_includes/subtle-ads.html`](/_includes/subtle-ads.html)
 2. Commit and push your changes
 
 This automatically updates the content:
@@ -29,7 +29,7 @@ This automatically updates the content:
 
 The backend is deployed on Vercel as a simple serverless function, written in the format Vercel expects for [Next.js API routes](https://nextjs.org/docs/api-routes/introduction).
 
-It reads the contents of `_subtle-ads.html` from the filesystem and serves it as raw HTML via this endpoint:
+It reads the contents of `subtle-ads.html` from the filesystem and serves it as raw HTML via this endpoint:
 
 ```
 https://arc42-subtle-ads-backend.vercel.app/api
@@ -67,7 +67,7 @@ const handler = async (req, res) => {
     const delay = (duration) => new Promise(resolve => setTimeout(resolve, duration));
     await delay(6000); // artificial delay for testing
 
-    const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');
+    const filePath = path.join(__dirname, '..', '_includes', 'subtle-ads.html');
     const htmlContent = await fs.readFile(filePath, 'utf8');
 
     res.setHeader('Content-Type', 'text/html');
@@ -81,9 +81,9 @@ const handler = async (req, res) => {
 module.exports = allowCors(handler);
 ```
 
-Because the backend is part of the same repository as the `_subtle-ads.html` file, we can access the training data at runtime using a relative path:
+Because the backend is part of the same repository as the `subtle-ads.html` file, we can access the training data at runtime using a relative path:
 
-`const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');`
+`const filePath = path.join(__dirname, '..', '_includes', 'subtle-ads.html');`
 
 ### How Deployment Works
 
@@ -92,12 +92,12 @@ When you commit and push changes to the repo:
 - **GitHub** rebuilds the Jekyll frontend (`trainings.arc42.org`)
 - **Vercel** detects the push and automatically re-deploys the serverless backend
 
-During that deployment, the contents of the repository (including `_subtle-ads.html`) are bundled and made available in the serverless function’s read-only filesystem. This ensures the backend API always serves the latest training data—without any additional steps.
+During that deployment, the contents of the repository (including `subtle-ads.html`) are bundled and made available in the serverless function’s read-only filesystem. This ensures the backend API always serves the latest training data—without any additional steps.
 
 
 ## Frontend Integration
 
-- **trainings.arc42.org** includes `_subtle-ads.html` directly via Jekyll and does *not* use the backend. This ensures availability even if the backend fails.
+- **trainings.arc42.org** includes `subtle-ads.html` directly via Jekyll and does *not* use the backend. This ensures availability even if the backend fails.
 - **All other arc42 sites** load the training data dynamically using HTMX, which fetches the HTML from the backend API and replaces a placeholder div. On these sites, the HTMX snippet is contained in a Jekyll include as well, and can be inserted via `{% include subtle-ads/subtle-ads.html %}`.
 
 ## Fallback Behavior

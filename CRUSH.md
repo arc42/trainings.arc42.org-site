@@ -36,7 +36,7 @@ sitemap: false
 
 ### Configuration
 - Site settings in `_config.yml` - restart server after changes
-- Training dates maintained in `_includes/_subtle-ads.html`
+- Training dates maintained in `_includes/subtle-ads.html`
 - Use Jekyll collections and data files for structured content
 
 ### JavaScript
