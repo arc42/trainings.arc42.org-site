@@ -1,7 +1,7 @@
 services:
   jekyll:
-    image: bretfisher/jekyll-serve
+    build: .
     volumes:
-      - .:/site
+      - .:/srv/jekyll
     ports:
       - '4000:4000'
