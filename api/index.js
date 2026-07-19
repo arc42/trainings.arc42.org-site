@@ -18,10 +18,6 @@ const allowCors = fn => async (req, res) => {
 
 const handler = async (req, res) => {
   try {
-    const delay = (duration) => new Promise(resolve => setTimeout(resolve, duration));
-
-    await delay(6000);
-
     const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');
     const htmlContent = await fs.readFile(filePath, 'utf8');
     res.setHeader('Content-Type', 'text/html');
