@@ -1,0 +1,25 @@
+name: Notify consumer sites
+on:
+  push:
+    branches: [main]
+    paths: ["_data/trainings.yml"]
+jobs:
+  dispatch:
+    if: github.repository == 'arc42/trainings.arc42.org-site'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for GitHub Pages to republish /api/trainings.json
+        run: sleep 150   # dispatching before Pages deploys would refresh consumers from the stale JSON
+      - name: repository_dispatch to arc42.de-site
+        env:
+          TOKEN: ${{ secrets.CONSUMER_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::CONSUMER_DISPATCH_TOKEN not set - consumers update via their weekly schedule instead."
+            exit 0
+          fi
+          curl --fail -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $TOKEN" \
+            https://api.github.com/repos/arc42/arc42.de-site/dispatches \
+            -d '{"event_type":"trainings-updated"}'

@@ -104,4 +104,19 @@ During that deployment, the contents of the repository (including `_subtle-ads.h
 
 If the backend is unreachable or blocked (e.g. by browser settings), users are directed to [trainings.arc42.org](https://trainings.arc42.org), which always reflects the latest content via the static include.
 
+## Maintaining training dates
+
+All training dates for ALL arc42 sites live in `_data/trainings.yml` (single
+source of truth). To change dates:
+
+1. Edit `_data/trainings.yml` on a branch (every date needs `language: de|en` —
+   validation fails loudly otherwise).
+2. Run `ruby scripts/validate_trainings.rb` and `ruby scripts/generate_subtle_ads.rb`.
+3. Open a PR. CI re-validates and checks the generated fragment is fresh.
+4. On merge: GitHub Pages republishes `/api/trainings.json`; Vercel redeploys the
+   legacy htmx fragment; consumer sites (arc42.de, …) pull the JSON weekly
+   (Mon 04:17 UTC), immediately if the `CONSUMER_DISPATCH_TOKEN` secret is set
+   (fine-grained PAT, Contents read/write on the consumer repos), or on demand
+   via their `Refresh training dates` workflow_dispatch button.
+
 ## Created with [OneFlow Jekyl Theme](https://oneflow-jekyll-theme.github.io/)
