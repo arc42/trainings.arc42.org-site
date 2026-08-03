@@ -63,8 +63,12 @@ out << "<!-- Heading levels start at h3: this block is injected below an h2 on e
 out << "<div class=\"subtle-ad\">\n"
 out << "    <h3>arc42 offers architecture training.</h3>\n"
 out << "    #{msa['blurb'].strip.gsub("\n", ' ')}\n"
-unless msa_en.empty?
-  out << "\n    <h4>Next available dates (in <strong>English</strong>)</h4>\n    <ul>\n"
+out << "\n    <h4>Next available dates (in <strong>English</strong>)</h4>\n"
+if msa_en.empty?
+  # ADR-0006 mandates an empty state: never render a heading with nothing under it.
+  out << "    <p>No English-language dates are currently scheduled - see the German dates below or <a href=\"https://arc42.org/about/#contact\">contact us</a> for inhouse training.</p>\n"
+else
+  out << "    <ul>\n"
   msa_en.each { |d| out << li(d, msa, "en") << "\n" }
   out << "    </ul>\n"
 end

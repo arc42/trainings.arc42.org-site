@@ -9,7 +9,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for GitHub Pages to republish /api/trainings.json
-        run: sleep 150   # dispatching before Pages deploys would refresh consumers from the stale JSON
+        run: |
+          # A fixed sleep races the actual deploy: too short and consumers pull the
+          # stale JSON, too long and we waste CI minutes. Poll the published
+          # `generated` timestamp instead and proceed as soon as Pages has caught up.
+          start_epoch=$(date -u +%s)
+          published=0
+          for attempt in $(seq 1 20); do
+            generated=$(curl -s https://trainings.arc42.org/api/trainings.json | jq -r '.generated // empty')
+            if [ -n "$generated" ]; then
+              generated_epoch=$(date -u -d "$generated" +%s 2>/dev/null || date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$generated" +%s 2>/dev/null || echo 0)
+              if [ "$generated_epoch" -ge "$start_epoch" ]; then
+                echo "Pages republished at $generated (attempt $attempt)"
+                published=1
+                break
+              fi
+            fi
+            sleep 30
+          done
+          if [ "$published" -eq 0 ]; then
+            echo "::warning::Pages did not republish within 10 minutes - dispatching anyway; consumer may pick up the change on its weekly schedule"
+          fi
       - name: repository_dispatch to arc42.de-site
         env:
           TOKEN: ${{ secrets.CONSUMER_DISPATCH_TOKEN }}

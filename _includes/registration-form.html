@@ -56,6 +56,27 @@ activate JavaScript and reload this page.
 {% endif %}
 
 {%- assign today = 'now' | date: '%Y-%m-%d' -%}
+{%- comment -%}
+  ADR-0006 empty state: count how many <option>s the loop below will actually
+  render, and if the answer is zero, say so instead of showing a select with
+  nothing meaningful in it.
+{%- endcomment -%}
+{%- assign bookable_count = 0 -%}
+{%- for course in site.data.trainings.courses -%}
+  {%- for d in course.dates -%}
+    {%- if d.status != "open" -%}{%- continue -%}{%- endif -%}
+    {%- if d.end < today -%}{%- continue -%}{%- endif -%}
+    {%- if include.lang == "en" and d.language != "en" -%}{%- continue -%}{%- endif -%}
+    {%- assign bookable_count = bookable_count | plus: 1 -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- if bookable_count == 0 -%}
+  {% if include.lang == "en" %}
+  <p>No English-language courses are currently open for registration. The <a href="/anmeldung/">German form</a> lists all courses.</p>
+  {% else %}
+  <p>Derzeit sind keine Kurse zur Online-Anmeldung geöffnet. Bitte <a href="mailto:info@arc42.de">kontaktieren Sie uns</a>.</p>
+  {% endif %}
+{%- endif -%}
 <select id="kurs" name="Kurs" required>
   <option value=""></option>
   {%- for course in site.data.trainings.courses -%}
