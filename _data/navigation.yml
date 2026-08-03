@@ -2,6 +2,8 @@
 main:
   - title: "Training dates"
     url: /#training-dates
+  - title: "Register"
+    url: /anmeldung/
   - title: "Contact"
     url: /#contact
   - title: "License"
