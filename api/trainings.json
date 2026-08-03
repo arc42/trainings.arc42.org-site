@@ -1,0 +1,8 @@
+---
+layout: none
+---
+{
+  "$schema": "https://trainings.arc42.org/api/trainings.schema.json",
+  "generated": "{{ site.time | date: '%Y-%m-%dT%H:%M:%S%z' | slice: 0, 19 | append: 'Z' }}",
+  "courses": {{ site.data.trainings.courses | jsonify }}
+}
