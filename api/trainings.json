@@ -1,8 +1,10 @@
 ---
 layout: none
+# JSON with front matter (not .md) follows repo's search.json pattern;
+# .md extension triggers Jekyll Markdown processing that wraps output in <p> tags.
 ---
 {
   "$schema": "https://trainings.arc42.org/api/trainings.schema.json",
-  "generated": "{{ site.time | date: '%Y-%m-%dT%H:%M:%S%z' | slice: 0, 19 | append: 'Z' }}",
+  "generated": {{ site.time | date_to_xmlschema | jsonify }},
   "courses": {{ site.data.trainings.courses | jsonify }}
 }
