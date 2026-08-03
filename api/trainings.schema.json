@@ -40,7 +40,13 @@
                 "few_seats": { "type": "string" },
                 "url": { "type": "string", "pattern": "^https://" },
                 "status": { "enum": ["open", "waitlist", "full", "cancelled"] }
-              }
+              },
+              "allOf": [
+                {
+                  "if": { "properties": { "format": { "enum": ["public", "inhouse"] } } },
+                  "then": { "required": ["city"], "properties": { "city": { "type": "string", "minLength": 1 } } }
+                }
+              ]
             }
           }
         }
