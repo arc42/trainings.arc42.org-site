@@ -12,6 +12,6 @@ We process registrations _by hand_ - so it might take a while...
 
 ### and now...
 
-<a href="/registration/"><button class="button buttonAnmeldung">One more<br>registration</button></a>
-<a href="/#training-dates"><button class="button buttonRoyalBlue">Back to<br>training dates</button></a>
-<a href="/"><button class="button buttonHome">Take me<br>home</button></a>
+<a href="/registration/"><button class="btn btn--primary">One more<br>registration</button></a>
+<a href="/#training-dates"><button class="btn btn--info">Back to<br>training dates</button></a>
+<a href="/"><button class="btn btn--inverse">Take me<br>home</button></a>
