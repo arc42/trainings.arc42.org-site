@@ -16,9 +16,9 @@ excerpt: >-
 <h1 id="training-dates">Training dates</h1>
 
 <p class="timeline-lead">
-  Every upcoming arc42 training in one chronological list — sign up for a
-  German-language course via <a href="/anmeldung/">Anmeldung</a>, for an
-  English-language course via <a href="/registration/">Registration</a>.
+  Every upcoming arc42 training in one chronological list — sign up via
+  <a href="/registration/">Registration</a>. Each card states the language the
+  training is held in.
 </p>
 
 <div class="timeline">
@@ -128,28 +128,34 @@ excerpt: >-
 
 <h1 id="license">License</h1>
 
-<div id="main" role="main">
-  <section class="page__content" itemprop="text">
-    <h2 id="the-arc42-template">The arc42 template</h2>
+{%- comment -%}
+  The license block used to re-open its own `<div id="main" role="main">
+  <section class="page__content">` here — but layouts/page.html already wraps
+  the whole page in exactly that, so the page shipped two `id="main"` and two
+  `role="main"` landmarks. The wrapper is gone; nothing is styled differently,
+  because these paragraphs still sit inside the outer `.page__content`.
+{%- endcomment -%}
 
-    <p><a rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a></p>
+<h2 id="the-arc42-template">The arc42 template</h2>
 
-    <p><br /><br />
-      arc42 is licensed under a <a rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.</p>
+<p><a rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a></p>
 
-    <p>Under this license, you’re free to:</p>
+<p><br /><br />
+  arc42 is licensed under a <a rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.</p>
 
-    <ul>
-      <li>Share: copy and redistribute the material in any medium or format</li>
-      <li>Adapt: remix, transform, and build upon the material for any purpose, even commercially.</li>
-    </ul>
+<p>Under this license, you’re free to:</p>
 
-    <p>We, the licensors, (Gernot Starke and Peter Hruschka, the creators of arc42)
-      cannot (and surely will not) revoke these freedoms as long as you follow the license terms.</p>
+<ul>
+  <li>Share: copy and redistribute the material in any medium or format</li>
+  <li>Adapt: remix, transform, and build upon the material for any purpose, even commercially.</li>
+</ul>
 
-    <p><strong>You must give appropriate credit, provide a link to the license, and indicate if changes to arc42 were made.</strong> You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.</p>
+<p>We, the licensors, (Gernot Starke and Peter Hruschka, the creators of arc42)
+  cannot (and surely will not) revoke these freedoms as long as you follow the license terms.</p>
 
-    <p>If you remix, transform, or build upon material from arc42, you must distribute your contributions under the same license as the original.</p>
+<p><strong>You must give appropriate credit, provide a link to the license, and indicate if changes to arc42 were made.</strong> You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.</p>
 
-    <h2 id="your-own-content">Your own content</h2>
-    <p>You are completely free to use or publish your own content, even if it is embedded in the arc42 template, according to your own rules.</p>
+<p>If you remix, transform, or build upon material from arc42, you must distribute your contributions under the same license as the original.</p>
+
+<h2 id="your-own-content">Your own content</h2>
+<p>You are completely free to use or publish your own content, even if it is embedded in the arc42 template, according to your own rules.</p>

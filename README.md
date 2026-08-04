@@ -10,8 +10,31 @@ This project includes both frontend and backend functionality, used by multiple 
 
 All training dates are maintained in a single data file ([`/_data/trainings.yml`](/_data/trainings.yml)) and distributed across sites via:
 
-- The timeline on this site's home page, rendered from `_data/trainings.yml`
+- The timeline on this site's two home pages, rendered from `_data/trainings.yml`
 - A generated HTML fragment ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) served by the backend API to other sites (via Vercel)
+
+## Languages
+
+The site is bilingual: English at `/` ([`_pages/home.html`](/_pages/home.html)),
+German at `/de/` ([`_pages/home-de.html`](/_pages/home-de.html)). The two home
+pages are structural twins — same layout, same section ids
+(`training-dates`, `contact`, `license`) — and differ only in language and in
+which registration form they point at (`/registration/` vs `/anmeldung/`).
+
+- Every page declares `lang: en|de` and `translation_url:` in its front matter.
+  The masthead renders a **DE | EN switch** from those two fields (there is no
+  site search; the theme's search toggle was removed and the switch sits in its
+  slot).
+- The masthead nav is per language: [`_data/navigation.yml`](/_data/navigation.yml)
+  holds `main` (English) and `main_de` (German); `page.lang == "de"` selects the
+  latter.
+- `_includes/head/custom.html` emits the `hreflang` triple (`en`, `de`,
+  `x-default`) from the same front matter.
+- Timeline cards are bilingual: `_includes/timeline_auto.html` takes a
+  `page_lang` parameter (`"en"` / `"de"`) and renders all card copy, buttons and
+  date labels in the **page's** language,
+  while the language a training is actually *held* in (`language:` in
+  `_data/trainings.yml`) travels separately and shows as a small per-card note.
 
 ## Local development
 
@@ -74,7 +97,7 @@ To change or add training dates:
 
 This automatically updates the content:
 
-- On trainings.arc42.org (the home-page timeline renders `_data/trainings.yml` directly)
+- On trainings.arc42.org (both home-page timelines render `_data/trainings.yml` directly)
 - Across other arc42 sites (via the backend API, which serves the generated
   `_subtle-ads.html` fragment)
 
@@ -153,7 +176,7 @@ During that deployment, the contents of the repository (including `_subtle-ads.h
 
 ## Frontend Integration
 
-- **trainings.arc42.org** renders its own home-page timeline (`_includes/timeline_auto.html`) straight from `_data/trainings.yml` at build time and does *not* use the backend, nor the generated `_subtle-ads.html`. This ensures availability even if the backend fails.
+- **trainings.arc42.org** renders its own home-page timelines (`_includes/timeline_auto.html`, once per language) straight from `_data/trainings.yml` at build time and does *not* use the backend, nor the generated `_subtle-ads.html`. This ensures availability even if the backend fails.
 - **All other arc42 sites** load the training data dynamically using HTMX, which fetches the HTML from the backend API and replaces a placeholder div. On these sites, the HTMX snippet is contained in a Jekyll include as well, and can be inserted via `{% include subtle-ads/subtle-ads.html %}`.
 
 ## Fallback Behavior

@@ -29,6 +29,22 @@ Everything runs in Docker via the Makefile - no local Ruby/bundler needed.
 - Store reusable content in `_includes/` directory
 - Use semantic HTML5 elements
 
+### Bilingual site (EN `/`, DE `/de/`)
+- Every page front matter carries `lang: en|de` and `translation_url:` (the URL of
+  its twin). The masthead builds the DE | EN switch from those; a page without
+  `translation_url` simply gets no switch. There is no site search — the theme's
+  search toggle was removed and the switch occupies its slot
+- Masthead nav is per language: `_data/navigation.yml` holds `main` (EN) and
+  `main_de` (DE); `page.lang == "de"` selects `main_de`
+- `_includes/head/custom.html` emits the `hreflang` triple (en, de, x-default)
+- `_pages/home.html` and `_pages/home-de.html` are structural twins: same layout,
+  same section ids (`training-dates`, `contact`, `license`), same classes. Only
+  the language and the form URL differ (`/registration/` vs `/anmeldung/`).
+  Change one, change the other
+- Timeline cards follow the *page* language via the `page_lang` parameter of
+  `_includes/timeline_auto.html`; the language a training is *held* in comes from
+  `language:` in `_data/trainings.yml` and renders as a small per-card note
+
 ### SCSS/CSS
 - Follow BEM-like naming conventions for CSS classes
 - Use SCSS imports from `_sass/oneflow/` directory
