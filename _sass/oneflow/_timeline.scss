@@ -246,6 +246,12 @@ $timeline-border-rest: $border-wash-rest !default;
     .course-title {
       color: var(--timeline-ink-muted);
     }
+
+    /* Same reason as .course-title: the note sets its colour explicitly, so
+       it would keep full --ink contrast while the rest of the card recedes. */
+    .training-language-note {
+      color: var(--timeline-ink-muted);
+    }
   }
 
   /* The language a training is HELD in — a fact about the course, not about
