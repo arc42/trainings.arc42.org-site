@@ -10,8 +10,9 @@
    `git diff` shows the arc42 palette as one self-contained file instead of
    scattered through 140 lines of upstream defaults. Switching
    `_config.yml: oneflow-skin` back to "default" restores the stock theme, which
-   is exactly the reversibility a vendored theme should keep. The nine stock
-   skins are left alone.
+   is exactly the reversibility a vendored theme should keep. The other nine
+   stock skins were deleted to trim dead theme weight; "default" is now the
+   only stock fallback left, and it is the reversion path.
 
    Named `arc42`, not `coral`: it carries the whole family look — the two
    typefaces and the surface language — not just a hue.

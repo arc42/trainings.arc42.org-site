@@ -207,12 +207,13 @@ text-align: center;
     position: relative;
     margin-bottom: 2em;
 
-    /* The masthead band is `top: 0; height: var(--bar-h)` and, whenever
-       `sticky-masthead` is off, `position: absolute` — i.e. out of flow and
-       lying over the hero's first 60px. Offsetting the top padding by --bar-h
-       keeps the h1 clear of the band in that case and costs only breathing
-       room in the sticky one. */
-    padding: calc(var(--bar-h) + 1.25rem) 0 1.75rem;
+    /* Symmetric padding — the shipped config (_config.yml: sticky-masthead:
+       true) keeps the masthead in normal flow, so the hero never sits under
+       the band and needs no --bar-h offset. If sticky-masthead is ever set
+       to false, the masthead becomes `position: absolute` and overlaps the
+       hero's first 60px (see _masthead.scss); top padding must then go back
+       to `calc(var(--bar-h) + 1.75rem)` to keep the h1 clear of the band. */
+    padding: 1.75rem 0;
     @include clearfix;
     background-size: cover;
     background-repeat: no-repeat;

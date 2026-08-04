@@ -8,8 +8,10 @@
 
 # "arc42" is this site's own skin (_sass/oneflow/skins/_arc42.scss): the family
 # typography pair and the dusty-rose signature hue from meta.arc42.org BRAND.md.
-# The stock OneFlow skins are still selectable and unmodified:
-# "default", "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+# The nine stock OneFlow skins were removed to trim dead theme weight; only
+# "arc42" and the theme's "default" fallback exist. To revert to the stock
+# theme look, set oneflow-skin: "default" — any other stock name now fails
+# the Sass build with a missing-import error.
 oneflow-skin    : "arc42"
 
 # Site Settings
