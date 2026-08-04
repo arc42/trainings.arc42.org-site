@@ -87,7 +87,16 @@
           background-color: $surface-hover;
           color: $deep; /* 6.24:1 on --surface-hover */
         } @else if ($buttoncolor == light-outline) {
-          background-color: rgba(#fff, 0.14);
+          /* This variant lives on the hero band, over a photo, so its floor is
+             the adversarial one: the lightest composite a photo can produce
+             under the 0.85 deep filter, #89525e. White on that is 6.12:1 at
+             rest. A 0.14 white hover fill composites to #9a6a75 and drops the
+             label to 4.48:1 — and these labels are 1em bold, which is NOT
+             WCAG large text, so 4.48 is a fail, not a rounding error. 0.08
+             composites to #92606b and holds 5.11:1, clearing 5:1 with room.
+             The hover is still plainly readable as a hover because .btn:hover
+             also lifts the button. */
+          background-color: rgba(#fff, 0.08);
           color: #fff;
         } @else {
           @include yiq-contrasted(mix(#000, $color, 20%));

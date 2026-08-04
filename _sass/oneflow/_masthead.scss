@@ -142,6 +142,30 @@
   }
 }
 
+/* The hover state of the same control, and it needs its own rule.
+   _utilities.scss:164-171 paints the bars `mix(#000, $primary-color, 25%)` on
+   hover — `#783947`, which against the `#a04c5e` band it now sits on measures
+   **1.49:1**. That rule is `.greedy-nav__toggle:hover .navicon` (0,2,1) and so
+   beats the rest-state rule above (0,2,0): the mobile hamburger all but
+   disappears under the finger that is pressing it.
+
+   On a band a hover moves toward the light, never toward the fill. One step up
+   the wash ladder — `--surface-1`, 5.02:1 on the band — is a visible change in
+   the right direction and stays far past the 3:1 that WCAG 1.4.11 asks of a
+   control's graphical parts. The `.close` branch keeps the theme's transparent
+   middle bar so the open-menu X is not repainted. */
+.masthead .greedy-nav__toggle:hover {
+  .navicon,
+  .navicon::before,
+  .navicon::after {
+    background: var(--surface-1); /* #f5eff2 on the band — 5.02:1 */
+  }
+
+  &.close .navicon {
+    background: transparent;
+  }
+}
+
 .masthead__menu-item {
   display: block;
   list-style-type: none;

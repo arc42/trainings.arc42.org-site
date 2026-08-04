@@ -253,6 +253,16 @@ text-align: center;
   }
 }
 
+/* Full prefers-reduced-motion coverage is a family constant (DESIGN.md §2.4).
+   This is the third of the site's three transform sites — the other two are in
+   _buttons.scss and _timeline.scss. As with those, the lift keeps its shadow
+   (that is the affordance) and loses the move. */
+@media (prefers-reduced-motion: reduce) {
+  .page__content a:not(.btn):hover img {
+    transform: none;
+  }
+}
+
 .page__hero-image {
   width: 100%;
   height: auto;
