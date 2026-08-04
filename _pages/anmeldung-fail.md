@@ -3,6 +3,8 @@ title: "OOPS!"
 layout: page
 permalink: /anmeldung-fail/
 lang: de
+# jekyll-seo-tag reads page.locale (not page.lang) for og:locale
+locale: de_DE
 translation_url: /registration-fail/
 ---
 
@@ -23,5 +25,5 @@ Wir bearbeiten Anmeldungen _von Hand_ - es könnte also etwas dauern...
 
 ### und nun...
 
-<a class="btn btn--info" href="/#training-dates">Termine</a>
-<a class="btn btn--inverse" href="/">Home</a>
+<a class="btn btn--info" href="/de/#training-dates">Termine</a>
+<a class="btn btn--inverse" href="/de/">Home</a>

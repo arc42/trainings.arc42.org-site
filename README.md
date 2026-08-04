@@ -10,7 +10,8 @@ This project includes both frontend and backend functionality, used by multiple 
 
 All training dates are maintained in a single data file ([`/_data/trainings.yml`](/_data/trainings.yml)) and distributed across sites via:
 
-- The timeline on this site's two home pages, rendered from `_data/trainings.yml`
+- The timeline on this site's two home pages — the English `/` and the German
+  `/de/`, both rendered from the same `_data/trainings.yml`
 - A generated HTML fragment ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) served by the backend API to other sites (via Vercel)
 
 ## Languages
@@ -21,15 +22,21 @@ pages are structural twins — same layout, same section ids
 (`training-dates`, `contact`, `license`) — and differ only in language and in
 which registration form they point at (`/registration/` vs `/anmeldung/`).
 
-- Every page declares `lang: en|de` and `translation_url:` in its front matter.
-  The masthead renders a **DE | EN switch** from those two fields (there is no
-  site search; the theme's search toggle was removed and the switch sits in its
-  slot).
+- Every page declares `lang: en|de` in its front matter. The eight pages that
+  have a twin also declare `translation_url:` (the twin's URL); `/imprint/` and
+  `404.html` have no twin and therefore no `translation_url`. The masthead
+  renders a **DE | EN switch** only where `translation_url` is present (there is
+  no site search; the theme's search toggle was removed and the switch sits in
+  its slot).
 - The masthead nav is per language: [`_data/navigation.yml`](/_data/navigation.yml)
   holds `main` (English) and `main_de` (German); `page.lang == "de"` selects the
   latter.
-- `_includes/head/custom.html` emits the `hreflang` triple (`en`, `de`,
-  `x-default`) from the same front matter.
+- [`_includes/head.html`](/_includes/head.html) emits the `hreflang` triple
+  (`en`, `de`, `x-default`) from the same front matter. (Not
+  `_includes/head/custom.html` — that one holds favicons, `theme-color` and
+  font preloads.)
+- German pages additionally declare `locale: de_DE`, which is the key
+  `jekyll-seo-tag` reads for `og:locale` (it does not look at `lang`).
 - Timeline cards are bilingual: `_includes/timeline_auto.html` takes a
   `page_lang` parameter (`"en"` / `"de"`) and renders all card copy, buttons and
   date labels in the **page's** language,

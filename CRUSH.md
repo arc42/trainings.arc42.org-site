@@ -30,13 +30,17 @@ Everything runs in Docker via the Makefile - no local Ruby/bundler needed.
 - Use semantic HTML5 elements
 
 ### Bilingual site (EN `/`, DE `/de/`)
-- Every page front matter carries `lang: en|de` and `translation_url:` (the URL of
-  its twin). The masthead builds the DE | EN switch from those; a page without
-  `translation_url` simply gets no switch. There is no site search — the theme's
-  search toggle was removed and the switch occupies its slot
+- Every page front matter carries `lang: en|de`; the eight pages that have a twin
+  also carry `translation_url:` (the twin's URL). `/imprint/` and `404.html` have
+  no twin, so no `translation_url` and no switch. The masthead builds the DE | EN
+  switch from those two fields. There is no site search — the theme's search
+  toggle was removed and the switch occupies its slot
+- German pages also carry `locale: de_DE` — `jekyll-seo-tag` reads `page.locale`,
+  not `page.lang`, when emitting `og:locale`
 - Masthead nav is per language: `_data/navigation.yml` holds `main` (EN) and
   `main_de` (DE); `page.lang == "de"` selects `main_de`
-- `_includes/head/custom.html` emits the `hreflang` triple (en, de, x-default)
+- `_includes/head.html` emits the `hreflang` triple (en, de, x-default) — *not*
+  `_includes/head/custom.html`, which holds favicons, theme-color, font preloads
 - `_pages/home.html` and `_pages/home-de.html` are structural twins: same layout,
   same section ids (`training-dates`, `contact`, `license`), same classes. Only
   the language and the form URL differ (`/registration/` vs `/anmeldung/`).

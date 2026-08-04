@@ -60,18 +60,24 @@ activate JavaScript and reload this page.
   render, and if the answer is zero, say so instead of showing a select with
   nothing meaningful in it.
 {%- endcomment -%}
+{%- comment -%}
+  Both forms list the SAME set of bookable dates (status "open", not past).
+  A date whose delivery language differs from the form's language is NOT
+  hidden — it gets a delivery hint appended to its visible label instead.
+  (Hiding them made /registration/ a dead end for 14 of 15 advertised
+  trainings once every English card started routing here.)
+{%- endcomment -%}
 {%- assign bookable_count = 0 -%}
 {%- for course in site.data.trainings.courses -%}
   {%- for d in course.dates -%}
     {%- if d.status != "open" -%}{%- continue -%}{%- endif -%}
     {%- if d.end < today -%}{%- continue -%}{%- endif -%}
-    {%- if include.lang == "en" and d.language != "en" -%}{%- continue -%}{%- endif -%}
     {%- assign bookable_count = bookable_count | plus: 1 -%}
   {%- endfor -%}
 {%- endfor -%}
 {%- if bookable_count == 0 -%}
   {% if include.lang == "en" %}
-  <p>No English-language courses are currently open for registration. The <a href="/anmeldung/">German form</a> lists all courses.</p>
+  <p>No courses are currently open for registration. Please <a href="mailto:info@arc42.de">contact us</a>.</p>
   {% else %}
   <p>Derzeit sind keine Kurse zur Online-Anmeldung geöffnet. Bitte <a href="mailto:info@arc42.de">kontaktieren Sie uns</a>.</p>
   {% endif %}
@@ -82,8 +88,12 @@ activate JavaScript and reload this page.
     {%- for d in course.dates -%}
       {%- if d.status != "open" -%}{%- continue -%}{%- endif -%}
       {%- if d.end < today -%}{%- continue -%}{%- endif -%}
-      {%- if include.lang == "en" and d.language != "en" -%}{%- continue -%}{%- endif -%}
-  <option value="{{ d.code }}">{{ course.short_title }}, {% include training-date-label.html date=d lang=include.lang style="short" %}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online{% if d.language == "en" %}, English{% endif %}){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}</option>
+      {%- comment -%}
+        value = the Formspark booking code, byte-for-byte. Never decorate it.
+        The delivery hint is label-only, and only when the delivery language
+        differs from the form's language.
+      {%- endcomment -%}
+  <option value="{{ d.code }}">{{ course.short_title }}, {% include training-date-label.html date=d lang=include.lang style="short" %}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{% if include.lang == "en" and d.language == "de" %} (held in German){% elsif include.lang == "de" and d.language == "en" %} (auf Englisch){% endif %}</option>
     {%- endfor -%}
   {%- endfor -%}
   <option value="sonstige">{% if include.lang == "de" %}Sonstige{% else %}other{% endif %}</option>
