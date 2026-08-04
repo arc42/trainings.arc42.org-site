@@ -5,17 +5,9 @@ main:
     url: /#training-dates
   - title: "Register"
     url: /registration/
-  - title: "Contact"
-    url: /#contact
-  - title: "License"
-    url: /#license
 
 main_de:
   - title: "Termine"
     url: /de/#training-dates
   - title: "Anmeldung"
     url: /anmeldung/
-  - title: "Kontakt"
-    url: /de/#contact
-  - title: "Lizenz"
-    url: /de/#license
