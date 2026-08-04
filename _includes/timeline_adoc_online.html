@@ -1,0 +1,41 @@
+{% assign position_class = include.position | default: "right" %}
+{% assign anchor_id = include.anchor_id | default: "adoc-online" %}
+{% assign sold_out = include.sold_out | default: false %}
+{% assign trainer = include.trainer | default: "Wolfgang Reimesch" %}
+
+<div class="container {{ position_class }}" id="{{ anchor_id }}">
+    <div class="content{% if sold_out %} content--sold-out{% endif %}">
+        {{ include.date }} (online)<br>
+        <strong class="course-title">ADOC <br>(CPSA-Advanced)</strong><br>
+        <p>Effektive und sparsame Architekturdokumentation (mit Schwerpunkt arc42)</p>
+        <p>Trainer: {{ trainer }}.</p>
+        {% if include.credits %}
+        <p class="date-small">
+            CPSA-Credits: {{ include.credits }}
+        </p>
+        {% endif %}
+
+        {% if sold_out %}
+            <p class="timeline-sold-out">(Ausgebucht, nur noch Warteliste)</p>
+        {% endif %}
+
+        {% if include.few_seats %}
+            <p class="timeline-few-seats">{{ include.few_seats }}</p>
+        {% endif %}
+
+        {% if include.pricing %}
+        <p class="date-small">
+            {{ include.pricing }}
+        </p>
+        {% else %}
+        <p class="date-small">
+            Normalpreis: € 1500
+        </p>
+        {% endif %}
+
+        <a class="button buttonAdoc" href="https://www.arc42.de/info-adoc/">Mehr Info</a>
+        {% unless sold_out %}
+            <a class="button buttonAnmeldung" href="/anmeldung/">Anmeldung</a>
+        {% endunless %}
+    </div>
+</div>

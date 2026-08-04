@@ -1,0 +1,30 @@
+{% assign position_class = include.position | default: "right" %}
+{% assign anchor_id = include.anchor_id | default: "req4arc" %}
+{% assign sold_out = include.sold_out | default: false %}
+
+<div class="container {{ position_class }}" id="{{ anchor_id }}">
+    <div class="content{% if sold_out %} content--sold-out{% endif %}">
+        {{ include.date }}, {{ include.location }}<br>
+        <strong class="course-title">REQ4ARC <br>(CPSA-Advanced)</strong><br>
+        <p>Ihr systematischer Weg zu besseren Anforderungen!</p>
+        <p>Mit dem "dynamischen Duo" Peter Hruschka und Gernot Starke.</p>
+        {% if sold_out %}
+            <p class="timeline-sold-out">(Ausgebucht, nur noch Warteliste)</p>
+        {% endif %}
+        {% if include.few_seats %}
+            <p class="timeline-few-seats">{{ include.few_seats }}</p>
+        {% endif %}
+        {% if include.credits %}
+        <p class="date-small">
+            CPSA-Credits: {{ include.credits }}
+        </p>
+        {% endif %}
+        <p class="date-small">
+            Normalpreis: € 2200,- (für unsere Alumni € 2050.-)
+        </p>
+        <a class="button buttonReq4Arc" href="https://www.arc42.de/info-req4arc/">Mehr Info</a>
+        {% unless sold_out %}
+            <a class="button buttonAnmeldung" href="/anmeldung/">Anmeldung</a>
+        {% endunless %}
+    </div>
+</div>
