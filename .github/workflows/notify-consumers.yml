@@ -13,10 +13,13 @@ jobs:
           # A fixed sleep races the actual deploy: too short and consumers pull the
           # stale JSON, too long and we waste CI minutes. Poll the published
           # `generated` timestamp instead and proceed as soon as Pages has caught up.
+          # While Pages is mid-deploy the URL serves a 404 HTML page; the step runs
+          # under `bash -e`, so curl and jq must not fail the assignment — a bad
+          # response means "not published yet", which is the loop's retry case.
           start_epoch=$(date -u +%s)
           published=0
           for attempt in $(seq 1 20); do
-            generated=$(curl -s https://trainings.arc42.org/api/trainings.json | jq -r '.generated // empty')
+            generated=$(curl -sf https://trainings.arc42.org/api/trainings.json | jq -r '.generated // empty' 2>/dev/null || true)
             if [ -n "$generated" ]; then
               generated_epoch=$(date -u -d "$generated" +%s 2>/dev/null || date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$generated" +%s 2>/dev/null || echo 0)
               if [ "$generated_epoch" -ge "$start_epoch" ]; then
