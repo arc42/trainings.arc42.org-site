@@ -12,7 +12,11 @@
   margin-right: 0;
   width: 100%;
   margin-top: 3em;
-  color: $muted-text-color;
+  /* --surface-2, the site's marked surface. --ink on it measures 8.31:1; the
+     theme's $muted-text-color would have been 4.59:1 — passing, but the footer
+     carries the imprint link, and that is not a place to spend the margin. */
+  color: var(--ink);
+  border-top: 1px solid var(--hairline);
   -webkit-animation: $intro-transition;
   animation: $intro-transition;
   -webkit-animation-delay: 0.45s;
@@ -40,17 +44,9 @@
       text-decoration: underline;
     }
   }
-
-  .fas,
-  .fab,
-  .far,
-  .fal {
-    color: $muted-text-color;
-  }
 }
 
 .page__footer-copyright {
-  margin-top: 10px;
   font-family: $global-font-family;
   font-size: $type-size-7;
 }
@@ -67,55 +63,77 @@
     padding-top: 0;
     padding-bottom: 5px;
   }
-
-  li + li:before {
-    content: "";
-    padding-right: 5px;
-  }
-
-  a {
-    padding-right: 10px;
-    font-weight: bold;
-  }
 }
 
+/* ==========================================================================
+   arc42.org-shaped footer: sponsor mark, one middot-separated link row,
+   copyright. Ported from arc42.org's arc42-org.css, colors token-mapped.
+   ========================================================================== */
 
-.socials {
+.footer-center {
+  text-align: center;
+  font-size: 80%;
+}
+
+.copyright-size {
+  /* 0.64em, not 0.8em: this class sits on the SAME element as .footer-center
+     (see footer.html), so its font-size *replaces* — does not compound with —
+     the ancestor's 80%. The 0.8 factor is baked in by hand (0.8 x 0.8 = 0.64)
+     so the rendered result still matches arc42.org's fixed-16px-root 0.8rem
+     (12.8px) at this site's ~20px desktop root: 20 x 0.64 = 12.8px. */
+  font-size: 0.64em;
+}
+
+.footer-innoq {
+  margin: 0 0 0.5rem;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.6rem;
   list-style: none;
-  margin: 0;
+  margin: 0 0 0.75rem;
   padding: 0;
 }
 
-.socials__item {
-  display: inline-block;
-  margin-left: 7px;
+/* .page__footer-follow prefix is load-bearing: OneFlow declares
+   li rules at equal specificity earlier in the cascade.
+   em, not rem: this repo's root font is fluid (16px -> 22px, _reset.scss),
+   unlike arc42.org's fixed 16px. em lets the row inherit through its
+   ancestor .footer-center's `font-size: 80%`, so the effective size is
+   root x 0.8 x 0.92 — at this site's ~20px desktop root that is 14.72px,
+   matching arc42.org's fixed 0.92rem (14.72px) exactly. */
+.page__footer-follow .footer-links li {
+  font-size: 0.92em;
+  text-transform: none;
 }
 
-.no-margin {
-  margin-left: 0px;
+.page__footer-follow .footer-links li + li::before {
+  content: "\00B7";
+  margin-right: 0.6rem;
+  color: var(--ink);
+  opacity: 0.6;
 }
 
-.socials__item__link {
-  position: relative;
-  display: block;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: $primary-color;
-  font-size: 20px;
-  line-height: 40px;
-  text-align: center;
-  transition: background-color 0.3s ease;
+.footer-links a {
+  /* --deep on the footer's --surface-2: 7.32:1 */
+  color: var(--deep);
+  text-decoration: none;
 
-  &:hover {
-    background: $link-color;
+  &:hover,
+  &:focus {
+    text-decoration: underline;
   }
 }
 
-.footer-icon {
-  color: $footer-background-color !important;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile {
+    display: inline;
+  }
 }

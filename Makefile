@@ -1,20 +1,46 @@
-# Makefile for the arc42 trainings site (Jekyll).
-# Wraps the local Docker workflow so you don't need to remember the commands.
-# All targets use the pinned image defined in ./Dockerfile + docker-compose.yml.
-
 .DEFAULT_GOAL := help
-.PHONY: help build serve clean
+
+.PHONY: help dev build stop site check-links clean install update shell logs
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-8s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-build: ## Build the static site into _site/, then serve it at http://localhost:4000
+dev: ## Start the local Jekyll dev server with live reload (http://localhost:4000)
+	@echo "==> Open http://localhost:4000  (NOT http://0.0.0.0:4000 — Firefox refuses to connect to 0.0.0.0)"
+	@docker compose down --remove-orphans >/dev/null 2>&1 || true
+	@holder=$$(docker ps --filter "publish=4000" --format '{{.Names}}'); \
+	if [ -n "$$holder" ]; then \
+		echo "==> Port 4000 is already in use by another container: $$holder"; \
+		echo "==> That's likely a dev server from a sibling arc42 site repo. Stop it first, e.g.:"; \
+		echo "==>   docker stop $$holder"; \
+		exit 1; \
+	fi
+	docker compose up --build
+
+build: ## Build the Docker dev image from the Gemfile-pinned gems
+	docker compose build
+
+stop: ## Stop and remove the running dev container
+	docker compose down
+
+site: build ## Generate the static site into _site/
 	docker compose run --rm jekyll bundle exec jekyll build
-	docker compose up
 
-serve: ## Serve locally at http://localhost:4000 with live reload
-	docker compose up
+check-links: site ## Validate internal links, images, and HTML in the built _site (html-proofer)
+	docker compose run --rm jekyll bundle exec htmlproofer ./_site --disable-external --allow-hash-href
 
-clean: ## Remove generated _site/ and Jekyll caches
-	rm -rf _site .jekyll-metadata .sass-cache
+clean: ## Remove generated _site AND the Docker cache volumes (a true reset)
+	rm -rf _site .sass-cache .jekyll-cache .jekyll-metadata
+	-docker compose down -v --remove-orphans
+
+install: build ## Install/refresh gems into the dev image after editing the Gemfile
+	docker compose run --rm jekyll bundle install
+
+update: build ## Update gems to their latest allowed versions (rewrites Gemfile.lock)
+	docker compose run --rm jekyll bundle update
+
+shell: build ## Open a shell inside the dev container for debugging
+	docker compose run --rm jekyll bash
+
+logs: ## Tail logs from the running dev container
+	docker compose logs -f jekyll

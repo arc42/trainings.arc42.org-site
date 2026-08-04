@@ -58,7 +58,12 @@
 {% endif %}
 
 <meta property="og:type" content="{{ og_type }}">
-<meta property="og:locale" content="{{ site.locale | replace: "-", "_" | default: "en_US" }}">
+{%- comment -%}
+  page.locale wins over site.locale so the German pages can declare
+  `locale: de_DE` in their front matter instead of contradicting their own
+  hreflang with the site-wide en_US.
+{%- endcomment -%}
+<meta property="og:locale" content="{{ page.locale | default: site.locale | replace: "-", "_" | default: "en_US" }}">
 <meta property="og:site_name" content="{{ site.title }}">
 <meta property="og:title" content="{{ page.title | default: site.title | markdownify | strip_html | strip_newlines | escape_once }}">
 <meta property="og:url" content="{{ canonical_url }}">

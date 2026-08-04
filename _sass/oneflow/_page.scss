@@ -59,10 +59,11 @@ body {
 
 .page__title {
   margin-top: 0;
-  line-height: 1;
+  line-height: 1.1;
+  color: var(--deep); /* 8.92:1 on paper; the hero variant overrides to #fff */
 
   a {
-    color: $text-color;
+    color: inherit;
     text-decoration: none;
   }
 
@@ -72,18 +73,38 @@ body {
 }
 
 .page__lead {
-  font-family: $global-font-family;
+  font-family: $global-font-family; /* a lead is body copy, not a heading */
   font-size: $type-size-4;
   text-align: center;
+  max-width: 46ch; /* a lead is one or two lines, not a paragraph */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .page__content {
 
 text-align: center;
 
+  /* Reading measure, 65–75ch (DESIGN.md §2.4). The theme let prose run the full
+     1280px shell — at the root's 22px on a wide screen that is ~120 characters
+     per line, and the eye loses the line on the way back. Headings and button
+     rows stay centred; running text is capped and set left, because centred
+     ragged-both prose is unreadable past two lines. Non-prose surfaces (the
+     timeline, the box grids) set their own width and are untouched. */
+  p,
+  ul,
+  ol,
+  dl,
+  blockquote {
+    max-width: var(--measure);
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+  }
+
   h2 {
-    padding-bottom: 0.5em;
-    border-bottom: 1px solid $border-color;
+    padding-bottom: 0.4em;
+    border-bottom: 1px solid var(--hairline); /* divider tier */
   }
 
 	h1, h2, h3, h4, h5, h6 {
@@ -126,8 +147,11 @@ text-align: center;
     &:hover {
       text-decoration: underline;
 
+      /* Was a resting-weight `0 0 10px rgba(#000,.25)` glow. The family has one
+         dynamic shadow and this is it (DESIGN.md §2.3). */
       img {
-        box-shadow: 0 0 10px rgba(#000, 0.25);
+        transform: translateY(-2px);
+        box-shadow: var(--hover-lift-shadow);
       }
     }
   }
@@ -182,7 +206,14 @@ text-align: center;
   &--overlay {
     position: relative;
     margin-bottom: 2em;
-    padding: 3em 0;
+
+    /* Symmetric padding — the shipped config (_config.yml: sticky-masthead:
+       true) keeps the masthead in normal flow, so the hero never sits under
+       the band and needs no --bar-h offset. If sticky-masthead is ever set
+       to false, the masthead becomes `position: absolute` and overlaps the
+       hero's first 60px (see _masthead.scss); top padding must then go back
+       to `calc(var(--bar-h) + 1.75rem)` to keep the h1 clear of the band. */
+    padding: 1.75rem 0;
     @include clearfix;
     background-size: cover;
     background-repeat: no-repeat;
@@ -205,22 +236,45 @@ text-align: center;
       }
     }
 
+    /* The hero band is a flat --deep fill, no photo (see _pages/home.html):
+       white on #743442 measures 9.08:1. That is why the text-shadow the theme
+       used to prop up an unmeasurable photo/text pair is gone — there is no
+       photo left to prop up. */
     .page__title,
     .page__meta,
     .page__lead,
     .btn {
       color: #fff;
-      text-shadow: 1px 1px 4px rgba(#000, 0.5);
+      text-shadow: none;
       text-align: center;
     }
 
+    /* One step down from the page-level hero sizes: this is a band, not a
+       poster. */
     .page__title {
-      font-size: $type-size-2;
+      font-size: $type-size-3;
 
       @include breakpoint($small) {
-        font-size: $type-size-1;
+        font-size: $type-size-2;
       }
     }
+
+    /* .page__lead is $type-size-4 (1.25em) page-wide; in the band it is a
+       single modest line under the title. */
+    p.page__lead {
+      font-size: 1em;
+      margin-bottom: 1em;
+    }
+  }
+}
+
+/* Full prefers-reduced-motion coverage is a family constant (DESIGN.md §2.4).
+   This is the third of the site's three transform sites — the other two are in
+   _buttons.scss and _timeline.scss. As with those, the lift keeps its shadow
+   (that is the affordance) and loses the move. */
+@media (prefers-reduced-motion: reduce) {
+  .page__content a:not(.btn):hover img {
+    transform: none;
   }
 }
 
@@ -230,19 +284,22 @@ text-align: center;
   -ms-interpolation-mode: bicubic;
 }
 
+/* Photo credit. Was `background: #000; opacity: .5` — a half-transparent black
+   plate, i.e. white text on whatever the photo happened to be, which is
+   unmeasurable by construction. It is the opaque deep hue now: 9.08:1. */
 .page__hero-caption {
   position: absolute;
   bottom: 0;
   right: 0;
   margin: 0 auto;
-  padding: 2px 5px;
+  padding: 3px 8px;
   color: #fff;
-  font-family: $caption-font-family;
-  font-size: $type-size-7;
-  background: #000;
+  font-family: $caption-font-family; /* Atkinson — a caption is not a heading */
+  font-size: $type-size-8;
+  background: var(--deep);
   text-align: right;
   z-index: 5;
-  opacity: 0.5;
+  opacity: 1;
   border-radius: $border-radius 0 0 0;
 
   @include breakpoint($large) {

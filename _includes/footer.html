@@ -1,41 +1,18 @@
-<div class="page__footer-follow">
+<div class="page__footer-follow footer-center">
+  <p class="footer-innoq">
+    <a href="https://www.innoq.com" target="_blank" rel="noopener noreferrer nofollow"><img class="supported-by-innoq" src="/images/supported-by-innoq.svg" alt="Supported by INNOQ" width="110" height="24"></a>
+  </p>
 
-  <a href="https://www.innoq.com" target="_blank" rel="noopener noreferrer nofollow"><img class="supported-by-innoq" src="/images/supported-by-innoq--petrol-apricot.svg"></a>
-
-  <ul class="socials">
-
-    <li></li>
-
-    {% for link in site.footer.links %}
-    {% if link.url %}
-    <li class="socials__item">
-      <a href="{{link.url}}" rel="noopener noreferrer nofollow" target="_blank" class="socials__item__link" title="{{link.label}}">
-        <i class="{{link.icon}} footer-icon" aria-hidden="true"></i>
-      </a>
-    </li>
-    {% endif %}
-    {% endfor %}
-
-    <li class="socials__item">
-      <a href="https://status.arc42.org/" rel="noopener noreferrer nofollow" target="_blank" class="socials__item__link" title="Status">
-        <i class="fas fa-chart-bar footer-icon" aria-hidden="true"></i>
-      </a>
-    </li>
-
-    <li class="socials__item">
-      <a href="/imprint" rel="noopener noreferrer nofollow" target="_blank" class="socials__item__link" title="Imprint">
-        <i class="fas fa-gavel footer-icon" aria-hidden="true"></i>
-      </a>
-    </li>
-
-    <li class="socials__item">
-      <a href="https://oneflow-jekyll-theme.github.io/" rel="noopener noreferrer nofollow" target="_blank" class="socials__item__link" title="Created with OneFlow Jekyll Theme">
-        <i class="fas fa-file-waveform footer-icon" aria-hidden="true"></i>
-      </a>
-    </li>
-
+  <ul class="footer-links">
+    <li><a href="https://arc42.org">arc42.org</a></li>
+    <li><a href="https://arc42.org/about/#contact">Contact</a></li>
+    <li><a href="https://arc42.org/license/">License</a></li>
+    <li><a href="/imprint/">Imprint &amp; Privacy</a></li>
+    <li><a href="https://github.com/arc42">GitHub</a></li>
   </ul>
+</div>
 
-  </div>
-
-  <div class="page__footer-copyright">&copy; {{ site.time | date: '%Y' }} {{ site.footer.copyright | default: site.title }}. {% if site.footer.creator %} Supported by <a rel="noopener noreferrer" target="_blank"href="{{site.footer.creator.url}}">{{site.footer.creator.name}}</a>{% endif %}</div>
+<div class="page__footer-copyright footer-center copyright-size">
+  &copy; {{ site.time | date: '%Y' }} Dr. Peter Hruschka and Dr. Gernot Starke. <br class="mobile">
+  Supported by <a href="https://kroener-starke.ch/">Kröner &amp; Starke</a>.
+</div>

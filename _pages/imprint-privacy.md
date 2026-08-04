@@ -2,11 +2,12 @@
 layout: page
 title: Imprint & Privacy
 permalink: /imprint/
+lang: en
 order: 90
 share: false
 header:
-  overlay_image: /images/splash/privacy-274694-unsplash.webp
-  caption: "[**Scott Webb**](https://unsplash.com/photos/yekGLpc3vro)"
+  # Same compact solid --deep band as the home page (white on #743442, 9.08:1).
+  overlay_color: "#743442"
 
 ---
 

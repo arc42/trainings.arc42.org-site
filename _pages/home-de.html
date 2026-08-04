@@ -1,0 +1,35 @@
+---
+title: "arc42 Trainings & Termine"
+layout: page
+permalink: /de/
+lang: de
+# og:locale comes from page.locale via the vendored _includes/seo.html (no jekyll-seo-tag plugin)
+locale: de_DE
+translation_url: /
+header:
+  # Same compact solid --deep band as the English home page: white on #743442
+  # measures 9.08:1 outright (ADR-0002) — no photo, no overlay filter.
+  overlay_color: "#743442"
+
+excerpt: >-
+  Software-Architektur-Trainings aus der Praxis — von den Köpfen hinter arc42.
+---
+
+{%- comment -%}
+  German twin of _pages/home.html. Same layout, same section id
+  (training-dates), same classes, same links — only the language and the
+  registration form URL (/anmeldung/ instead of /registration/) differ.
+  Keep the two files in sync structurally.
+{%- endcomment -%}
+
+<h1 id="training-dates">Termine</h1>
+
+<p class="timeline-lead">
+  Alle kommenden arc42-Trainings in einer chronologischen Übersicht — zur
+  Buchung geht es über <a href="/anmeldung/">Anmeldung</a>. Trainings, die auf
+  Englisch durchgeführt werden, sind auf der jeweiligen Karte gekennzeichnet.
+</p>
+
+<div class="timeline">
+  {% include timeline_auto.html page_lang="de" %}
+</div>

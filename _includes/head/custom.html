@@ -6,7 +6,25 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="manifest" href="/site.webmanifest">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="theme-color" content="#ffffff">
+
+{%- comment -%}
+  Browser chrome must not disagree with the band underneath it (meta.arc42.org
+  DESIGN.md §2.2 / BRAND.md → Signature treatments): theme-color IS the masthead
+  fill, which for trainings.arc42.org is the dusty rose #a04c5e. It was #ffffff,
+  a generator default, which painted a white strip above a coloured band on
+  every phone. The same value is in site.webmanifest's theme_color.
+
+  msapplication-TileColor was removed rather than recoloured: browserconfig.xml
+  and the mstile PNGs it pointed at were deleted in T2, so the meta named a tile
+  that no longer exists — and #da532c was a generator orange from no arc42
+  palette (T2 report, concern 1).
+{%- endcomment -%}
+<meta name="theme-color" content="#a04c5e">
+
+{%- comment -%} Self-hosted fonts (no CDN — see _sass/oneflow/_fonts.scss). Preloading the
+     two latin subsets every page actually uses removes a round trip from first
+     paint; the latin-ext subsets stay lazy, as unicode-range intends. {%- endcomment -%}
+<link rel="preload" href="/assets/fonts/atkinson-hyperlegible-next-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/libre-caslon-text-700-latin.woff2" as="font" type="font/woff2" crossorigin>
 
 <!-- end custom head snippets -->

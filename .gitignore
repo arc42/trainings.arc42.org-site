@@ -2,3 +2,7 @@
 _site
 .jekyll-metadata
 .DS_Store
+
+# IDE project/workspace files
+*.iml
+*.code-workspace

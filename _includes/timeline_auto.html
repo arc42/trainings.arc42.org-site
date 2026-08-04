@@ -1,0 +1,63 @@
+{% comment %}
+Auto-alternating timeline, driven by _data/trainings.yml.
+This site IS the source of that file (arc42.de pulls it); the include is a
+port of arc42.de-site/_includes/timeline_auto.html and reads the same shape.
+Usage: {% include timeline_auto.html page_lang="en" %}
+page_lang is the PRESENTATION language of the page that embeds the timeline
+("de" on /de/, "en" on /). All card copy and the date label follow it. The
+language a training is actually HELD in (d.language) travels separately as
+delivery_lang and shows up as a small per-card note.
+Dates are interleaved chronologically across courses via sortable
+"start|courseIndex|dateIndex" keys (ISO strings sort lexicographically).
+timeline_course.html and the timeline_<type>.html templates are unchanged;
+type = course.id, plus "_online" suffix when format == "online".
+trainer is only passed for explicit per-date overrides, matching the old
+frontmatter behaviour (course-default trainers stay baked into the templates).
+{% endcomment %}
+{%- assign page_lang = include.page_lang | default: "en" -%}
+{%- if page_lang == "de" -%}{%- assign trainer_join = " und " -%}{%- else -%}{%- assign trainer_join = " and " -%}{%- endif -%}
+{%- assign crs = site.data.trainings.courses -%}
+{%- assign today = 'now' | date: '%Y-%m-%d' -%}
+{%- assign keys = "" | split: "" -%}
+{%- for c in crs -%}
+  {%- for d in c.dates -%}
+    {%- if d.status == "cancelled" -%}{%- continue -%}{%- endif -%}
+    {%- if d.end < today -%}{%- continue -%}{%- endif -%}
+    {%- capture k -%}{{ d.start }}|{{ forloop.parentloop.index0 }}|{{ forloop.index0 }}{%- endcapture -%}
+    {%- assign karr = k | split: "~~" -%}
+    {%- assign keys = keys | concat: karr -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- assign sorted_keys = keys | sort -%}
+{%- assign shown = 0 -%}
+{%- for key in sorted_keys -%}
+  {%- assign parts = key | split: "|" -%}
+  {%- assign ci = parts[1] | plus: 0 -%}
+  {%- assign di = parts[2] | plus: 0 -%}
+  {%- assign c = crs[ci] -%}
+  {%- assign d = c.dates[di] -%}
+  {%- assign shown = shown | plus: 1 -%}
+  {%- assign remainder = shown | modulo: 2 -%}
+  {%- if remainder == 0 -%}{%- assign position = "left" -%}{%- else -%}{%- assign position = "right" -%}{%- endif -%}
+  {%- assign type = c.id -%}
+  {%- if d.format == "online" -%}{%- assign type = type | append: "_online" -%}{%- endif -%}
+  {%- capture datelabel -%}{%- include training-date-label.html date=d lang=page_lang style="long" -%}{%- endcapture -%}
+  {%- assign sold_out = false -%}
+  {%- if d.status == "waitlist" or d.status == "full" -%}{%- assign sold_out = true -%}{%- endif -%}
+  {%- assign trainerline = nil -%}
+  {%- if d.trainers -%}{%- assign trainerline = d.trainers | join: trainer_join -%}{%- endif -%}
+  {% include timeline_course.html
+     type=type
+     position=position
+     date=datelabel
+     location=d.city
+     anchor_id=d.id
+     sold_out=sold_out
+     few_seats=d.few_seats
+     pricing=d.pricing
+     trainer=trainerline
+     credits=c.credits
+     page_lang=page_lang
+     delivery_lang=d.language %}
+{%- endfor -%}
+{% if shown == 0 %}{% if page_lang == "de" %}<p class="timeline-empty">Derzeit sind keine Termine geplant. Schauen Sie bald wieder vorbei, oder <a href="mailto:info@arc42.de">kontaktieren Sie uns</a>.</p>{% else %}<p class="timeline-empty">No training dates are scheduled right now. Please check back soon, or <a href="mailto:info@arc42.de">get in touch with us</a>.</p>{% endif %}{% endif %}

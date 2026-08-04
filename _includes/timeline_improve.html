@@ -1,0 +1,56 @@
+{%- comment -%}
+  Card copy follows include.page_lang (the PAGE language, default "en").
+  include.delivery_lang is the language the training is held in and only shows
+  up as the small note under the date line.
+{%- endcomment -%}
+{% assign position_class = include.position | default: "right" %}
+{% assign anchor_id = include.anchor_id | default: "improve" %}
+{% assign sold_out = include.sold_out | default: false %}
+
+{%- if include.page_lang == "de" -%}
+  {%- assign blurb = "Mit Gernot Starke (INNOQ Fellow) und Carola Lilienthal (WPS)" -%}
+  {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
+  {%- assign default_price = "Normalpreis: € 2200 (für unsere Alumni € 2050)." -%}
+  {%- assign info_label = "Mehr Info" -%}
+  {%- assign register_label = "Anmeldung" -%}
+  {%- assign register_url = "/anmeldung/" -%}
+{%- else -%}
+  {%- assign blurb = "With Gernot Starke (INNOQ Fellow) and Carola Lilienthal (WPS)" -%}
+  {%- assign sold_out_text = "(sold out — waitlist only)" -%}
+  {%- assign default_price = "Regular price: € 2200 (€ 2050 for our alumni)." -%}
+  {%- assign info_label = "More info (in German)" -%}
+  {%- assign register_label = "Register" -%}
+  {%- assign register_url = "/registration/" -%}
+{%- endif -%}
+
+<div class="container {{ position_class }}" id="{{ anchor_id }}">
+    <div class="content{% if sold_out %} content--sold-out{% endif %}">
+        {{ include.date }}, {{ include.location }}<br>
+        {% if include.page_lang == "de" %}
+          {% if include.delivery_lang == "en" %}<p class="training-language-note">Durchführung auf Englisch</p>{% endif %}
+        {% else %}
+          {% if include.delivery_lang == "de" %}<p class="training-language-note">held in German</p>{% else %}<p class="training-language-note">held in English</p>{% endif %}
+        {% endif %}
+        <h2 class="course-title">IMPROVE<br>
+        (CPSA-Advanced)</h2>
+        <p>{{ blurb }}</p>
+        {% if sold_out %}
+            <p class="timeline-sold-out">{{ sold_out_text }}</p>
+        {% endif %}
+        {% if include.few_seats %}
+            <p class="timeline-few-seats">{{ include.few_seats }}</p>
+        {% endif %}
+        {% if include.credits %}
+        <p class="date-small">
+            CPSA-Credits: {{ include.credits }}
+        </p>
+        {% endif %}
+        <p class="date-small">
+            {{ default_price }}
+        </p>
+        <a class="button buttonImprove" href="https://www.arc42.de/info-improve/" hreflang="de">{{ info_label }}</a>
+        {% unless sold_out %}
+            <a class="button buttonAnmeldung" href="{{ register_url }}">{{ register_label }}</a>
+        {% endunless %}
+    </div>
+</div>

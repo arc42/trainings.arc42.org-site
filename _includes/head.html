@@ -2,6 +2,23 @@
 
 {% include seo.html %}
 
+{%- comment -%}
+  hreflang pairs. Only emitted for pages that declare both halves of the
+  front-matter contract (lang + translation_url). x-default is the English page,
+  always.
+{%- endcomment -%}
+{% if page.lang and page.translation_url %}
+  {% if page.lang == "de" %}
+<link rel="alternate" hreflang="de" href="{{ page.url | absolute_url }}">
+<link rel="alternate" hreflang="en" href="{{ page.translation_url | absolute_url }}">
+<link rel="alternate" hreflang="x-default" href="{{ page.translation_url | absolute_url }}">
+  {% else %}
+<link rel="alternate" hreflang="en" href="{{ page.url | absolute_url }}">
+<link rel="alternate" hreflang="de" href="{{ page.translation_url | absolute_url }}">
+<link rel="alternate" hreflang="x-default" href="{{ page.url | absolute_url }}">
+  {% endif %}
+{% endif %}
+
 {% unless site.atom_feed.hide %}
   <link href="{% if site.atom_feed.path %}{{ site.atom_feed.path }}{% else %}{{ '/feed.xml' | relative_url }}{% endif %}" type="application/atom+xml" rel="alternate" title="{{ site.title }} Feed">
 {% endunless %}
@@ -20,4 +37,8 @@
   {% for script in site.head_scripts %}
     <script src="{{ script | relative_url }}"></script>
   {% endfor %}
+{% endif %}
+
+{% if page.botpoison %}
+<script src="https://unpkg.com/@botpoison/browser"></script>
 {% endif %}

@@ -1,7 +1,18 @@
+/* ==========================================================================
+   FULL-BLEED SECTIONS
+   ========================================================================== */
+
+/* The separator between full-bleed sections. Was a 4px `border-image:
+   linear-gradient(...)` — DESIGN.md §2.4 is "no gradients", flatly, and a
+   three-stop gradient rule in two hues is the loudest possible way to draw a
+   horizontal line. It is now one hairline in the divider tier, full bleed. */
 .section-sep {
-    border: 4px solid;
-    border-image: linear-gradient(to right, $link-color, $primary-color, $link-color) 1;
+    border: 0;
+    border-top: 1px solid var(--hairline);
+    height: 0;
     width: 100vw;
+    max-width: 100%;
+    margin: 3em 0;
     position: relative;
     left: 50%;
     right: 50%;
@@ -24,6 +35,11 @@ section.first-section {
     margin-top: -2em;
 }
 
+/* The alternating band on the home page. Was `mix($background-color,
+   $primary-color, 50%)` — half-strength band, i.e. a saturated fill sitting
+   behind running text, which DESIGN.md §2.3 forbids outright. It is now
+   --surface-2, the 14% wash-active step, which is the family's answer to
+   "this section is a different surface": --ink on it measures 8.31:1. */
 section.alternative-color {
-    background-color: mix($background-color, $primary-color, 50%);
+    background-color: var(--surface-2);
 }

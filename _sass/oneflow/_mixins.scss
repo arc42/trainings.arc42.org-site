@@ -2,12 +2,17 @@
    MIXINS
    ========================================================================== */
 
+/* Focus ring #1 of the site's pair (DESIGN.md §4, Focus rings): the ring for
+   paper and every tinted surface on it. The deep hue measures 8.92:1 on paper
+   and 8.00:1 on --surface-1, both far past the 3:1 a ring must carry. The ring
+   for the band is white and lives in _navigation.scss — the deep hue would be
+   1.60:1 there.
+
+   Replaces `outline: 5px auto` + a negative offset, which drew the ring
+   *inside* the control and, on a filled button, on top of the fill. */
 %tab-focus {
-  /* Default*/
-  outline: thin dotted $focus-color;
-  /* Webkit*/
-  outline: 5px auto $focus-color;
-  outline-offset: -2px;
+  outline: 3px solid $focus-color;
+  outline-offset: 2px;
 }
 
 /*

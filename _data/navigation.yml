@@ -1,8 +1,13 @@
-# main links
+# Masthead links, one list per language. _includes/masthead.html picks `main_de`
+# when page.lang == "de" and falls back to `main` otherwise.
 main:
   - title: "Training dates"
     url: /#training-dates
-  - title: "Contact"
-    url: /#contact
-  - title: "License"
-    url: /#license
+  - title: "Register"
+    url: /registration/
+
+main_de:
+  - title: "Termine"
+    url: /de/#training-dates
+  - title: "Anmeldung"
+    url: /anmeldung/

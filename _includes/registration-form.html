@@ -1,0 +1,162 @@
+{%- comment -%}
+  Registration form, ported from arc42.de-site _pages/anmeldung.md (DE) and
+  anmeldungEN.md (EN) into a single include parameterized by include.lang ("de"|"en").
+  The <select> options are generated from site.data.trainings.courses instead of being
+  hand-maintained (that was the drift problem this task fixes).
+{%- endcomment -%}
+
+{% if include.lang == "de" %}
+<noscript>
+     <h1>Zur Anmeldung muss Ihr Browser JavaScript erlauben!</h1>
+     Aktuell ist das ausgeschaltet... Sie können uns entweder die Anmeldung
+     per Email senden,
+     oder aber JavaScript einschalten und dann diese Seite im Browser erneut laden.
+    <br><br>
+     <a class="btn btn--primary" href='mailto:info@arc42.de?subject=[arc42] Anmeldung&body=Ihr Name:%0A%0AFür%20welchen%20Kurs%20melden%20Sie an:%0A-----------------------%0AKursbezeichnung:%0ADatum%20Kursbeginn:%0A%0ATeilnehmende%20Person(en):%0A-----------------------%0AVorname,%20Nachname:%0AEmail:%0A%0ARechnungsadresse:%0A%0A%0A-----------------------%0ABemerkungen:%0A'>Anmeldung<br>per E-Mail</a>
+
+</noscript>
+{% else %}
+<noscript>
+     <h1>Your browser needs to have JavaScript enabled!</h1>
+     Currently, it seems to be deactivated... You may send your registration via email, or
+activate JavaScript and reload this page.
+    <br><br>
+     <a class="btn btn--primary" href='mailto:info@arc42.de?subject=[arc42] registration&body=your name :%0A%0AFür%20which%20course%20?%0AEmail:%0A%0Abilling adress:%0A%0A%0A-----------------------%0Aremarks:%0A'>Registration<br>via E-Mail</a>
+
+</noscript>
+{% endif %}
+
+<div id="main_body" style="display: none;">
+
+<form action="https://submit-form.com/AIKiYyJP"
+      data-botpoison-public-key="pk_8e195655-38ed-4eec-a445-a1e0d68a488d"
+      class="registration-form"
+      id="arc42anmeldung">
+
+<strong>{% if include.lang == "de" %}Wer meldet an?{% else %}Who registers?{% endif %}</strong>
+  <br>
+
+{% if include.lang == "de" %}
+<input type="text" id="nachname" name="Nachname" aria-label="Nachname (Pflichtfeld)" placeholder="* Nachname" size="20" required  />
+<input type="text" id="vorname" name="Vorname" aria-label="Vorname" placeholder="Vorname" size="20"  />
+
+<label for="email">E-Mail (für Anmeldebestätigung und Ähnliches)</label>
+<input type="email" id="email" name="Email" placeholder="* E-Mail" required multiple  />
+
+<label for="kurs">Für welchen Kurs melden Sie an?</label>
+{% else %}
+<input type="text" id="nachname" name="last name" aria-label="Last name (required)" placeholder="* last name" size="20" required  />
+<input type="text" id="vorname" name="first name" aria-label="First name" placeholder="first name" size="20"  />
+
+<label for="email">E-Mail </label>
+<input type="email" id="email" name="Email" placeholder="* E-Mail" required multiple  />
+
+<label for="kurs">Which training?</label>
+{% endif %}
+
+{%- assign today = 'now' | date: '%Y-%m-%d' -%}
+{%- comment -%}
+  ADR-0006 empty state: count how many <option>s the loop below will actually
+  render, and if the answer is zero, say so instead of showing a select with
+  nothing meaningful in it.
+{%- endcomment -%}
+{%- comment -%}
+  Both forms list the SAME set of bookable dates (status "open", not past).
+  A date whose delivery language differs from the form's language is NOT
+  hidden — it gets a delivery hint appended to its visible label instead.
+  (Hiding them made /registration/ a dead end for 14 of 15 advertised
+  trainings once every English card started routing here.)
+{%- endcomment -%}
+{%- assign bookable_count = 0 -%}
+{%- for course in site.data.trainings.courses -%}
+  {%- for d in course.dates -%}
+    {%- if d.status != "open" -%}{%- continue -%}{%- endif -%}
+    {%- if d.end < today -%}{%- continue -%}{%- endif -%}
+    {%- assign bookable_count = bookable_count | plus: 1 -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- if bookable_count == 0 -%}
+  {% if include.lang == "en" %}
+  <p>No courses are currently open for registration. Please <a href="mailto:info@arc42.de">contact us</a>.</p>
+  {% else %}
+  <p>Derzeit sind keine Kurse zur Online-Anmeldung geöffnet. Bitte <a href="mailto:info@arc42.de">kontaktieren Sie uns</a>.</p>
+  {% endif %}
+{%- endif -%}
+<select id="kurs" name="Kurs" required>
+  <option value=""></option>
+  {%- for course in site.data.trainings.courses -%}
+    {%- for d in course.dates -%}
+      {%- if d.status != "open" -%}{%- continue -%}{%- endif -%}
+      {%- if d.end < today -%}{%- continue -%}{%- endif -%}
+      {%- comment -%}
+        value = the Formspark booking code, byte-for-byte. Never decorate it.
+        The delivery hint is label-only, and only when the delivery language
+        differs from the form's language.
+      {%- endcomment -%}
+  <option value="{{ d.code }}">{{ course.short_title }}, {% include training-date-label.html date=d lang=include.lang style="short" %}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{% if include.lang == "en" and d.language == "de" %} (held in German){% elsif include.lang == "de" and d.language == "en" %} (auf Englisch){% endif %}</option>
+    {%- endfor -%}
+  {%- endfor -%}
+  <option value="sonstige">{% if include.lang == "de" %}Sonstige{% else %}other{% endif %}</option>
+</select>
+
+<hr class="form-rule">
+
+<strong>{% if include.lang == "de" %}Teilnehmende Person(en){% else %}Participants{% endif %}</strong>
+<br>
+
+{% if include.lang == "de" %}
+Falls Sie mehr als eine Person anmelden, schreiben Sie die weiteren Namen als Bemerkung.
+<input type="text" id="lastnameTN" name="NachnameTN" aria-label="Nachname teilnehmende Person" placeholder="Nachname teilnehmende Person"   />
+<input type="text" id="firstnameTN" name="VornameTN" aria-label="Vorname teilnehmende Person" placeholder="Vorname teilnehmende Person"  />
+
+<label for="emailTN">E-Mail (teilnehmende Person(en), falls abweichend zu obiger E-Mail)</label>
+<input type="email" id="emailTN" name="EmailTN" placeholder="E-Mail TN" />
+
+<label for="ra">Rechnungsadresse</label>
+<textarea id="ra" name="Rechnungsadresse" placeholder="* Diese Adresse benötigen wir zur Abrechnung" required ></textarea>
+{% else %}
+In case you register more than one person, please state their names in the comments.
+<input type="text" id="lastnameTN" name="NachnameTN" aria-label="Last name of participant" placeholder="last name of participant"   />
+<input type="text" id="firstnameTN" name="VornameTN" aria-label="First name of participant" placeholder="first name of participant"  />
+
+<label for="emailTN">E-Mail (participant)</label>
+<input type="email" id="emailTN" name="EmailTN" placeholder="E-Mail participant" />
+
+<label for="ra">Billing address</label>
+<textarea id="ra" name="Billing address" placeholder="* required to produce and send the invoice" required ></textarea>
+{% endif %}
+
+<hr class="form-rule">
+
+{% if include.lang == "de" %}
+<label for="comments">Bemerkungen (z.B. weitere TN, Bestell-/Auftragsnummer)</label>
+<textarea id="comments" name="Bemerkungen" placeholder="Bemerkungen"></textarea>
+{% else %}
+<label for="comments">Comments (e.g. additional participants, order-numbers or similar)</label>
+<textarea id="comments" name="Comments" placeholder="Comments"></textarea>
+{% endif %}
+<hr class="form-rule">
+
+  <button type="submit" id="submit" class="btn btn--primary" >{% if include.lang == "de" %}Anmeldung absenden{% else %}Send registration{% endif %}</button>
+  <input type="button" value="{% if include.lang == "de" %}Zurück{% else %}back{% endif %}" class="btn btn--inverse" onclick="history.back()" style="float: right;">
+
+<!--
+ The following is the custom REDIRECT / SOURCE / EMAIL configuration for Formspark
+ =================================================================
+-->
+
+<input type="hidden" name="_source" value="trainings.arc42.org" />
+<input type="hidden" name="_redirect" value="{% if include.lang == "de" %}{{ '/anmeldung-erfolg/' | absolute_url }}{% else %}{{ '/registration-success/' | absolute_url }}{% endif %}" />
+<input type="hidden" name="_error" value="{% if include.lang == "de" %}{{ '/anmeldung-fail/' | absolute_url }}{% else %}{{ '/registration-fail/' | absolute_url }}{% endif %}" />
+<input type="hidden" name="_append" value="false" />
+<input type="hidden" name="_email.subject" value="[trainings.arc42.org] ANMELDUNG" />
+<input type="hidden" name="_email.from" value="trainings.arc42.org Website (via formspark.io)" />
+<input type="hidden" name="_email.template.title" value="Anmeldung (via trainings.arc42.org)" />
+
+</form>
+
+</div>
+
+<script type="text/javascript">
+document.getElementById("main_body").style.display="block";
+</script>
