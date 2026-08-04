@@ -5,15 +5,22 @@ sitemap: false
 # CRUSH.md - arc42 Trainings Site
 
 ## Build/Development Commands
-- `bundle install` - Install Ruby gems
-- `bundle exec jekyll serve` - Start Jekyll development server (localhost:4000)
-- `docker-compose up` - Start Jekyll in Docker container (port 4000)
-- `./_manage-site.sh` - Interactive Docker development script
+Everything runs in Docker via the Makefile - no local Ruby/bundler needed.
+- `make help` - List all targets
+- `make dev` - Start the dev server with live reload (http://localhost:4000)
+- `make stop` - Stop and remove the running dev container
+- `make site` - Build the static site into `_site/`
+- `make check-links` - Build, then run html-proofer over `_site/`
+- `make install` - Re-resolve gems after editing the `Gemfile`
+- `make clean` - Remove `_site/`, Jekyll caches and the Docker volumes
 - `npm run build:js` - Build and minify JavaScript assets
 - `npm run watch:js` - Watch JS files for changes during development
 
 ## Testing
-- No automated tests configured - manual testing via local server
+- `ruby scripts/validate_trainings.rb` - Validate `_data/trainings.yml`
+- `ruby scripts/generate_subtle_ads.rb --check` - Assert the generated fragment is fresh
+- `make check-links` - html-proofer: internal links, images, `alt` attributes, in-page anchors
+- No unit-test suite; everything else is manual testing via `make dev`
 
 ## Code Style Guidelines
 

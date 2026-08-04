@@ -30,6 +30,40 @@ lists all targets; the ones you need day to day:
 `make dev` refuses to start if another container already holds port 4000 — that
 is usually a dev server from a sibling arc42 site repo; stop that one first.
 
+## Design
+
+How this site looks is **not** decided in this repository. It follows the arc42
+family design system, which lives in
+[meta.arc42.org](https://github.com/arc42/meta.arc42.org):
+
+- [`BRAND.md`](https://github.com/arc42/meta.arc42.org/blob/main/BRAND.md) — the
+  hue registry. The signature hue of trainings.arc42.org is the **softened dusty
+  rose `#a04c5e`** (deep variant `#743442`), a low-chroma relative of the family
+  coral `#ff5c7c`. White on that band measures 5.69:1. It is deliberately *not*
+  the shared error token `#c22b47`: a colour sized for a button and an error
+  message reads as an alarm when it is stretched across a full-width masthead.
+- [`DESIGN.md`](https://github.com/arc42/meta.arc42.org/blob/main/DESIGN.md) —
+  the family constants (§2): Libre Caslon Text for headings and Atkinson
+  Hyperlegible Next for body/UI, both self-hosted with no third typeface; a
+  solid masthead band in the signature hue with light text; flat near-white
+  paper behind long prose; and the pinned-note shadow
+  (`box-shadow: 3px 3px 0 0 #743442`, zero blur, annotation-style elements only).
+
+Two rules that bite in practice:
+
+- `<meta name="theme-color">` in [`_includes/head/custom.html`](/_includes/head/custom.html)
+  and `theme_color` in [`site.webmanifest`](/site.webmanifest) must both equal
+  the masthead fill `#a04c5e`.
+- Contrast is measured, never eyeballed
+  ([ADR-0002](https://github.com/arc42/meta.arc42.org/blob/main/adr/0002-measured-accessibility.md)).
+  Every new foreground/background pair gets its measured ratio stated before it
+  ships; body text ≥ 4.5:1, and the on-band secondary tint is `#f6edef`
+  (4.95:1) — not `rgba(255,255,255,.82)`, which fails at 4.41:1.
+
+Run `make check-links` before opening a PR: it builds the site and runs
+html-proofer over `_site/`, which also catches missing `alt` attributes and
+dead in-page anchors.
+
 ## Updating Training Dates (requires write access)
 
 To change or add training dates:
