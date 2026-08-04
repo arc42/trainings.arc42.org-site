@@ -43,9 +43,9 @@
         {% if page.translation_url %}
         <nav class="lang-switch" aria-label="Sprache / Language">
           {% if page.lang == "de" %}
-          <span class="lang-switch__current" aria-current="page">DE</span><span class="lang-switch__sep" aria-hidden="true">|</span><a class="lang-switch__link" href="{{ page.translation_url | relative_url }}" hreflang="en" lang="en">EN</a>
+          <span class="lang-switch__current" lang="de" aria-current="page">DE</span><a class="lang-switch__link" href="{{ page.translation_url | relative_url }}" hreflang="en" lang="en">EN</a>
           {% else %}
-          <a class="lang-switch__link" href="{{ page.translation_url | relative_url }}" hreflang="de" lang="de">DE</a><span class="lang-switch__sep" aria-hidden="true">|</span><span class="lang-switch__current" aria-current="page">EN</span>
+          <a class="lang-switch__link" href="{{ page.translation_url | relative_url }}" hreflang="de" lang="de">DE</a><span class="lang-switch__current" lang="en" aria-current="page">EN</span>
           {% endif %}
         </nav>
         {% endif %}

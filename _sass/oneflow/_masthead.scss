@@ -174,38 +174,45 @@
   }
 }
 
-/* The DE/EN switch. Two words, one of them the page you are on — so the current
-   language is stated, not linked, and only the other one is a control. Both
-   measured on the band: #fff 5.69:1, rgba(255,255,255,.90) (= --band-tint,
-   #f6edef) 4.95:1. .82 would be 4.41:1 and fails; it appears nowhere. */
+/* The DE/EN switch, drawn as arc42.org's rounded pill group: a hairline
+   capsule around both words, the current language filled. The current language
+   is stated, not linked — only the other one is a control. Text pairs measured
+   on the band: the filled pill is band ink on #fff (5.69:1, same pair as the
+   masthead inverted), the idle link rgba(255,255,255,.90) (4.95:1). The
+   capsule border rgba(255,255,255,.28) is decorative, not text. */
 .lang-switch {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.35em;
+  gap: 0.15em;
   margin-left: 0.75em;
-  font-size: 0.85em;
+  padding: 0.15em;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  font-size: 0.8em;
+  line-height: 1;
   white-space: nowrap;
 
   .lang-switch__current {
-    color: #fff;
+    padding: 0.35em 0.6em;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--band);
     font-weight: 700;
-    text-decoration: underline;
-    text-underline-offset: 0.25em;
+    letter-spacing: 0.02em;
   }
 
   .lang-switch__link {
+    padding: 0.35em 0.6em;
+    border-radius: 999px;
     color: rgba(255, 255, 255, 0.9);
+    font-weight: 700;
+    letter-spacing: 0.02em;
     text-decoration: none;
 
     &:hover,
     &:focus-visible {
       color: #fff;
-      text-decoration: underline;
-      text-underline-offset: 0.25em;
+      background: rgba(255, 255, 255, 0.14);
     }
-  }
-
-  .lang-switch__sep {
-    color: rgba(255, 255, 255, 0.9);
   }
 }
