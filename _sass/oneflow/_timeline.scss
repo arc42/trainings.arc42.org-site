@@ -248,6 +248,15 @@ $timeline-border-rest: $border-wash-rest !default;
     }
   }
 
+  /* The language a training is HELD in — a fact about the course, not about
+     the page. It sits under the date line and must not compete with it, so it
+     is only smaller, never a new hue (DESIGN.md §3). */
+  .training-language-note {
+    margin: 0;
+    font-size: 0.85em;
+    color: var(--ink);
+  }
+
   /* Never colour alone (DESIGN.md §2.4): the words say it too. */
   .timeline-sold-out {
     font-weight: bold;

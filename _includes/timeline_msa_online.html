@@ -1,17 +1,47 @@
+{%- comment -%}
+  Card copy follows include.page_lang (the PAGE language, default "en").
+  include.delivery_lang is the language the training is held in and only shows
+  up as the small note under the date line.
+{%- endcomment -%}
 {% assign position_class = include.position | default: "right" %}
 {% assign anchor_id = include.anchor_id | default: "msa-online" %}
 {% assign sold_out = include.sold_out | default: false %}
 {% assign trainer = include.trainer | default: "Wolfgang Reimesch" %}
 
-<div class="container {{ position_class }}" id="{{ anchor_id }}"{% if include.lang %} lang="{{ include.lang }}"{% endif %}>
+{%- if include.page_lang == "de" -%}
+  {%- capture terms_line -%}
+    Bitte beachten Sie unsere <a href="https://www.arc42.de/terms/">Allgemeinen Geschäftsbedingungen</a>.
+  {%- endcapture -%}
+  {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
+  {%- assign fee = "Teilnahmegebühr: € 2100" -%}
+  {%- assign info_label = "Mehr Info" -%}
+  {%- assign register_label = "Anmeldung" -%}
+  {%- assign register_url = "/anmeldung/" -%}
+{%- else -%}
+  {%- capture terms_line -%}
+    Please see our <a href="https://www.arc42.de/terms-en/">terms and conditions</a>.
+  {%- endcapture -%}
+  {%- assign sold_out_text = "(sold out — waitlist only)" -%}
+  {%- assign fee = "Delegate Fee: €2100" -%}
+  {%- assign info_label = "More info" -%}
+  {%- assign register_label = "Register" -%}
+  {%- assign register_url = "/registration/" -%}
+{%- endif -%}
+
+<div class="container {{ position_class }}" id="{{ anchor_id }}">
     <div class="content{% if sold_out %} content--sold-out{% endif %}">
         {{ include.date }} (online)<br>
+        {% if include.page_lang == "de" %}
+          {% if include.delivery_lang == "en" %}<p class="training-language-note">Durchführung auf Englisch</p>{% endif %}
+        {% else %}
+          {% if include.delivery_lang == "de" %}<p class="training-language-note">held in German</p>{% else %}<p class="training-language-note">held in English</p>{% endif %}
+        {% endif %}
         <h2 class="course-title">Mastering Software Architectures<br>
         (iSAQB CPSA-Foundation)<br></h2>
-        Please see our <a href="https://www.arc42.de/terms-en/">terms and conditions.</a>
+        {{ terms_line }}
 
         {% if sold_out %}
-            <p class="timeline-sold-out">(Sold out, waiting list only)</p>
+            <p class="timeline-sold-out">{{ sold_out_text }}</p>
         {% endif %}
 
         {% if include.few_seats %}
@@ -20,12 +50,12 @@
 
         <p>Trainer: {{ trainer }}.</p>
         <p class="date-small">
-            Delegate Fee: €2100
+            {{ fee }}
         </p>
 
-        <a class="button buttonMSA" href="https://www.arc42.de/info-msa-EN/">further info</a>
+        <a class="button buttonMSA" href="https://www.arc42.de/info-msa-EN/">{{ info_label }}</a>
         {% unless sold_out %}
-            <a class="button buttonAnmeldung" href="/registration/">Registration</a>
+            <a class="button buttonAnmeldung" href="{{ register_url }}">{{ register_label }}</a>
         {% endunless %}
     </div>
 </div>
