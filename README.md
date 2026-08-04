@@ -1,10 +1,10 @@
 # trainings.arc42.org-site
 
-This repository powers [trainings.arc42.org](https://trainings.arc42.org), which displays a list of upcoming arc42 training dates, and includes backend functionality to dynamically serve these dates on other arc42-related sites.
+This repository powers [trainings.arc42.org](https://trainings.arc42.org), which displays a list of upcoming arc42 training dates, and publishes those dates as a JSON feed that the other arc42-related sites consume.
 
 # Overview
 
-This project includes both frontend and backend functionality, used by multiple arc42-related sites to show consistent, up-to-date training info.
+This project includes both the frontend and the machine-readable feed used by multiple arc42-related sites to show consistent, up-to-date training info.
 
 ## Key Process
 
@@ -12,7 +12,12 @@ All training dates are maintained in a single data file ([`/_data/trainings.yml`
 
 - The timeline on this site's two home pages — the English `/` and the German
   `/de/`, both rendered from the same `_data/trainings.yml`
-- A generated HTML fragment ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) served by the backend API to other sites (via Vercel)
+- The JSON feed ([`/api/trainings.json`](/api/trainings.json)), served by GitHub
+  Pages — the supported machine interface for all other arc42 sites
+- *(deprecated)* A generated HTML fragment
+  ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) served by a
+  Vercel backend, kept only until the last consumers' migration to the JSON
+  feed is live — see [Deprecated: Vercel Fragment Backend](#deprecated-vercel-fragment-backend)
 
 ## Languages
 
@@ -101,20 +106,57 @@ To change or add training dates:
 
 1. Edit [`/_data/trainings.yml`](/_data/trainings.yml)
 2. Run `ruby scripts/validate_trainings.rb` and `ruby scripts/generate_subtle_ads.rb`
+   (the latter regenerates the deprecated fragment — still required while it
+   exists, because CI checks its freshness)
 3. Commit and push your changes
 
 This automatically updates the content:
 
 - On trainings.arc42.org (both home-page timelines render `_data/trainings.yml` directly)
-- Across other arc42 sites (via the backend API, which serves the generated
-  `_subtle-ads.html` fragment)
+- Across the consumer sites (GitHub Pages republishes `/api/trainings.json`,
+  which the consumers pull weekly — see [Consumers](#consumers))
 
 See [Maintaining training dates](#maintaining-training-dates) for the full
 branch/PR workflow and how consumer sites pick the changes up.
 
-## Backend API
+## JSON Feed (the supported machine interface)
 
-The backend is deployed on Vercel as a simple serverless function, written in the format Vercel expects for [Next.js API routes](https://nextjs.org/docs/api-routes/introduction).
+The supported way for other sites to consume training dates is the JSON feed:
+
+```
+https://trainings.arc42.org/api/trainings.json
+```
+
+[`/api/trainings.json`](/api/trainings.json) is a Jekyll template (JSON with
+front matter) rendered from `_data/trainings.yml` at build time and served by
+GitHub Pages as a static file — no serverless function involved. On every
+relevant change, CI validates the built feed against
+[`/api/trainings.schema.json`](/api/trainings.schema.json)
+(see [`validate-trainings.yml`](/.github/workflows/validate-trainings.yml)).
+
+### Consumers
+
+Four sites render the training dates at build time from this feed. Each pulls
+it weekly via its own `.github/workflows/refresh-trainings.yml` and commits an
+expiry-filtered `_data/trainings.json` into its own repository:
+
+- arc42.de-site
+- docs.arc42.org-site
+- faq.arc42.org-site
+- arc42.org-site
+
+Because the dates are baked into the consumers' HTML at build time, a failing
+refresh workflow means "dates at most one week stale" — never a broken page.
+
+## Deprecated: Vercel Fragment Backend
+
+> **Deprecated.** The HTML fragment backend described below is superseded by
+> the JSON feed above. It is kept only until the last consumers' migration to
+> the feed is live; the removal steps are tracked in the workspace rollout
+> plan, Phase B:
+> `docs/superpowers/plans/2026-08-04-trainings-consumers-rollout.md`.
+
+The legacy backend is deployed on Vercel as a simple serverless function, written in the format Vercel expects for [Next.js API routes](https://nextjs.org/docs/api-routes/introduction).
 
 It reads the contents of `_subtle-ads.html` from the filesystem and serves it as raw HTML via this endpoint:
 
@@ -122,11 +164,16 @@ It reads the contents of `_subtle-ads.html` from the filesystem and serves it as
 https://arc42-subtle-ads-backend.vercel.app/api
 ```
 
-The endpoint returns the HTML with appropriate CORS and caching headers. The backend is automatically redeployed on each push to this repository, ensuring that updates to the training data are reflected across all consuming sites.
+The endpoint returns the HTML with appropriate CORS and caching headers. The backend is automatically redeployed on each push to this repository, so any site still fetching the fragment sees updated training data.
 
-### Further Details
+If the backend is unreachable or blocked (e.g. by browser settings), sites
+still on the fragment fall back to a plain link to
+[trainings.arc42.org](https://trainings.arc42.org), which always reflects the
+latest content via its build-time timeline.
 
-The function for the backend is located in [`/api/index.js`](/api/index.js).  
+### Further Details (deprecated fragment)
+
+The function for the deprecated backend is located in [`/api/index.js`](/api/index.js).  
 Here’s the full implementation:
 
 ```
@@ -168,28 +215,29 @@ const handler = async (req, res) => {
 module.exports = allowCors(handler);
 ```
 
-Because the backend is part of the same repository as the `_subtle-ads.html` file, we can access the training data at runtime using a relative path:
+Because the backend is part of the same repository as the `_subtle-ads.html` file, it can access the training data at runtime using a relative path:
 
 `const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');`
+
+The fragment itself is generated from `_data/trainings.yml` by
+[`scripts/generate_subtle_ads.rb`](/scripts/generate_subtle_ads.rb) — run it
+after every date change while the fragment still exists; CI fails if the
+committed fragment is stale.
 
 ### How Deployment Works
 
 When you commit and push changes to the repo:
 
-- **GitHub** rebuilds the Jekyll frontend (`trainings.arc42.org`)
-- **Vercel** detects the push and automatically re-deploys the serverless backend
-
-During that deployment, the contents of the repository (including `_subtle-ads.html`) are bundled and made available in the serverless function’s read-only filesystem. This ensures the backend API always serves the latest training data—without any additional steps.
-
+- **GitHub** rebuilds the Jekyll frontend (`trainings.arc42.org`), which also
+  republishes the JSON feed at `/api/trainings.json`
+- **Vercel** *(deprecated path)* detects the push and automatically re-deploys
+  the serverless backend; the repository contents (including
+  `_subtle-ads.html`) are bundled into the function’s read-only filesystem
 
 ## Frontend Integration
 
-- **trainings.arc42.org** renders its own home-page timelines (`_includes/timeline_auto.html`, once per language) straight from `_data/trainings.yml` at build time and does *not* use the backend, nor the generated `_subtle-ads.html`. This ensures availability even if the backend fails.
-- **All other arc42 sites** load the training data dynamically using HTMX, which fetches the HTML from the backend API and replaces a placeholder div. On these sites, the HTMX snippet is contained in a Jekyll include as well, and can be inserted via `{% include subtle-ads/subtle-ads.html %}`.
-
-## Fallback Behavior
-
-If the backend is unreachable or blocked (e.g. by browser settings), users are directed to [trainings.arc42.org](https://trainings.arc42.org), which always reflects the latest content via its build-time timeline.
+- **trainings.arc42.org** renders its own home-page timelines (`_includes/timeline_auto.html`, once per language) straight from `_data/trainings.yml` at build time and uses neither the JSON feed nor the deprecated backend. This ensures availability even if everything else fails.
+- **The consumer sites** (see [Consumers](#consumers)) render the dates at build time from their committed, expiry-filtered copy of the JSON feed. The former runtime HTMX fetch against the Vercel fragment backend is deprecated; any site still on it should migrate per the rollout plan referenced above.
 
 ## Maintaining training dates
 
@@ -201,8 +249,9 @@ source of truth). To change dates:
 2. Run `ruby scripts/validate_trainings.rb` and `ruby scripts/generate_subtle_ads.rb`.
 3. Open a PR. CI re-validates and checks the generated fragment is fresh.
 4. On merge: GitHub Pages republishes `/api/trainings.json`; Vercel redeploys the
-   legacy htmx fragment; consumer sites (arc42.de, …) pull the JSON weekly
-   (Mon 04:17 UTC), immediately if the `CONSUMER_DISPATCH_TOKEN` secret is set
+   deprecated htmx fragment; the [consumer sites](#consumers) pull the JSON
+   weekly (Monday mornings UTC, staggered crons), immediately if the
+   `CONSUMER_DISPATCH_TOKEN` secret is set
    (fine-grained PAT, Contents read/write on the consumer repos), or on demand
    via their `Refresh training dates` workflow_dispatch button.
 
