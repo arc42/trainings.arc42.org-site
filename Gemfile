@@ -12,3 +12,7 @@ group :jekyll_plugins do
   gem "jekyll-seo-tag"
   gem "webrick"
 end
+
+group :test do
+  gem "html-proofer"
+end

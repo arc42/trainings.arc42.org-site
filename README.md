@@ -12,7 +12,24 @@ All training dates are maintained in a single HTML file ([`/_includes/_subtle-ad
 
 - A static Jekyll include on trainings.arc42.org
 - A backend API used by other sites (served via Vercel)
- 
+
+## Local development
+
+Everything runs in Docker — no local Ruby/bundler needed. `make` (or `make help`)
+lists all targets; the ones you need day to day:
+
+| Target | What it does |
+| --- | --- |
+| `make dev` | Start the dev server with live reload at <http://localhost:4000> (not `0.0.0.0:4000`) |
+| `make site` | Build the static site into `_site/` |
+| `make check-links` | Run html-proofer over the built `_site` (internal links, images, HTML) |
+| `make stop` | Stop and remove the running dev container |
+| `make clean` | Remove `_site/`, Jekyll caches and the Docker volumes |
+| `make install` | Re-resolve gems after editing the `Gemfile` (rewrites `Gemfile.lock`) |
+
+`make dev` refuses to start if another container already holds port 4000 — that
+is usually a dev server from a sibling arc42 site repo; stop that one first.
+
 ## Updating Training Dates (requires write access)
 
 To change or add training dates:
