@@ -1,29 +1,75 @@
 /* ==========================================================================
    NOTICE TEXT BLOCKS
-   ========================================================================== */
 
-/**
+   Five variants used to mean five tinted backgrounds — five near-white washes
+   in five hues, plus a resting `box-shadow: 0 1px 1px rgba(...)` on each. That
+   is both halves of what DESIGN.md §2.3 forbids: tint proliferation past the
+   three-surface cap, and a fuzzy resting shadow.
+
+   One surface now carries all five (--surface-1, the site's card tint) and the
+   variant is announced the way DESIGN.md §4 specifies a callout: a pinned icon
+   in the top-right corner plus ink matched to the variant. Icon *and* ink, so
+   colour never carries the meaning alone (DESIGN.md §2.4) — and the notice says
+   what it is in words on top of that.
+
+   No side rail: a thick coloured stripe down one edge is neither what §4
+   specifies nor what any sibling ships, and it is the single most overused
+   admonition cliché going.
+
+   Measured on --surface-1 #f5eff2:
+     --ink               9.08:1   body copy in every variant
+     --deep              8.00:1   primary / info ink
+     --arc42-coral-deep  4.96:1   danger ink
+     --arc42-green-ink   6.44:1   success ink
+     --arc42-amber-ink   9.72:1   warning ink
+   Every icon is a non-text graphic that duplicates the heading, so 1.4.11 does
+   not bind it; all five clear 4.5:1 anyway, being the same inks as above.
+
  *  Default Kramdown usage (no indents!):
  *  <div class="notice" markdown="1">
  *  #### Headline for the Notice
  *  Text for the notice
  *  </div>
- */
+   ========================================================================== */
 
-@mixin notice($notice-color) {
+@mixin notice($ink, $icon: none) {
+  position: relative;
   margin: 2em 0 !important;  /* override*/
-  padding: 1em;
-  color: $text-color;
+  padding: 1em 1.25em;
+  color: var(--ink);
   font-family: $global-font-family;
   font-size: $type-size-6 !important;
+  text-align: left;
   text-indent: initial; /* override*/
-  background-color: mix($background-color, $notice-color, $notice-background-mix);
-  border-radius: $border-radius;
-  box-shadow: 0 1px 1px rgba($notice-color, 0.25);
+  background-color: var(--surface-1);
+  border-radius: var(--radius);
+  border: 0;
+  box-shadow: none;
+
+  /* The pinned icon, top-right (DESIGN.md §4, Callouts). aria-hidden by
+     construction — a generated-content glyph is not exposed to a screen
+     reader, and the notice's own words already carry the meaning. */
+  @if $icon != none {
+    padding-right: 3em;
+
+    &::after {
+      content: $icon;
+      position: absolute;
+      top: 0.85em;
+      right: 0.9em;
+      color: $ink;
+      font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", FontAwesome;
+      font-weight: 900;
+      font-size: 1.1em;
+      line-height: 1;
+      pointer-events: none;
+    }
+  }
 
   h4 {
     margin-top: 0 !important; /* override*/
     margin-bottom: 0.75em;
+    color: $ink;
     line-height: inherit;
   }
 
@@ -46,19 +92,19 @@
   }
 
   a {
-    color: mix(#000, $notice-color, 10%);
+    color: $ink;
 
     &:hover {
-      color: mix(#000, $notice-color, 50%);
+      color: $band;
     }
   }
 
   @at-root #{selector-unify(&, "blockquote")} {
-    border-left-color: mix(#000, $notice-color, 10%);
+    border-left-color: $ink;
   }
 
   code {
-    background-color: mix($background-color, $notice-color, $code-notice-background-mix)
+    background-color: var(--surface-2);
   }
 
 	pre code {
@@ -72,38 +118,52 @@
   }
 }
 
-/* Default notice */
+/* Default notice — no icon: it announces nothing in particular. */
 
 .notice {
-  @include notice($light-gray);
+  @include notice($deep);
 }
 
 /* Primary notice */
 
 .notice--primary {
-  @include notice($primary-color);
+  @include notice($deep, "\f08d"); /* thumbtack */
 }
 
-/* Info notice */
+/* Info notice — and the site's one pinned note.
+
+   THE pinned-note shadow (DESIGN.md §2.3): `3px 3px 0 0 <site deep hue>`, zero
+   blur, zero spread, reserved for annotation-style elements pinned *onto* the
+   page and never for headings, cards or containers at rest.
+
+   This site has exactly one element of that kind, and this is it: the "Please
+   note: in case you contact us" block on the home page — a note about the
+   section it sits in, not part of the section's content. It is the closest
+   thing here to docs' `arc42-help`, which is the family's normative carrier of
+   the shadow (DESIGN.md §4, Callouts). The other four notice variants are
+   status messages, not annotations, and stay flat; the timeline cards are
+   cards, which the rule names explicitly. Nothing else on the site qualifies,
+   so nothing else gets it. */
 
 .notice--info {
-  @include notice($info-color);
+  @include notice($deep, "\f05a"); /* info-circle */
+  box-shadow: var(--pinned-note-shadow);
 }
 
 /* Warning notice */
 
 .notice--warning {
-  @include notice($warning-color);
+  @include notice($arc42-amber-ink, "\f071"); /* warning triangle — 9.72:1 */
 }
 
 /* Success notice */
 
 .notice--success {
-  @include notice($success-color);
+  @include notice($arc42-green-ink, "\f058"); /* circle-check — 6.44:1 */
 }
 
 /* Danger notice */
 
 .notice--danger {
-  @include notice($danger-color);
+  @include notice($arc42-coral-deep, "\f06a"); /* exclamation-circle — 4.96:1 */
 }

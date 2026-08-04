@@ -1,18 +1,102 @@
-/*
-Put your font-css here. The one given below is just an example.
-Remember to include the license for the font, if required by the license.
-The Great Vibes font, included here as an example, requires no naming of the font and not giving the license,
-but many other fonts require that.
-I recommend to use google-webfonts-helper to download and self-host fonts: https://gwfh.mranftl.com/fonts.
-Put the css you get there in this file, include the downloaded files in "/assets/fonts" and then apply the font
-to any text you like.
-*/
+// ============================================================================
+// Self-hosted webfonts — arc42 family constant #1 (meta BRAND.md → Typography).
+//
+// Libre Caslon Text (headings, 400/700) over Atkinson Hyperlegible Next (body
+// and every UI control). Two faces, never a third; a serif never enters a
+// control (the Two Voices Rule, DESIGN.md §2.1).
+//
+// Served from /assets/fonts/ rather than a font CDN: a third-party font hop is
+// both a render-blocking dependency and a privacy liability on a site that
+// carries an imprint. Six woff2 files, ~107 KB total.
+//
+// Both families are SIL OFL 1.1; the licences ship next to them in
+// assets/fonts/OFL-*.txt, as the licence requires.
+//
+// Subsets are latin and latin-ext only. `unicode-range` means a reader who
+// never hits a latin-ext codepoint never downloads that file — but this site
+// does need latin-ext, for names like Kröner and Zürich.
+//
+// Provenance: byte-identical copies of docs.arc42.org-site/assets/fonts/, which
+// BRAND.md names as the family's reference implementation (sha256 verified).
+// The rules below are docs' `_sass/_fonts.scss`, unchanged except for this
+// header — deliberately, so the two sites cannot drift apart.
+//
+// This file replaced the OneFlow theme's Great Vibes demo face, which was a
+// third face from no arc42 palette and is deleted along with its woff2.
+// ============================================================================
 
-/* great-vibes-regular - latin */
+// ---- Libre Caslon Text — headings ------------------------------------------
+// A static family: 400 and 700 are genuinely different files.
+
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-  font-family: 'Great Vibes';
+  font-family: "Libre Caslon Text";
   font-style: normal;
   font-weight: 400;
-  src: url('/assets/fonts/great-vibes-v18-latin-regular.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+  font-display: swap;
+  src: url("/assets/fonts/libre-caslon-text-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Libre Caslon Text";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/libre-caslon-text-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Libre Caslon Text";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/libre-caslon-text-700-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Libre Caslon Text";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/libre-caslon-text-700-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+// ---- Atkinson Hyperlegible Next — body and UI ------------------------------
+// A variable font: one file per subset covers the whole 400-700 axis, which is
+// why `font-weight` is declared as a range. Requesting 400 and 700 separately
+// from the CDN returns byte-identical files. Italics are synthesised by the
+// browser from the same file — the Braille Institute ships no separate italic
+// for the Next release, which is why no italic face is declared here.
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/assets/fonts/atkinson-hyperlegible-next-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/assets/fonts/atkinson-hyperlegible-next-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }

@@ -3,8 +3,17 @@ title: "arc42 training dates"
 layout: page
 permalink: /
 header:
-  overlay_color: "#d7ecf8"
-  overlay_filter: rgba(15, 80, 180, 0.4)
+  # The hero band. DESIGN.md §2.2's family pattern is a solid band in the
+  # signature hue on the home page; here the photo stays and the band is laid
+  # over it as the deep hue at 0.85, which is the only way a photo/text pair on
+  # this page can carry a *measured* ratio (ADR-0002) instead of a hope: the
+  # lightest composite any photo can produce under it is #89525e, and white on
+  # that is 6.12:1 (on the filter alone, 9.08:1).
+  # It replaces overlay_color #d7ecf8 + overlay_filter rgba(15,80,180,.4) — a
+  # pale blue and a saturated blue, neither in any arc42 palette, sitting on the
+  # site's most-seen surface and clashing with the dusty rose two lines below.
+  overlay_color: "#743442"
+  overlay_filter: rgba(116, 52, 66, 0.85)
   overlay_image: /images/splash/arc42-splash-landingpage.webp
   caption: "Photo credit: [**Thomas Bayer**](https://www.predic8.de/)"
   actions: 

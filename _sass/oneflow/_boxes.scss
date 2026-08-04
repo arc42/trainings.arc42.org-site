@@ -1,3 +1,17 @@
+/* ==========================================================================
+   BOXES
+
+   The home page's contact and license grids. Three changes from the theme's
+   original: the `1.5px solid black` border (black is in no arc42 palette and
+   is the heaviest possible way to draw a box) becomes the box/control hairline
+   tier; the `rgba($primary-color, 0.05)` background becomes --surface-1, so the
+   site has one card surface rather than one per component; and the variants
+   keep their semantic border but stop needing a fill of their own.
+
+   Measured: --ink on --surface-1 9.08:1 · --deep on --surface-1 8.00:1 ·
+   --border on --paper 5.59:1 (non-text, 1.4.11 needs 3).
+   ========================================================================== */
+
 .box-container {
     display: flex;
     flex-wrap: wrap;
@@ -5,35 +19,43 @@
 }
 
 .box {
-    border: 1.5px solid black;
-    border-radius: 5px;
-    background-color: rgba($primary-color, 0.05);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--surface-1);
+    color: var(--ink);
     flex: 1 1 calc(100% - 20px);
-    padding: 10px;
+    padding: 1em 1.25em;
+    text-align: left; /* a box of prose is prose */
+
+    > :last-child {
+        margin-bottom: 0;
+    }
 }
 
+/* Inside the alternating section the card would be lighter than its own
+   background; it steps up to the surface above instead of inventing a tint. */
 .alternative-color .box {
-    background-color: rgba($background-color, 0.05);
+    background-color: var(--paper);
 }
 
 .box--primary {
-    border-color: $primary-color
+    border-color: var(--band);
 }
 
 .box--success {
-    border-color: $success-color
+    border-color: var(--arc42-green-ink);
 }
 
 .box--warning {
-    border-color: $warning-color
+    border-color: var(--arc42-amber);
 }
 
 .box--danger {
-    border-color: $danger-color
+    border-color: var(--arc42-coral-deep);
 }
 
 .box--info {
-    border-color: $info-color
+    border-color: var(--deep);
 }
 
 @media (min-width: 768px) {

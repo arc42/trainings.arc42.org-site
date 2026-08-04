@@ -1,0 +1,62 @@
+/* ==========================================================================
+   DESIGN TOKENS
+
+   ADR-0003's mechanical floor: family values enter a site as CSS custom
+   properties, never as a loose hex literal. The SCSS variables in
+   `skins/_arc42.scss` are the single source; this file publishes them to the
+   cascade so that new rules read `var(--…)` and a later task can retheme a
+   component from one place. (The vendored OneFlow partials still consume the
+   SCSS variables directly — rewriting 1900 lines of upstream theme to
+   `var()` would be churn, not clarity, and the values are the same either way.)
+
+   Every ratio quoted below was measured with the WCAG 2.2 formula, not
+   eyeballed (ADR-0002); the full table is in the T4 report.
+   ========================================================================== */
+
+:root {
+  /* ---- Signature hue: dusty rose (BRAND.md registry, trainings row) ------ */
+  --band: #{$band}; /* masthead fill, primary fills — #fff on it 5.69:1 */
+  --deep: #{$deep}; /* headings, links, borders, hover — 8.92:1 on paper */
+  --band-tint: #{rgba(#fff, 0.9)}; /* the ONLY sanctioned quiet text on the band:
+                                      composites to #f6edef, 4.95:1. rgba(#fff,.82)
+                                      is 4.41:1 and fails — never use it here. */
+
+  /* ---- Surfaces --------------------------------------------------------- */
+  --paper: #{$paper}; /* flat near-white; never #fff behind running prose */
+  --surface-1: #{$surface-1}; /* cards: a training date, a notice, a box, a form group */
+  --surface-2: #{$surface-2}; /* marked surfaces: timeline node, alternating section, footer */
+  --surface-hover: #{$surface-hover}; /* every interactive hover fill */
+
+  /* ---- Ink -------------------------------------------------------------- */
+  --ink: #{$text-color}; /* 10.12:1 on paper, 9.08:1 on --surface-1 */
+  --ink-muted: #{$muted-text-color}; /* 5.60:1 on paper, 5.02:1 on --surface-1 */
+
+  /* ---- Hairlines, two tiers --------------------------------------------- */
+  --hairline: #{$hairline}; /* divider tier — decorative rules only */
+  --hairline-hover: #{$hairline-hover};
+  --border: #{$band}; /* box/control tier — 5.59:1 on paper */
+
+  /* ---- Shared family tokens (BRAND.md), each with a job on this site ----- */
+  --arc42-coral-deep: #{$arc42-coral-deep}; /* errors: sold-out, required marks, .btn--danger */
+  --arc42-amber: #{$arc42-amber}; /* the "few seats left" marker */
+  --arc42-amber-ink: #{$arc42-amber-ink};
+  --arc42-green-wash: #{$arc42-green-wash}; /* registration confirmed */
+  --arc42-green-ink: #{$arc42-green-ink}; /* 6.82:1 on the green wash */
+
+  /* ---- Type ------------------------------------------------------------- */
+  --serif: #{$serif}; /* headings only, 400/700 */
+  --sans: #{$sans-serif}; /* body and every UI control */
+  --mono: #{$monospace};
+
+  /* ---- Metrics ---------------------------------------------------------- */
+  --bar-h: #{$bar-h}; /* height of the sticky masthead band */
+  --measure: #{$measure}; /* reading measure, 65–75ch (DESIGN.md §2.4) */
+  --radius: #{$border-radius};
+
+  /* ---- The two sanctioned shadows --------------------------------------- */
+  /* Static: THE pinned-note shadow — zero blur, zero spread, deep hue.
+     Annotation-style elements pinned onto the page, and nothing else. */
+  --pinned-note-shadow: #{$pinned-note-shadow};
+  /* Dynamic: hover-lift, and it is the only one. */
+  --hover-lift-shadow: #{$hover-lift-shadow};
+}

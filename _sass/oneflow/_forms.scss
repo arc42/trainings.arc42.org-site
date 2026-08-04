@@ -1,0 +1,247 @@
+/* ==========================================================================
+   FORMS
+
+   The OneFlow theme ships no form vocabulary at all — `_reset.scss` normalises
+   inputs and then nothing styles them, so /anmeldung/ and /registration/ were
+   rendering browser-default controls on a themed page. DESIGN.md §4 defines the
+   family vocabulary before any form ships; this is that vocabulary, applied.
+
+   The spec, point by point:
+     · one input/select/textarea rule — single radius, single border token,
+       min-height 44px, `font: inherit` so a control can never fall back to the
+       serif or to 13px Arial (DESIGN.md §2.1, the Two Voices Rule);
+     · a label + required-field convention;
+     · a tokenised focus ring per surface, measured (ADR-0002);
+     · --arc42-coral-deep for required/error, --arc42-green-* for success —
+       wash plus dark ink, never saturated text;
+     · :disabled and pending-submit states;
+     · no glow, no inset, no resting shadow of any kind. DESIGN.md §4 calls the
+       "2016 glow shadow" out by name.
+
+   Measured pairs (all on --paper unless stated):
+     --ink            on --paper   10.12:1   input text
+     --ink-muted      on --paper    5.60:1   placeholder
+     --deep           on --paper    8.92:1   labels, section headings, focus ring
+     --arc42-coral-deep on --paper   5.53:1   the required mark
+     --border(--band) on --paper    5.59:1   the control boundary (1.4.11 needs 3)
+     --arc42-green-ink on --arc42-green-wash 6.82:1   the success page
+   ========================================================================== */
+
+/* The scroll container the form's own script un-hides. Everything below is
+   scoped to it so the rules cannot leak onto, say, the search field. */
+#main_body {
+  max-width: 46rem;
+  margin: 0 auto;
+  /* Forms are read and filled left-to-right; the theme centres all page
+     content, which turns a label into a puzzle about which field it belongs to. */
+  text-align: left;
+}
+
+.registration-form {
+  display: block;
+
+  /* Group headings ("Who registers?", "Participants"). The include emits a bare
+     <strong>; it is a label for the group, so it is set like one. */
+  > strong {
+    display: block;
+    margin: 1.5em 0 0.25em;
+    color: var(--deep); /* 8.92:1 */
+    font-size: $type-size-5;
+    font-weight: 700;
+  }
+
+  label {
+    display: block;
+    margin: 1em 0 0.35em;
+    color: var(--ink); /* 10.12:1 */
+    font-family: $sans-serif;
+    font-size: $type-size-6;
+    font-weight: 700;
+  }
+
+  /* ---- The one control rule ------------------------------------------- */
+  input[type="text"],
+  input[type="email"],
+  select,
+  textarea {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-height: 44px;
+    margin: 0 0 0.75em;
+    padding: 0.55em 0.75em;
+    font: inherit; /* never the serif, never a UA default */
+    font-size: $type-size-5;
+    color: var(--ink);
+    background-color: var(--paper);
+    border: 1px solid var(--border); /* 5.59:1 — the boundary WCAG 1.4.11 asks for */
+    border-radius: var(--radius);
+    box-shadow: none; /* the glow the family spec forbids, off */
+    -webkit-appearance: none;
+    appearance: none;
+
+    &::placeholder {
+      color: var(--ink-muted); /* 5.60:1 — placeholders are hints, not labels */
+      opacity: 1;
+    }
+
+    &:hover {
+      border-color: var(--deep);
+    }
+
+    /* Focus ring #1, the paper ring: --deep at 8.92:1, drawn outside the
+       control so it never sits on top of the border it is announcing. */
+    &:focus-visible {
+      outline: 3px solid var(--deep);
+      outline-offset: 2px;
+      border-color: var(--deep);
+    }
+
+    &:disabled {
+      background-color: var(--surface-1);
+      color: var(--ink-muted);
+      border-color: var(--hairline);
+      cursor: not-allowed;
+    }
+  }
+
+  textarea {
+    min-height: 7em;
+    resize: vertical;
+  }
+
+  /* The native select arrow disappears with `appearance: none`, so it is drawn
+     back in the deep hue rather than left as an invisible affordance. */
+  select {
+    padding-right: 2.25em;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23743442' d='M1.4 0 6 4.6 10.6 0 12 1.4 6 7.4 0 1.4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85em center;
+  }
+
+  /* ---- Required and error states --------------------------------------- */
+  /* The required-field convention here is the literal "*" the include puts in
+     each required placeholder and label, plus the `required` attribute the
+     browser and assistive tech read. It is deliberately *not* a colour: a
+     coloured edge on a resting field would be colour carrying meaning alone
+     (DESIGN.md §2.4), and it would say "error" before the visitor has done
+     anything wrong.
+
+     The error state is a state — a required field the visitor has typed in and
+     left empty or invalid. That is where the family's shared error token gets
+     its form job (BRAND.md → Coral discipline; DESIGN.md §4). `:placeholder-shown`
+     keeps it off a field nobody has touched yet. */
+  input:invalid:not(:placeholder-shown),
+  textarea:invalid:not(:placeholder-shown) {
+    border-color: var(--arc42-coral-deep); /* 5.53:1 on paper */
+    border-width: 2px;
+  }
+
+  /* ---- Section rules ---------------------------------------------------- */
+  /* Replaces three inline `color:CadetBlue; background-color:CadetBlue` rules
+     in the include. CadetBlue #5f9ea0 is a teal, and teal is faq's reserved
+     territory (ADR-0001, no satellite wears another site's hue in any role). */
+  .form-rule {
+    height: 1px;
+    width: 100%;
+    margin: 2em 0 0.5em;
+    border: 0;
+    border-top: 1px solid var(--hairline); /* divider tier */
+  }
+
+  /* ---- Submit row ------------------------------------------------------- */
+  .btn {
+    margin-top: 1em;
+  }
+
+  /* Pending submit. The form posts to Formspark and the browser navigates
+     away, so the window between click and unload is where a second click
+     happens; `aria-busy` is the hook a later inline-validation task can set. */
+  &[aria-busy="true"] {
+    .btn {
+      pointer-events: none;
+      opacity: 0.65;
+    }
+  }
+}
+
+/* The no-JavaScript fallback block: a real message, not a bare heading. */
+noscript {
+  display: block;
+
+  h1 {
+    font-size: $h-size-2;
+  }
+}
+
+/* ==========================================================================
+   Registration outcome pages
+
+   /registration-success/, /anmeldung-erfolg/  — the green pair's job here
+   /registration-fail/,    /anmeldung-fail/    — the coral-deep pair's job here
+
+   Neither introduces a new tinted surface: the family's shared --arc42-green-*
+   pair is a semantic token with a named job, and the failure page uses a rail
+   in the shared error token rather than inventing a fourth site wash. Both
+   pages already say what happened in words; the colour is the second signal.
+   ========================================================================== */
+
+.form-outcome {
+  position: relative;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 1.25em 3.25em 1.25em 1.5em;
+  text-align: left;
+  border-radius: var(--radius);
+
+  /* Pinned icon, top-right — the same callout grammar as the notices
+     (DESIGN.md §4). Icon and words together; the wash is the third signal. */
+  &::after {
+    position: absolute;
+    top: 1.1em;
+    right: 1.1em;
+    font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", FontAwesome;
+    font-weight: 900;
+    font-size: 1.25em;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  &--success {
+    color: var(--arc42-green-ink); /* 6.82:1 on the wash */
+    background-color: var(--arc42-green-wash);
+
+    /* The deep rose would be 6.15:1 here and would pass, but a rose heading on
+       a green wash reads as two unrelated signals. The ink of the surface wins. */
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--arc42-green-ink);
+    }
+
+    &::after {
+      content: "\f058"; /* circle-check */
+      color: var(--arc42-green-ink);
+    }
+  }
+
+  &--fail {
+    color: var(--ink); /* 9.08:1 on --surface-1 */
+    background-color: var(--surface-1);
+
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--arc42-coral-deep); /* 4.96:1 on --surface-1 */
+    }
+
+    &::after {
+      content: "\f06a"; /* exclamation-circle */
+      color: var(--arc42-coral-deep);
+    }
+  }
+}

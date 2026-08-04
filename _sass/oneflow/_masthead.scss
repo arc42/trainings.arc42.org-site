@@ -1,5 +1,20 @@
 /* ==========================================================================
-   MASTHEAD
+   MASTHEAD — the band
+
+   Family constant #2 (DESIGN.md §2.2): a solid saturated fill in the site's
+   signature hue with light text and logo. docs' two-variant pattern is the
+   family reference — a hero band on the home page, a condensed sticky bar
+   everywhere else, both driven by one `--bar-h` token. This theme renders one
+   masthead include on every page and `sticky-masthead: true` is already set, so
+   the condensed bar *is* the masthead here, and the hero band is the page hero
+   below it (see _page.scss). One `--bar-h`, one band, no second component.
+
+   Measured pairs used here (ADR-0002):
+     #ffffff  on --band   5.69:1   nav links, wordmark, logo
+     --paper  on --band   5.59:1   hover fill edge (non-text)
+     #ffffff  on --deep   9.08:1   open dropdown toggle
+   `rgba(255,255,255,.82)`, the family's usual quiet on-band tint, measures
+   4.41:1 on this band and appears nowhere (M1 §8.1).
    ========================================================================== */
 
 .masthead {
@@ -7,9 +22,15 @@
   top: 0;
   left: 0;
   width: 100%;
-  background-color: $background-color;
 
-  border-bottom: 1px solid $border-color;
+  /* The band. Solid — see the masthead-opacity note in _config.yml. */
+  background-color: var(--band);
+  color: #fff;
+
+  /* No border-bottom: against the band, a hairline measures ~1.2:1 and costs a
+     paint to be invisible. The band ends at the band (docs' note, same reason). */
+  border-bottom: 0;
+
   -webkit-animation: $intro-transition;
   animation: $intro-transition;
   -webkit-animation-delay: 0.15s;
@@ -20,7 +41,7 @@
     @include clearfix;
     margin-left: auto;
     margin-right: auto;
-    padding: 1em;
+    padding: 0 1em;
     max-width: 100%;
     display: -webkit-box;
     display: -ms-flexbox;
@@ -28,6 +49,7 @@
     -webkit-box-pack: justify;
     -ms-flex-pack: justify;
     justify-content: space-between;
+    /* Atkinson. The Two Voices Rule keeps the serif out of navigation. */
     font-family: $sans-serif-narrow;
 
     @include breakpoint($x-large) {
@@ -44,8 +66,18 @@
   }
 }
 
+/* The light-on-band logo variant (BRAND.md → Assets). A white wordmark on the
+   band needs no plate behind it; the dark mark would have needed one, and a
+   white box on a coloured band reads as a sticker, not a masthead. */
 .site-logo img {
-  max-height: 4rem;
+  display: block;
+  width: auto;
+  height: 26px;
+  max-height: none;
+
+  @include breakpoint($medium) {
+    height: 30px;
+  }
 }
 
 .site-title {
@@ -54,12 +86,18 @@
   display: flex;
   -ms-flex-item-align: center;
   align-self: center;
-  font-weight: bold;
+  color: #fff; /* 5.69:1 on the band */
+  font-family: $header-font-family; /* the wordmark is a heading, not a control */
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
 .site-subtitle {
   display: block;
   font-size: $type-size-8;
+  /* The one quiet tint the band tolerates: rgba(255,255,255,.90) → #f6edef,
+     4.95:1. Anything lower fails AA here. */
+  color: var(--band-tint);
 }
 
 .masthead__menu {
@@ -82,6 +120,25 @@
     padding: 0;
     clear: both;
     list-style-type: none;
+  }
+}
+
+/* The hamburger and the search glyph. _utilities.scss draws the navicon in
+   $primary-color, which IS the band now — it would have been a 1:1 invisible
+   control. On the band they are white (5.69:1). */
+.masthead {
+  .navicon,
+  .navicon::before,
+  .navicon::after {
+    background: #fff;
+  }
+
+  .close .navicon {
+    background: transparent;
+  }
+
+  .search__toggle {
+    color: #fff;
   }
 }
 

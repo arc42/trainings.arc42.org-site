@@ -15,29 +15,41 @@
   -webkit-box-align: center;
   -ms-flex-align: center;
   align-items: center;
-  min-height: $nav-height;
-  background: $background-color;
+  /* One token governs the height of the band; anything that has to clear it —
+     anchor scroll-margin above all — reads --bar-h too. */
+  min-height: var(--bar-h);
+  /* Transparent: the band behind it is the surface (DESIGN.md §2.2). */
+  background: transparent;
 
   a {
     display: block;
     margin: 0 1rem;
-    color: $masthead-link-color;
+    color: $masthead-link-color; /* #ffffff on the band — 5.69:1 */
     text-decoration: none;
     -webkit-transition: none;
     transition: none;
 
     &:hover {
-      color: $masthead-link-color-hover;
+      color: $masthead-link-color-hover; /* stays white; the underline is the state */
     }
 
     &.site-logo {
       margin-left: 0;
-      margin-right: 0.5rem;
+      margin-right: 0.75rem;
     }
 
     &.site-title {
       margin-left: 0;
     }
+  }
+
+  /* Focus ring #2 of the site's pair (DESIGN.md §4, Focus rings): the paper
+     ring is the deep hue, but on the band that measures 1.60:1. White measures
+     5.69:1 here, comfortably past the 3:1 a ring needs. */
+  :focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   img {
@@ -50,8 +62,11 @@
     align-self: center;
     height: $nav-toggle-height;
     border: 0;
+    /* `outline: none` obliges you to apply a ring (DESIGN.md §4) — the
+       :focus-visible rule above is that ring. */
     outline: none;
     background-color: transparent;
+    color: #fff;
     cursor: pointer;
   }
 
@@ -81,8 +96,10 @@
         position: absolute;
         left: 0;
         bottom: 0;
-        height: 4px;
-        background: $primary-color;
+        height: 3px;
+        /* On the band, the reveal must be lighter than the band, not darker:
+           white measures 5.69:1 against it, the deep hue only 1.60:1. */
+        background: #fff;
         width: 100%;
         -webkit-transition: $global-transition;
         transition: $global-transition;
@@ -98,18 +115,20 @@
     }
   }
 
+  /* The overflow menu drops off the band onto paper, so it switches to the
+     paper palette. It carries no shadow: the family sanctions exactly two —
+     the pinned-note (annotations only) and the hover-lift — and a dropdown is
+     neither. A box/control-tier border is what makes it read as a panel. */
   .hidden-links {
     position: absolute;
     top: 100%;
     right: 0;
-    margin-top: 15px;
-    padding: 5px;
-    border: 1px solid $border-color;
+    margin-top: 12px;
+    padding: 4px;
+    border: 1px solid var(--border); /* 5.59:1 on paper */
     border-radius: $border-radius;
-    background: $background-color;
-    -webkit-box-shadow: 0 2px 4px 0 rgba(#000, 0.16),
-      0 2px 10px 0 rgba(#000, 0.12);
-    box-shadow: 0 2px 4px 0 rgba(#000, 0.16), 0 2px 10px 0 rgba(#000, 0.12);
+    background: var(--paper);
+    box-shadow: none;
 
     &.hidden {
       display: none;
@@ -118,11 +137,12 @@
     a {
       margin: 0;
       padding: 10px 20px;
-      font-size: $type-size-5;
+      color: var(--deep); /* 8.92:1 on paper */
+      font-size: $type-size-6;
 
       &:hover {
-        color: $masthead-link-color-hover;
-        background: $navicon-link-color-hover;
+        color: var(--deep);
+        background: var(--surface-hover); /* deep on it: 6.24:1 */
       }
     }
 
@@ -134,7 +154,7 @@
       width: 0;
       border-style: solid;
       border-width: 0 10px 10px;
-      border-color: $border-color transparent;
+      border-color: $band transparent;
       display: block;
       z-index: 0;
     }
@@ -147,14 +167,14 @@
       width: 0;
       border-style: solid;
       border-width: 0 10px 10px;
-      border-color: $background-color transparent;
+      border-color: $paper transparent;
       display: block;
       z-index: 1;
     }
 
     li {
       display: block;
-      border-bottom: 1px solid $border-color;
+      border-bottom: 1px solid var(--hairline); /* divider tier */
 
       &:last-child {
         border-bottom: none;

@@ -6,7 +6,11 @@
 # `jekyll serve`. If you change this file, please restart the server process.
 
 
-oneflow-skin    : "default" # "default", "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+# "arc42" is this site's own skin (_sass/oneflow/skins/_arc42.scss): the family
+# typography pair and the dusty-rose signature hue from meta.arc42.org BRAND.md.
+# The stock OneFlow skins are still selectable and unmodified:
+# "default", "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+oneflow-skin    : "arc42"
 
 # Site Settings
 locale                   : "en-US"
@@ -17,14 +21,20 @@ url                      : "https://trainings.arc42.org" # the base hostname & p
 baseurl                  : # the subpath of your site, e.g. "/blog"
 repository               : "arc42/trainings.arc42.org-site" # GitHub username/repo-name
 teaser                   : # path of fallback teaser image, e.g. "/assets/images/500x300.png"
-logo                     : "/images/arc42-site-logo.webp" # Site logo displayed in the masthead
+logo                     : "/images/arc42-logo-white.svg" # Site logo displayed in the masthead.
+                                # The light-on-band variant (BRAND.md → Assets: "Variants needed
+                                # per site: dark (on paper) and light (on band)"). The old
+                                # arc42-site-logo.webp is the dark-on-white mark and is unreadable
+                                # on a saturated band; it stays in /images for other uses.
 show-popup               : true # set to false if you don't need / want to show a cookie-banner / cdn-usage popup.
                                 # Edit the popup itself in the respective /includes file
 masthead_title           : " "  # Overrides the website title displayed in the masthead, use " " for no title
 sticky-masthead          : true # if true, masthead/navigation bar will stay visible when the user scrolls down.
                                 # if false, it will move out of sight when scrolling.
-masthead-opacity         : 0.85 # set to any value between 0 and 1.
-                                # 0.8-0.9 is a good recommended starting point. Only relevant if masthead is sticky.
+masthead-opacity         : 1    # MUST stay 1. DESIGN.md §2.2 makes the masthead a *solid* fill in
+                                # the signature hue, and the measured 5.69:1 of white-on-band only
+                                # holds if the band is opaque; at 0.85 the page scrolling underneath
+                                # composites into it and the ratio becomes whatever the content is.
 background-image         : # '/assets/images/header.webp' # Remove / out-comment, if you don't want a background image
 background-image-mobile  : # '/assets/images/header.webp' # If you want a different (e.g upright) background image for mobile
 background-image-overlay : rgba(255, 255, 255, 0.5) # Set overlay for the background image

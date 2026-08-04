@@ -11,9 +11,12 @@ html {
 body {
   margin: 0;
   padding: 0;
-  color: $text-color;
-  font-family: $global-font-family;
-  line-height: 1.5;
+  /* Flat near-white paper, never pure #fff behind running prose
+     (DESIGN.md §2.3). --ink on it measures 10.12:1. */
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: $global-font-family; /* Atkinson Hyperlegible Next */
+  line-height: 1.6;
 
   &.overflow--hidden {
     /* when primary navigation is visible, the content in the background won't scroll */
@@ -21,16 +24,31 @@ body {
   }
 }
 
+/* Headings are the serif voice and nothing else is (DESIGN.md §2.1, the Two
+   Voices Rule). Libre Caslon Text, 400/700 only. Ink is the deep hue —
+   8.92:1 on paper, 8.00:1 on --surface-1 — which is what M1 derived it for. */
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-  margin: 2em 0 0.5em;
+  margin: 1.6em 0 0.5em;
   line-height: 1.2;
+  color: var(--deep);
   font-family: $header-font-family;
-  font-weight: bold;
+  font-weight: 700;
+
+  /* Anchors must clear the sticky band, or every /#training-dates link lands
+     with its heading hidden underneath it. One token, from _tokens.scss. */
+  scroll-margin-top: calc(var(--bar-h) + 1rem);
+}
+
+/* h5 and h6 share h5's size; they separate by weight and tracking instead of by
+   another 0.5px of type size. */
+h6 {
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 h1 {
@@ -111,7 +129,7 @@ blockquote {
   padding-left: 1em;
   padding-right: 1em;
   font-style: italic;
-  border-left: 0.25em solid $primary-color;
+  border-left: 0.25em solid var(--border); /* box tier — 5.59:1 on paper */
 
   cite {
     font-style: italic;
@@ -123,9 +141,16 @@ blockquote {
   }
 }
 
-/* links */
+/* links
+   Rest --deep 8.92:1 on paper · hover --band 5.59:1 · visited #89525e 6.01:1.
+   Hover moves *lighter*, which is unusual, but it is this site's own ladder and
+   the underline thickens at the same time, so the state never rests on colour
+   alone (DESIGN.md §2.4). */
 
 a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+
   &:focus {
     @extend %tab-focus;
   }
@@ -136,6 +161,7 @@ a {
 
   &:hover {
     color: $link-color-hover;
+    text-decoration-thickness: 2px;
     outline: 0;
   }
 }
@@ -160,13 +186,14 @@ pre {
   overflow-x: auto; /* add scrollbars to wide code blocks*/
 }
 
-/* horizontal rule */
+/* horizontal rule — the divider tier of the two hairline tiers (DESIGN.md
+   §2.3). Decorative only: it never carries a boundary on its own. */
 
 hr {
   display: block;
-  margin: 1em 0;
+  margin: 2em 0;
   border: 0;
-  border-top: 1px solid $border-color;
+  border-top: 1px solid var(--hairline);
 }
 
 /* lists */
@@ -337,6 +364,12 @@ input[type="submit"],
 
 /*
 Popup / cookie banner
+
+Was $danger-color on a fuzzy drop shadow. Two problems: the site's error colour
+announcing a CDN notice means "error" now means nothing (DESIGN.md §2.4 —
+colour never carries meaning alone, and never two meanings at once), and a
+resting blurred shadow is the one thing the surface doctrine bans outright. It
+is now the deep hue with a hard top edge; white on it measures 9.08:1.
 */
 
 #cookie-banner {
@@ -345,12 +378,18 @@ Popup / cookie banner
     bottom: 0;
     left: 0;
     right: 0;
-    box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.2);
-    color: white;
-    background-color: $danger-color;
-    padding: 10px;
-    border-radius: 5px;
+    box-shadow: none;
+    border-top: 3px solid var(--band);
+    color: #fff;
+    background-color: var(--deep);
+    padding: 0.75em 1em;
+    border-radius: 0;
     z-index: 999;
-    font-size: 70%;
+    font-size: $type-size-7;
     text-align: center;
+
+    a {
+      color: #fff;
+      text-decoration: underline;
+    }
 }

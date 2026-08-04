@@ -1,5 +1,22 @@
 /* ==========================================================================
    BUTTONS
+
+   Atkinson, always: a serif never enters a UI control (DESIGN.md §2.1).
+
+   The five colour variants are mapped onto colours the family actually owns
+   (see skins/_arc42.scss); no sixth hue can enter the site through a button.
+   Every fill is measured against the label the yiq-contrasted() mixin picks:
+
+     .btn--primary        #ffffff on --band   5.69:1   hover #fff on --deep 9.08:1
+     .btn--info           #ffffff on --deep   9.08:1
+     .btn--success        #ffffff on #1b5e20  7.87:1
+     .btn--warning        #4a3a0a on #ffc95c  7.24:1   (forced — see below)
+     .btn--danger         #ffffff on #c22b47  5.63:1
+     .btn--inverse        --deep   on --paper 8.92:1
+     .btn--light-outline  #ffffff on --deep   9.08:1   (hero band only)
+
+   Hover-lift is the only dynamic shadow the family sanctions (DESIGN.md §2.3)
+   and this is where it lives.
    ========================================================================== */
 
 /*
@@ -10,10 +27,12 @@
   /* default */
   display: inline-block;
   margin-bottom: 0.25em;
-  padding: 0.5em 1em;
+  padding: 0.6em 1.2em;
+  min-height: 44px; /* the family's control minimum (DESIGN.md §4, Forms) */
   font-family: $sans-serif;
   font-size: $type-size-6;
-  font-weight: bold;
+  font-weight: 700;
+  line-height: 1.5;
   text-align: center;
   text-decoration: none;
   border-width: 0;
@@ -31,7 +50,7 @@
   /* button colors */
   $buttoncolors:
   (primary, $primary-color),
-  (inverse, #fff),
+  (inverse, $paper),
   (light-outline, transparent),
   (success, $success-color),
   (warning, $warning-color),
@@ -42,21 +61,64 @@
     &--#{$buttoncolor} {
       @include yiq-contrasted($color);
       @if ($buttoncolor == inverse) {
-        border: 1px solid $border-color;
+        border: 1px solid $band; /* box/control tier — 5.59:1 on paper */
+        color: $deep; /* 8.92:1 on paper — beats yiq's neutral pick */
       }
 
         @if ($buttoncolor == light-outline) {
           border: 1px solid #fff;
+          color: #fff; /* lives on the hero band; 6.12:1 worst case */
         }
 
       &:visited {
         @include yiq-contrasted($color);
+        @if ($buttoncolor == inverse) { color: $deep; }
+        @if ($buttoncolor == light-outline) { color: #fff; }
       }
 
       &:hover {
-        @include yiq-contrasted(mix(#000, $color, 20%));
+        /* Hover goes to the site's deep hue for the two hue-carrying variants
+           rather than to a generic 20%-black mix: mixing black into the band
+           produced an off-palette maroon that appears nowhere else. */
+        @if ($buttoncolor == primary) {
+          background-color: $deep;
+          color: #fff; /* 9.08:1 */
+        } @else if ($buttoncolor == inverse) {
+          background-color: $surface-hover;
+          color: $deep; /* 6.24:1 on --surface-hover */
+        } @else if ($buttoncolor == light-outline) {
+          background-color: rgba(#fff, 0.14);
+          color: #fff;
+        } @else {
+          @include yiq-contrasted(mix(#000, $color, 20%));
+        }
       }
     }
+  }
+
+  /* Amber is light: yiq() would put the theme's neutral near-black on it. The
+     family's own ink for amber is #4a3a0a (7.24:1), and BRAND.md names it. */
+  &--warning,
+  &--warning:visited,
+  &--warning:hover {
+    color: $arc42-amber-ink;
+  }
+
+  /* THE hover-lift — the one sanctioned dynamic shadow. Nothing on this site
+     carries a resting shadow; a button that has been pointed at carries this
+     one, and only while it is pointed at. */
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--hover-lift-shadow);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    @extend %tab-focus;
   }
 
   /* fills width of parent container */
@@ -70,11 +132,13 @@
   }
 
   /* disabled */
-  &--disabled {
+  &--disabled,
+  &:disabled {
     pointer-events: none;
     cursor: not-allowed;
     filter: alpha(opacity=65);
     box-shadow: none;
+    transform: none;
     opacity: 0.65;
   }
 
@@ -91,5 +155,17 @@
   /* small button */
   &--small {
     font-size: $type-size-7;
+    min-height: 0;
+  }
+}
+
+/* Full prefers-reduced-motion coverage is a family constant (DESIGN.md §2.4):
+   the lift keeps its shadow — that is the affordance — and loses the move. */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn:hover,
+  .btn:active {
+    transform: none;
+    transition: none;
   }
 }

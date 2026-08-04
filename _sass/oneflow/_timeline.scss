@@ -23,24 +23,32 @@
    eyeballed (ADR-0002); ratios recorded next to each pair below.
    -------------------------------------------------------------------------- */
 
+/* T4 note: T3 shipped this block as six hex literals holding M1's values,
+   flagged in its report (concern 7) as "placeholders by agreement — when T4
+   introduces the site-level tokens, the clean move is to redefine these in
+   terms of those, not to touch the rules". That is what happened. The values
+   are unchanged and every measured pair in T3's report still holds; the
+   literals are gone, so the site has exactly one definition of its hue
+   (skins/_arc42.scss) and this partial can no longer drift away from it. */
+
 /* signature hue pair (BRAND.md → Signature hues, row trainings.arc42.org) */
-$timeline-accent: #a04c5e !default; /* band / dusty rose — ruler, arrows, CTA fill */
-$timeline-deep: #743442 !default; /* deep — course titles, node ring, hover, focus */
+$timeline-accent: $band !default; /* #a04c5e — ruler, arrows, CTA fill */
+$timeline-deep: $deep !default; /* #743442 — course titles, node ring, hover, focus */
 
 /* shared family tokens, each with a visible job here (DESIGN.md §3) */
-$timeline-alert: #c22b47 !default; /* --arc42-coral-deep: the sold-out line */
-$timeline-amber: #ffc95c !default; /* --arc42-amber: the "few seats left" marker */
-$timeline-amber-ink: #4a3a0a !default; /* --arc42-amber-ink: ink on that marker */
+$timeline-alert: $arc42-coral-deep !default; /* the sold-out line */
+$timeline-amber: $arc42-amber !default; /* the "few seats left" marker */
+$timeline-amber-ink: $arc42-amber-ink !default; /* ink on that marker */
 
 /* neutrals: family paper + the theme's existing ink ramp */
-$timeline-paper: #fcfdff !default; /* flat near-white, never pure #fff */
+$timeline-paper: $paper !default; /* #fcfdff — flat near-white, never pure #fff */
 $timeline-ink: $text-color !default; /* #3d4144 */
 $timeline-ink-muted: $muted-text-color !default; /* #646769 */
 
 /* wash / border ladder — exactly the three sanctioned steps (BRAND.md) */
-$timeline-wash-calm: 8% !default;
-$timeline-wash-active: 14% !default;
-$timeline-border-rest: 35% !default;
+$timeline-wash-calm: $wash-calm !default;
+$timeline-wash-active: $wash-active !default;
+$timeline-border-rest: $border-wash-rest !default;
 
 /* --------------------------------------------------------------------------
    Geometry — 1:1 with arc42.de
@@ -56,12 +64,17 @@ $timeline-border-rest: 35% !default;
   --timeline-ink-muted: #{$timeline-ink-muted};
   --timeline-alert: #{$timeline-alert};
 
-  /* tinted surfaces, with their job descriptions (DESIGN.md §2.3 caps):
-     1. card    — the surface a single training date sits on
-     2. node    — the fill of the circle that marks the date on the ruler
+  /* Tinted surfaces. T3 counted three here; site-wide they are not three new
+     ones — the card wash IS --surface-1 and the node fill IS --surface-2, the
+     same two ladder steps every other component on the site now uses, and the
+     urgent marker is the shared amber token's one job. Site total after T4:
+     three tinted surfaces, exactly the DESIGN.md §2.3 cap, and no code wash
+     (this site renders no code). Aliases, not new values:
+     1. card    — the surface a single training date sits on   (= --surface-1)
+     2. node    — the circle that marks the date on the ruler  (= --surface-2)
      3. urgent  — the "only a few seats left" marker (the amber tip job) */
-  --timeline-card: #{mix($timeline-accent, $timeline-paper, $timeline-wash-calm)}; /* #f5eff2 */
-  --timeline-node: #{mix($timeline-accent, $timeline-paper, $timeline-wash-active)}; /* #efe4e8 */
+  --timeline-card: var(--surface-1); /* #f5eff2 */
+  --timeline-node: var(--surface-2); /* #efe4e8 */
   --timeline-urgent-wash: #{mix($timeline-amber, $timeline-paper, $timeline-wash-active)}; /* #fcf6e8 */
   --timeline-urgent-border: #{mix($timeline-amber, $timeline-paper, $timeline-border-rest)};
   --timeline-urgent-ink: #{$timeline-amber-ink};
@@ -155,6 +168,9 @@ $timeline-border-rest: 35% !default;
     border-radius: 6px;
     color: var(--timeline-ink); /* #3d4144 on #f5eff2 = 9.08:1 ✓ */
     overflow-wrap: break-word;
+    /* A card is a card, not centred prose — .page__content centres everything
+       by default and would have centred fourteen paragraphs of course copy. */
+    text-align: left;
 
     p {
       margin: 0 0 0.65em;
@@ -170,12 +186,49 @@ $timeline-border-rest: 35% !default;
      ------------------------------------------------------------------------ */
 
   /* Course name. arc42.de calls this `.blue-head`; renamed, because a class
-     named for navy has no business on the dusty-rose site. */
+     named for navy has no business on the dusty-rose site.
+
+     T4 promoted the element from <strong> to <h2> (T3 concern 4: fourteen
+     unlabelled regions, and the page's heading outline stopped dead at
+     <h1>Training dates</h1>). <h2> and not <h3>, because these cards are the
+     direct children of that <h1> — the same relationship the License section
+     already expresses with <h1>License</h1> → <h2>The arc42 template</h2>.
+     A heading needs its heading resets back: the theme gives h2 a 1.6em top
+     margin and, inside .page__content, a bottom rule — neither belongs on a
+     card title. */
+  h2.course-title,
   .course-title {
     display: block;
     margin: 0.15em 0 0.5em;
+    padding-bottom: 0;
+    border-bottom: 0;
     color: var(--timeline-deep); /* #743442 on #f5eff2 = 8.00:1 ✓ */
+    font-family: $header-font-family; /* Libre Caslon Text 700 */
+    font-size: $h-size-3;
+    font-weight: 700;
     line-height: 1.3;
+  }
+
+  /* Body links inside a card. T3 left these on the theme's old teal-blue
+     ($link-color was mix(#000, #3b9cba, 20%) = #2f7d95) and flagged it: two
+     link colours coexisted on the home page. The skin moved $link-color to
+     --deep site-wide, which fixes it; these rules make the card's own values
+     explicit and measured rather than inherited by luck. */
+  .content a:not(.button) {
+    color: var(--timeline-deep); /* 8.00:1 on the card */
+
+    &:visited {
+      color: var(--timeline-deep);
+    }
+
+    &:hover {
+      color: var(--timeline-accent); /* 5.02:1 on the card */
+    }
+
+    &:focus-visible {
+      outline: 3px solid var(--timeline-deep); /* 8.00:1 — ≥3 ✓ */
+      outline-offset: 2px;
+    }
   }
 
   /* Price / credits footnotes. */
@@ -241,6 +294,18 @@ $timeline-border-rest: 35% !default;
     &:focus {
       color: var(--timeline-paper); /* white-ish on deep = 9.08:1 ✓ */
       background-color: var(--timeline-deep);
+    }
+
+    /* THE hover-lift, the same one .btn carries — the site's only dynamic
+       shadow (DESIGN.md §2.3). */
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--hover-lift-shadow);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: none;
     }
 
     &:focus-visible {
@@ -310,14 +375,20 @@ $timeline-border-rest: 35% !default;
   }
 }
 
-/* The lead-in paragraph above the timeline. */
+/* The lead-in paragraph above the timeline. T3 hard-coded the 68ch it derived;
+   it is the site-wide --measure token now, same value, one definition. */
 .timeline-lead {
-  max-width: 68ch; /* family reading measure 65–75ch (DESIGN.md §2.4) */
-  color: $timeline-ink;
+  max-width: var(--measure); /* family reading measure 65–75ch (DESIGN.md §2.4) */
+  margin-left: auto;
+  margin-right: auto;
+  color: var(--ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .timeline .button {
+  .timeline .button,
+  .timeline .button:hover,
+  .timeline .button:active {
     transition: none;
+    transform: none;
   }
 }

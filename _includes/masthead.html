@@ -5,7 +5,13 @@
     <div class="masthead__menu">
       <nav id="site-nav" class="greedy-nav">
         {% unless logo_path == empty %}
-          <a class="site-logo" href="{{ '/' | relative_url }}"><img src="{{ logo_path | relative_url }}" alt="{{ site.masthead_title | default: site.title }}"></a>
+          {%- comment -%}
+            alt is the accessible name of the home link. It used to be
+            site.masthead_title, which _config.yml sets to " " to suppress the
+            wordmark next to the logo — so the only link in the band announced
+            itself as a single space.
+          {%- endcomment -%}
+          <a class="site-logo" href="{{ '/' | relative_url }}"><img src="{{ logo_path | relative_url }}" alt="{{ site.title }} home"></a>
         {% endunless %}
         <a class="site-title" href="{{ '/' | relative_url }}">
           {{ site.masthead_title | default: site.title }}

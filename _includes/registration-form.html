@@ -12,8 +12,7 @@
      per Email senden,
      oder aber JavaScript einschalten und dann diese Seite im Browser erneut laden.
     <br><br>
-     <a href='mailto:info@arc42.de?subject=[arc42] Anmeldung&body=Ihr Name:%0A%0AFür%20welchen%20Kurs%20melden%20Sie an:%0A-----------------------%0AKursbezeichnung:%0ADatum%20Kursbeginn:%0A%0ATeilnehmende%20Person(en):%0A-----------------------%0AVorname,%20Nachname:%0AEmail:%0A%0ARechnungsadresse:%0A%0A%0A-----------------------%0ABemerkungen:%0A'>
-     <button class='btn btn--primary'>Anmeldung<br>per E-Mail</button></a>
+     <a class="btn btn--primary" href='mailto:info@arc42.de?subject=[arc42] Anmeldung&body=Ihr Name:%0A%0AFür%20welchen%20Kurs%20melden%20Sie an:%0A-----------------------%0AKursbezeichnung:%0ADatum%20Kursbeginn:%0A%0ATeilnehmende%20Person(en):%0A-----------------------%0AVorname,%20Nachname:%0AEmail:%0A%0ARechnungsadresse:%0A%0A%0A-----------------------%0ABemerkungen:%0A'>Anmeldung<br>per E-Mail</a>
 
 </noscript>
 {% else %}
@@ -22,8 +21,7 @@
      Currently, it seems to be deactivated... You may send your registration via email, or
 activate JavaScript and reload this page.
     <br><br>
-     <a href='mailto:info@arc42.de?subject=[arc42] registration&body=your name :%0A%0AFür%20which%20course%20?%0AEmail:%0A%0Abilling adress:%0A%0A%0A-----------------------%0Aremarks:%0A'>
-     <button class='btn btn--primary'>Registration<br>via E-Mail</button></a>
+     <a class="btn btn--primary" href='mailto:info@arc42.de?subject=[arc42] registration&body=your name :%0A%0AFür%20which%20course%20?%0AEmail:%0A%0Abilling adress:%0A%0A%0A-----------------------%0Aremarks:%0A'>Registration<br>via E-Mail</a>
 
 </noscript>
 {% endif %}
@@ -32,22 +30,23 @@ activate JavaScript and reload this page.
 
 <form action="https://submit-form.com/AIKiYyJP"
       data-botpoison-public-key="pk_8e195655-38ed-4eec-a445-a1e0d68a488d"
+      class="registration-form"
       id="arc42anmeldung">
 
 <strong>{% if include.lang == "de" %}Wer meldet an?{% else %}Who registers?{% endif %}</strong>
   <br>
 
 {% if include.lang == "de" %}
-<input type="text" id="nachname" name="Nachname" placeholder="* Nachname" size="20" required  />
-<input type="text" id="vorname" name="Vorname" placeholder="Vorname" size="20"  />
+<input type="text" id="nachname" name="Nachname" aria-label="Nachname (Pflichtfeld)" placeholder="* Nachname" size="20" required  />
+<input type="text" id="vorname" name="Vorname" aria-label="Vorname" placeholder="Vorname" size="20"  />
 
 <label for="email">E-Mail (für Anmeldebestätigung und Ähnliches)</label>
 <input type="email" id="email" name="Email" placeholder="* E-Mail" required multiple  />
 
 <label for="kurs">Für welchen Kurs melden Sie an?</label>
 {% else %}
-<input type="text" id="nachname" name="last name" placeholder="* last name" size="20" required  />
-<input type="text" id="vorname" name="first name" placeholder="first name" size="20"  />
+<input type="text" id="nachname" name="last name" aria-label="Last name (required)" placeholder="* last name" size="20" required  />
+<input type="text" id="vorname" name="first name" aria-label="First name" placeholder="first name" size="20"  />
 
 <label for="email">E-Mail </label>
 <input type="email" id="email" name="Email" placeholder="* E-Mail" required multiple  />
@@ -90,34 +89,34 @@ activate JavaScript and reload this page.
   <option value="sonstige">{% if include.lang == "de" %}Sonstige{% else %}other{% endif %}</option>
 </select>
 
-<hr style="height:2px; width:100%; border-width:0; color:CadetBlue; background-color:CadetBlue">
+<hr class="form-rule">
 
 <strong>{% if include.lang == "de" %}Teilnehmende Person(en){% else %}Participants{% endif %}</strong>
 <br>
 
 {% if include.lang == "de" %}
 Falls Sie mehr als eine Person anmelden, schreiben Sie die weiteren Namen als Bemerkung.
-<input type="text" id="lastnameTN" name="NachnameTN" placeholder="Nachname teilnehmende Person"   />
-<input type="text" id="firstnameTN" name="VornameTN" placeholder="Vorname teilnehmende Person"  />
+<input type="text" id="lastnameTN" name="NachnameTN" aria-label="Nachname teilnehmende Person" placeholder="Nachname teilnehmende Person"   />
+<input type="text" id="firstnameTN" name="VornameTN" aria-label="Vorname teilnehmende Person" placeholder="Vorname teilnehmende Person"  />
 
-<label for="email">E-Mail (teilnehmende Person(en), falls abweichend zu obiger E-Mail)</label>
+<label for="emailTN">E-Mail (teilnehmende Person(en), falls abweichend zu obiger E-Mail)</label>
 <input type="email" id="emailTN" name="EmailTN" placeholder="E-Mail TN" />
 
 <label for="ra">Rechnungsadresse</label>
 <textarea id="ra" name="Rechnungsadresse" placeholder="* Diese Adresse benötigen wir zur Abrechnung" required ></textarea>
 {% else %}
 In case you register more than one person, please state their names in the comments.
-<input type="text" id="lastnameTN" name="NachnameTN" placeholder="last name of participant"   />
-<input type="text" id="firstnameTN" name="VornameTN" placeholder="first name of participant"  />
+<input type="text" id="lastnameTN" name="NachnameTN" aria-label="Last name of participant" placeholder="last name of participant"   />
+<input type="text" id="firstnameTN" name="VornameTN" aria-label="First name of participant" placeholder="first name of participant"  />
 
-<label for="email">E-Mail (participant)</label>
+<label for="emailTN">E-Mail (participant)</label>
 <input type="email" id="emailTN" name="EmailTN" placeholder="E-Mail participant" />
 
 <label for="ra">Billing address</label>
 <textarea id="ra" name="Billing address" placeholder="* required to produce and send the invoice" required ></textarea>
 {% endif %}
 
-<hr style="height:2px; width:100%; border-width:0; color:CadetBlue; background-color:CadetBlue">
+<hr class="form-rule">
 
 {% if include.lang == "de" %}
 <label for="comments">Bemerkungen (z.B. weitere TN, Bestell-/Auftragsnummer)</label>
@@ -126,7 +125,7 @@ In case you register more than one person, please state their names in the comme
 <label for="comments">Comments (e.g. additional participants, order-numbers or similar)</label>
 <textarea id="comments" name="Comments" placeholder="Comments"></textarea>
 {% endif %}
-<hr style="height:2px; width:100%; border-width:0; color:CadetBlue; background-color:CadetBlue">
+<hr class="form-rule">
 
   <button type="submit" id="submit" class="btn btn--primary" >{% if include.lang == "de" %}Anmeldung absenden{% else %}Send registration{% endif %}</button>
   <input type="button" value="{% if include.lang == "de" %}Zurück{% else %}back{% endif %}" class="btn btn--inverse" onclick="history.back()" style="float: right;">

@@ -1,0 +1,193 @@
+/* ==========================================================================
+   arc42 skin — the family look for trainings.arc42.org
+   ==========================================================================
+
+   Why a skin and not an edit to _variables.scss:
+
+   `assets/css/main.scss` imports the skin *before* `oneflow`, and every value
+   in `oneflow/_variables.scss` carries `!default`. So a skin is the theme's own
+   supported way to repaint it — the vendored theme file stays untouched and
+   `git diff` shows the arc42 palette as one self-contained file instead of
+   scattered through 140 lines of upstream defaults. Switching
+   `_config.yml: oneflow-skin` back to "default" restores the stock theme, which
+   is exactly the reversibility a vendored theme should keep. The nine stock
+   skins are left alone.
+
+   Named `arc42`, not `coral`: it carries the whole family look — the two
+   typefaces and the surface language — not just a hue.
+
+   Sources, all normative, nothing invented here:
+     meta.arc42.org BRAND.md  → signature hues, shared tokens, wash ladder,
+                                typography (family constant #1)
+     meta.arc42.org DESIGN.md → §2 family constants, §4 component specs
+     task-M1-report.md        → the measured dusty-rose pair
+
+   Every text-bearing pair below is measured (ADR-0002); the ratios are recorded
+   next to the declaration and the full table is in the T4 report.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. The palette
+   -------------------------------------------------------------------------- */
+
+/* Signature hue pair — trainings.arc42.org owns dusty rose (BRAND.md registry).
+   Softened from the shared error token #c22b47 in task M1: same coral hue
+   angle, 59% of the chroma, 9.5 ΔE00 away — an alarm colour is the wrong size
+   for a masthead. */
+$band: #a04c5e !default; /* masthead fill, primary fills, rails — white on it 5.69:1 */
+$deep: #743442 !default; /* headings, links, borders, hover, pinned-note shadow — 8.92:1 on paper */
+
+/* Flat near-white paper. Never pure #fff behind running prose (DESIGN.md §2.3).
+   #fcfdff is the family paper: BRAND.md measures the deep hue against it, and
+   the timeline (T3) is already built on it. */
+$paper: #fcfdff !default;
+
+/* Shared family tokens — identical hex on every arc42 site (BRAND.md).
+   The Visible-Token Rule (DESIGN.md §3) says each needs a named job here:
+     coral-deep  → errors: the timeline's sold-out line, the form's :invalid
+                   field state, the registration-failed page, .btn--danger
+     amber pair  → the timeline's "few seats left" marker and the cookie-consent
+                   button
+     green pair  → the registration-succeeded confirmation
+   Bright --arc42-coral #ff5c7c has no job on this site and is deliberately
+   absent rather than declared-and-unused. */
+$arc42-coral-deep: #c22b47 !default;
+$arc42-amber: #ffc95c !default;
+$arc42-amber-ink: #4a3a0a !default;
+$arc42-green-wash: #d9f7d3 !default;
+$arc42-green-ink: #1b5e20 !default;
+
+/* The wash ladder — exactly the three sanctioned steps, no values in between
+   (BRAND.md → Shared tokens; DESIGN.md §2.3). Borders: 35% rest, 50% hover. */
+$wash-calm: 8% !default;
+$wash-active: 14% !default;
+$wash-hover: 25% !default;
+$border-wash-rest: 35% !default;
+$border-wash-hover: 50% !default;
+
+/* The three tinted chrome surfaces this site is allowed (DESIGN.md §2.3 cap),
+   each with its one-line job. Anything that wants a fourth is one of these
+   three with a different job description. */
+$surface-1: mix($band, $paper, $wash-calm) !default; /* #f5eff2 — cards: a training date, a notice, a box, a form group */
+$surface-2: mix($band, $paper, $wash-active) !default; /* #efe4e8 — marked surfaces: timeline node, the alternating home section, the footer */
+$surface-hover: mix($band, $paper, $wash-hover) !default; /* #e5d1d7 — every interactive hover fill */
+
+/* Hairlines, two tiers (DESIGN.md §2.3).
+     $hairline  divider tier — decorative rules only; never the sole carrier of
+                a boundary, so WCAG 1.4.11 does not apply to it.
+     $band      box/control tier — anything that must read as a box or a form
+                control wears the hue itself: 5.59:1 on paper, well past the
+                3:1 that 1.4.11 does require. A 35% wash border measures 1.67:1
+                and is not good enough for an input. */
+$hairline: mix($band, $paper, $border-wash-rest) !default; /* #dcbfc7 */
+$hairline-hover: mix($band, $paper, $border-wash-hover) !default; /* #cea5af */
+
+/* --------------------------------------------------------------------------
+   2. Mapping onto the theme's variables
+   -------------------------------------------------------------------------- */
+
+$background-color: $paper !default;
+$code-background-color: $surface-1 !default;
+$code-background-color-dark: $surface-2 !default;
+$border-color: $hairline !default;
+$form-background-color: $paper !default;
+$footer-background-color: $surface-2 !default;
+
+/* $text-color / $muted-text-color keep the theme's neutral ramp on purpose:
+   #3d4144 (10.12:1 on paper) and #646769 (5.60:1). Both already pass, both are
+   what T3 measured the timeline against, and a rose-tinted ink would be a
+   fourth near-black nobody asked for. */
+
+/* The theme's five semantic slots, mapped onto colours the family actually
+   owns — no sixth hue enters the site through a button variant. */
+$primary-color: $band !default; /* white on it 5.69:1 */
+$info-color: $deep !default; /* the site's second voice — white on it 9.08:1 */
+$success-color: $arc42-green-ink !default; /* white 7.87:1 (emerald #2e9e67 fails, per BRAND.md) */
+$warning-color: $arc42-amber !default; /* amber-ink #4a3a0a on it 7.24:1 */
+$danger-color: $arc42-coral-deep !default; /* white 5.63:1 */
+$focus-color: $deep !default; /* focus ring on paper 8.92:1, on a card 8.00:1 */
+$active-color: $surface-hover !default;
+
+/* Links on light surfaces. Rest is the deep hue, hover is the band — a step
+   *lighter* on hover is unusual, but it is the family's own ladder and it is
+   always paired with an underline, so the state never rests on colour alone. */
+$link-color: $deep !default; /* 8.92:1 on paper, 8.00:1 on a card */
+$link-color-hover: $band !default; /* 5.59:1 on paper, 5.02:1 on a card */
+$link-color-visited: mix(#fff, $deep, 15%) !default; /* #89525e — 6.01:1 on paper */
+
+/* On the band. #ffffff at rest; the quiet tint is rgba(255,255,255,.90) and
+   NOT .82 — .82 composites to #eedfe2 and measures 4.41:1, which fails AA on
+   this band (M1 §8.1). Nothing on this site may use .82 or .78. */
+$masthead-link-color: #ffffff !default; /* 5.69:1 on the band */
+$masthead-link-color-hover: #ffffff !default; /* stays white; the state is the underline, not a dimming */
+$navicon-link-color-hover: $surface-1 !default;
+
+/* Notices lose the tinted-per-variant background entirely (see _notices.scss);
+   these two mixes are what the theme would use for `code` inside one, and are
+   pinned to the ladder so no off-ladder near-white can appear. */
+$notice-background-mix: 100% - $wash-calm !default; /* 8% of the hue */
+$code-notice-background-mix: 100% - $wash-active !default; /* 14% */
+
+/* --------------------------------------------------------------------------
+   3. Typography — family constant #1 (BRAND.md → Typography)
+   -------------------------------------------------------------------------- */
+
+/* Libre Caslon Text, headings only, 400/700. Atkinson Hyperlegible Next for
+   body and every UI control. The fallback order matters: plain Atkinson
+   Hyperlegible before system-ui, so the stack degrades to the right shapes.
+   Faces are declared in oneflow/_fonts.scss and served from /assets/fonts/. */
+$serif: "Libre Caslon Text", Georgia, "Times New Roman", serif !default;
+$sans-serif: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui,
+  -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !default;
+$monospace: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+  "Liberation Mono", monospace !default;
+$sans-serif-narrow: $sans-serif !default;
+
+$global-font-family: $sans-serif !default; /* body + UI */
+$header-font-family: $serif !default; /* headings, and nothing else */
+/* Captions are metadata, not headings: the Two Voices Rule keeps the serif out
+   of them. The theme's default pointed them at Georgia. */
+$caption-font-family: $sans-serif !default;
+
+/* Headline scale. The theme shipped 25/20/18/17/16.5/16px — six sizes inside
+   9px, which is not a hierarchy, it is a rounding error. Note that
+   oneflow/_reset.scss scales the root from 16px to 22px between $medium and
+   $x-large, so these ems are already fluid; the ratios are what matter. */
+$h-size-1: 1.875em !default; /* 30px at 16px root, 41px at 22px */
+$h-size-2: 1.5em !default; /* 24 / 33 */
+$h-size-3: 1.25em !default; /* 20 / 27.5 */
+$h-size-4: 1.125em !default; /* 18 / 24.75 */
+$h-size-5: 1em !default;
+$h-size-6: 1em !default; /* differs from h5 by weight and tracking, not size */
+
+/* Small-text scale. $type-size-6 carries buttons, captions, notices and the
+   timeline's own small print; at the theme's 0.75em that is 12px on a phone,
+   below the size at which Atkinson's legibility work is worth anything. */
+$type-size-6: 0.875em !default; /* 14px */
+$type-size-7: 0.8125em !default; /* 13px */
+$type-size-8: 0.75em !default; /* 12px */
+
+/* --------------------------------------------------------------------------
+   4. Metrics and the shadow doctrine
+   -------------------------------------------------------------------------- */
+
+$border-radius: 4px !default;
+
+/* Reading measure, 65–75ch (DESIGN.md §2.4). Applied to prose blocks in
+   oneflow/_page.scss; non-prose surfaces may take a documented wider measure. */
+$measure: 68ch !default;
+
+/* Height of the sticky masthead band. Anything that has to clear it — anchor
+   scroll-margin, above all — takes its offset from here. */
+$bar-h: 60px !default;
+
+/* THE pinned-note shadow (DESIGN.md §2.3): zero blur, zero spread, the site's
+   deep hue, and reserved for annotation-style elements pinned *onto* the page.
+   Declared here so there is one definition; used in exactly one place. */
+$pinned-note-shadow: 3px 3px 0 0 $deep !default;
+
+/* Hover-lift: the one sanctioned *dynamic* shadow. The theme's global
+   $box-shadow (a resting `0 1px 1px rgba(0,0,0,.125)` on the TOC) is switched
+   off — a resting fuzzy shadow is exactly what the surface doctrine forbids. */
+$box-shadow: none !default;
+$hover-lift-shadow: 0 4px 10px rgba($deep, 0.22) !default;
