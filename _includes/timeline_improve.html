@@ -18,7 +18,7 @@
   {%- assign blurb = "With Gernot Starke (INNOQ Fellow) and Carola Lilienthal (WPS)" -%}
   {%- assign sold_out_text = "(sold out — waitlist only)" -%}
   {%- assign default_price = "Regular price: € 2200 (€ 2050 for our alumni)." -%}
-  {%- assign info_label = "More info" -%}
+  {%- assign info_label = "More info (in German)" -%}
   {%- assign register_label = "Register" -%}
   {%- assign register_url = "/registration/" -%}
 {%- endif -%}
@@ -48,7 +48,7 @@
         <p class="date-small">
             {{ default_price }}
         </p>
-        <a class="button buttonImprove" href="https://www.arc42.de/info-improve/">{{ info_label }}</a>
+        <a class="button buttonImprove" href="https://www.arc42.de/info-improve/" hreflang="de">{{ info_label }}</a>
         {% unless sold_out %}
             <a class="button buttonAnmeldung" href="{{ register_url }}">{{ register_label }}</a>
         {% endunless %}

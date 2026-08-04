@@ -24,7 +24,7 @@
     The ideal preparation for the iSAQB Foundation certification.
   {%- endcapture -%}
   {%- assign sold_out_text = "(sold out — waitlist only)" -%}
-  {%- assign info_label = "More info" -%}
+  {%- assign info_label = "More info (in German)" -%}
   {%- assign register_label = "Register" -%}
   {%- assign register_url = "/registration/" -%}
 {%- endif -%}
@@ -58,7 +58,7 @@
             </p>
         {% endif %}
 
-        <a class="button buttonMSA" href="https://www.arc42.de/info-msa/">{{ info_label }}</a>
+        <a class="button buttonMSA" href="https://www.arc42.de/info-msa/" hreflang="de">{{ info_label }}</a>
         {% unless sold_out %}
             <a class="button buttonAnmeldung" href="{{ register_url }}">{{ register_label }}</a>
         {% endunless %}

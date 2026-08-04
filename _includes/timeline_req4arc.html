@@ -20,7 +20,7 @@
   {%- assign trainer_line = 'With the "dynamic duo" Peter Hruschka and Gernot Starke.' -%}
   {%- assign sold_out_text = "(sold out — waitlist only)" -%}
   {%- assign default_price = "Regular price: € 2200 (€ 2050 for our alumni)" -%}
-  {%- assign info_label = "More info" -%}
+  {%- assign info_label = "More info (in German)" -%}
   {%- assign register_label = "Register" -%}
   {%- assign register_url = "/registration/" -%}
 {%- endif -%}
@@ -50,7 +50,7 @@
         <p class="date-small">
             {{ default_price }}
         </p>
-        <a class="button buttonReq4Arc" href="https://www.arc42.de/info-req4arc/">{{ info_label }}</a>
+        <a class="button buttonReq4Arc" href="https://www.arc42.de/info-req4arc/" hreflang="de">{{ info_label }}</a>
         {% unless sold_out %}
             <a class="button buttonAnmeldung" href="{{ register_url }}">{{ register_label }}</a>
         {% endunless %}

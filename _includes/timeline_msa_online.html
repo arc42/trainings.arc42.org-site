@@ -14,7 +14,7 @@
   {%- endcapture -%}
   {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
   {%- assign fee = "Teilnahmegebühr: € 2100" -%}
-  {%- assign info_label = "Mehr Info" -%}
+  {%- assign info_label = "Mehr Info (auf Englisch)" -%}
   {%- assign register_label = "Anmeldung" -%}
   {%- assign register_url = "/anmeldung/" -%}
 {%- else -%}
@@ -53,7 +53,7 @@
             {{ fee }}
         </p>
 
-        <a class="button buttonMSA" href="https://www.arc42.de/info-msa-EN/">{{ info_label }}</a>
+        <a class="button buttonMSA" href="https://www.arc42.de/info-msa-EN/" hreflang="en">{{ info_label }}</a>
         {% unless sold_out %}
             <a class="button buttonAnmeldung" href="{{ register_url }}">{{ register_label }}</a>
         {% endunless %}
