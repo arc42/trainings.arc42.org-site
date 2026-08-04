@@ -123,9 +123,10 @@
   }
 }
 
-/* The hamburger and the search glyph. _utilities.scss draws the navicon in
-   $primary-color, which IS the band now — it would have been a 1:1 invisible
-   control. On the band they are white (5.69:1). */
+/* The hamburger. _utilities.scss draws the navicon in $primary-color, which IS
+   the band now — it would have been a 1:1 invisible control. On the band it is
+   white (5.69:1). (The theme's search toggle used to be styled here too; the
+   button is gone from masthead.html, so the rule went with it.) */
 .masthead {
   .navicon,
   .navicon::before,
@@ -135,10 +136,6 @@
 
   .close .navicon {
     background: transparent;
-  }
-
-  .search__toggle {
-    color: #fff;
   }
 }
 
@@ -174,5 +171,41 @@
   &--lg {
     padding-right: 2em;
     font-weight: 700;
+  }
+}
+
+/* The DE/EN switch. Two words, one of them the page you are on — so the current
+   language is stated, not linked, and only the other one is a control. Both
+   measured on the band: #fff 5.69:1, rgba(255,255,255,.90) (= --band-tint,
+   #f6edef) 4.95:1. .82 would be 4.41:1 and fails; it appears nowhere. */
+.lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  margin-left: 0.75em;
+  font-size: 0.85em;
+  white-space: nowrap;
+
+  .lang-switch__current {
+    color: #fff;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+
+  .lang-switch__link {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      color: #fff;
+      text-decoration: underline;
+      text-underline-offset: 0.25em;
+    }
+  }
+
+  .lang-switch__sep {
+    color: rgba(255, 255, 255, 0.9);
   }
 }

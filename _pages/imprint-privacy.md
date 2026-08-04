@@ -2,6 +2,7 @@
 layout: page
 title: Imprint & Privacy
 permalink: /imprint/
+lang: en
 order: 90
 share: false
 header:

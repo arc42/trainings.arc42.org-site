@@ -16,14 +16,19 @@
   Licensed under MIT.
 -->
 
-<html lang="{{ site.locale | slice: 0,2 | default: 'en' }}" class="no-js">
+<html lang="{{ page.lang | default: site.locale | slice: 0, 2 }}" class="no-js">
   <head>
     {% include head.html %}
     {% include head/custom.html %}
   </head>
 
   <body class="layout--{{ page.layout | default: layout.layout }}{% if page.classes or layout.classes %}{{ page.classes | default: layout.classes | join: ' ' | prepend: ' ' }}{% endif %}">
-    {% include_cached masthead.html %}
+    {%- comment -%}
+      NOT include_cached: the masthead now varies per page (page.lang picks the
+      nav list, page.translation_url draws the DE/EN switch). footer.html stays
+      cached — the footer is single-language by design, matching arc42.org.
+    {%- endcomment -%}
+    {% include masthead.html %}
 
 
     <style>

@@ -17,18 +17,31 @@
           {{ site.masthead_title | default: site.title }}
           {% if site.subtitle %}<span class="site-subtitle">{{ site.subtitle }}</span>{% endif %}
         </a>
+        {% assign nav_items = site.data.navigation.main %}
+        {% if page.lang == "de" and site.data.navigation.main_de %}
+          {% assign nav_items = site.data.navigation.main_de %}
+        {% endif %}
         <ul class="visible-links">
-          {%- for link in site.data.navigation.main -%}
+          {%- for link in nav_items -%}
             <li class="masthead__menu-item">
               <a href="{{ link.url | relative_url }}"{% if link.description %} title="{{ link.description }}"{% endif %} {% if link.blank %} target="_blank" rel="noopener noreferrer nofollow"{% endif %}>{{ link.title }}</a>
             </li>
           {%- endfor -%}
         </ul>
-        {% if site.search == true %}
-        <button class="search__toggle" type="button">
-          <span class="visually-hidden">{{ site.data.ui-text[site.locale].search_label | default: "Toggle search" }}</span>
-          <i class="fas fa-search"></i>
-        </button>
+        {%- comment -%}
+          The DE/EN switch sits between .visible-links and the hamburger — i.e.
+          OUTSIDE the <ul> the greedy-nav overflow JS moves children out of, so
+          the switch can never be swallowed into .hidden-links. (This is the slot
+          the theme's search toggle used to occupy; search is not wanted here.)
+        {%- endcomment -%}
+        {% if page.translation_url %}
+        <nav class="lang-switch" aria-label="Sprache / Language">
+          {% if page.lang == "de" %}
+          <span class="lang-switch__current" aria-current="page">DE</span><span class="lang-switch__sep" aria-hidden="true">|</span><a class="lang-switch__link" href="{{ page.translation_url | relative_url }}" hreflang="en" lang="en">EN</a>
+          {% else %}
+          <a class="lang-switch__link" href="{{ page.translation_url | relative_url }}" hreflang="de" lang="de">DE</a><span class="lang-switch__sep" aria-hidden="true">|</span><span class="lang-switch__current" aria-current="page">EN</span>
+          {% endif %}
+        </nav>
         {% endif %}
         <button class="greedy-nav__toggle hidden" type="button">
           <span class="visually-hidden">{{ site.data.ui-text[site.locale].menu_label | default: "Toggle menu" }}</span>

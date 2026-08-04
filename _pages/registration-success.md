@@ -2,6 +2,8 @@
 title: "Great!"
 layout: page
 permalink: /registration-success/
+lang: en
+translation_url: /anmeldung-erfolg/
 ---
 
 <div class="form-outcome form-outcome--success" markdown="1">

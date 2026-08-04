@@ -2,6 +2,8 @@
 title: "OOPS!"
 layout: page
 permalink: /anmeldung-fail/
+lang: de
+translation_url: /registration-fail/
 ---
 
 <div class="form-outcome form-outcome--fail" markdown="1">
