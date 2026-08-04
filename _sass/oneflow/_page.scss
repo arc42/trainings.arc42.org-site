@@ -206,7 +206,13 @@ text-align: center;
   &--overlay {
     position: relative;
     margin-bottom: 2em;
-    padding: 3em 0;
+
+    /* The masthead band is `top: 0; height: var(--bar-h)` and, whenever
+       `sticky-masthead` is off, `position: absolute` — i.e. out of flow and
+       lying over the hero's first 60px. Offsetting the top padding by --bar-h
+       keeps the h1 clear of the band in that case and costs only breathing
+       room in the sticky one. */
+    padding: calc(var(--bar-h) + 1.25rem) 0 1.75rem;
     @include clearfix;
     background-size: cover;
     background-repeat: no-repeat;
@@ -229,11 +235,10 @@ text-align: center;
       }
     }
 
-    /* The hero band. The overlay filter is the deep hue at 0.85 (see
-       _pages/home.html), so the worst case a photo can produce underneath is
-       #89525e — white on that measures 6.12:1, and on the filter alone 9.08:1.
-       That is why the text-shadow the theme used to prop up an unmeasurable
-       photo/text pair is gone: the pair is measured now. */
+    /* The hero band is a flat --deep fill, no photo (see _pages/home.html):
+       white on #743442 measures 9.08:1. That is why the text-shadow the theme
+       used to prop up an unmeasurable photo/text pair is gone — there is no
+       photo left to prop up. */
     .page__title,
     .page__meta,
     .page__lead,
@@ -243,12 +248,21 @@ text-align: center;
       text-align: center;
     }
 
+    /* One step down from the page-level hero sizes: this is a band, not a
+       poster. */
     .page__title {
-      font-size: $type-size-2;
+      font-size: $type-size-3;
 
       @include breakpoint($small) {
-        font-size: $type-size-1;
+        font-size: $type-size-2;
       }
+    }
+
+    /* .page__lead is $type-size-4 (1.25em) page-wide; in the band it is a
+       single modest line under the title. */
+    p.page__lead {
+      font-size: 1em;
+      margin-bottom: 1em;
     }
   }
 }
