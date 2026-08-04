@@ -3,7 +3,7 @@
 {% assign sold_out = include.sold_out | default: false %}
 {% assign trainer = include.trainer | default: "Wolfgang Reimesch" %}
 
-<div class="container {{ position_class }}" id="{{ anchor_id }}">
+<div class="container {{ position_class }}" id="{{ anchor_id }}"{% if include.lang %} lang="{{ include.lang }}"{% endif %}>
     <div class="content{% if sold_out %} content--sold-out{% endif %}">
         {{ include.date }} (online)<br>
         <h2 class="course-title">Mastering Software Architectures<br>

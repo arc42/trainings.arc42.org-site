@@ -58,7 +58,7 @@ msa_de = msa["dates"].select { |d| live.(d) && d["language"] == "de" }
 
 out = +"<!-- GENERATED FILE - do not edit. Source: _data/trainings.yml -->\n"
 out << "<!-- Regenerate: ruby scripts/generate_subtle_ads.rb -->\n"
-out << "<!-- Served as Jekyll include (home page) and via api/index.js (htmx feed). -->\n"
+out << "<!-- Served via api/index.js (Vercel htmx feed for docs/faq); no longer included on this site's pages. -->\n"
 out << "<!-- Heading levels start at h3: this block is injected below an h2 on embedding pages. -->\n\n"
 out << "<div class=\"subtle-ad\">\n"
 out << "    <h3>arc42 offers architecture training.</h3>\n"

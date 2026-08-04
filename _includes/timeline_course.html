@@ -13,21 +13,22 @@ Parameters:
 - pricing: Pricing information (optional)
 - trainer: Trainer names (optional)
 - credits: CPSA credit points (optional)
+- lang: BCP 47 language tag for the card content, e.g. "de" (optional)
 {% endcomment %}
 
 {% case include.type %}
   {% when "msa" %}
-    {% include timeline_msa.html position=include.position date=include.date location=include.location anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats pricing=include.pricing trainer=include.trainer %}
+    {% include timeline_msa.html position=include.position date=include.date location=include.location anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats pricing=include.pricing trainer=include.trainer lang=include.lang %}
   {% when "msa_online" %}
-    {% include timeline_msa_online.html position=include.position date=include.date anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats trainer=include.trainer %}
+    {% include timeline_msa_online.html position=include.position date=include.date anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats trainer=include.trainer lang=include.lang %}
   {% when "req4arc" %}
-    {% include timeline_req4arc.html position=include.position date=include.date location=include.location anchor_id=include.anchor_id credits=include.credits sold_out=include.sold_out few_seats=include.few_seats %}
+    {% include timeline_req4arc.html position=include.position date=include.date location=include.location anchor_id=include.anchor_id credits=include.credits sold_out=include.sold_out few_seats=include.few_seats lang=include.lang %}
   {% when "improve" %}
-    {% include timeline_improve.html position=include.position date=include.date location=include.location anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats credits=include.credits %}
+    {% include timeline_improve.html position=include.position date=include.date location=include.location anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats credits=include.credits lang=include.lang %}
   {% when "adoc" %}
-    {% include timeline_adoc.html position=include.position date=include.date location=include.location anchor_id=include.anchor_id pricing=include.pricing trainer=include.trainer credits=include.credits sold_out=include.sold_out few_seats=include.few_seats %}
+    {% include timeline_adoc.html position=include.position date=include.date location=include.location anchor_id=include.anchor_id pricing=include.pricing trainer=include.trainer credits=include.credits sold_out=include.sold_out few_seats=include.few_seats lang=include.lang %}
   {% when "adoc_online" %}
-    {% include timeline_adoc_online.html position=include.position date=include.date anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats pricing=include.pricing trainer=include.trainer credits=include.credits %}
+    {% include timeline_adoc_online.html position=include.position date=include.date anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats pricing=include.pricing trainer=include.trainer credits=include.credits lang=include.lang %}
   {% else %}
     <!-- timeline_course: unknown type "{{ include.type }}" (anchor {{ include.anchor_id }}) - no template; add a timeline_{{ include.type }}.html or fix course id/format in trainings.yml -->
 {% endcase %}

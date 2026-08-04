@@ -2,7 +2,7 @@
 {% assign anchor_id = include.anchor_id | default: "improve" %}
 {% assign sold_out = include.sold_out | default: false %}
 
-<div class="container {{ position_class }}" id="{{ anchor_id }}">
+<div class="container {{ position_class }}" id="{{ anchor_id }}"{% if include.lang %} lang="{{ include.lang }}"{% endif %}>
     <div class="content{% if sold_out %} content--sold-out{% endif %}">
         {{ include.date }}, {{ include.location }}<br>
         <h2 class="course-title">IMPROVE<br>

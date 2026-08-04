@@ -8,10 +8,10 @@ This project includes both frontend and backend functionality, used by multiple 
 
 ## Key Process
 
-All training dates are maintained in a single HTML file ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) and distributed across sites via:
+All training dates are maintained in a single data file ([`/_data/trainings.yml`](/_data/trainings.yml)) and distributed across sites via:
 
-- A static Jekyll include on trainings.arc42.org
-- A backend API used by other sites (served via Vercel)
+- The timeline on this site's home page, rendered from `_data/trainings.yml`
+- A generated HTML fragment ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) served by the backend API to other sites (via Vercel)
 
 ## Local development
 
@@ -68,13 +68,18 @@ dead in-page anchors.
 
 To change or add training dates:
 
-1. Edit [`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)
-2. Commit and push your changes
+1. Edit [`/_data/trainings.yml`](/_data/trainings.yml)
+2. Run `ruby scripts/validate_trainings.rb` and `ruby scripts/generate_subtle_ads.rb`
+3. Commit and push your changes
 
 This automatically updates the content:
 
-- On trainings.arc42.org (via Jekyll include)
-- Across other arc42 sites (via the backend API)
+- On trainings.arc42.org (the home-page timeline renders `_data/trainings.yml` directly)
+- Across other arc42 sites (via the backend API, which serves the generated
+  `_subtle-ads.html` fragment)
+
+See [Maintaining training dates](#maintaining-training-dates) for the full
+branch/PR workflow and how consumer sites pick the changes up.
 
 ## Backend API
 
@@ -148,12 +153,12 @@ During that deployment, the contents of the repository (including `_subtle-ads.h
 
 ## Frontend Integration
 
-- **trainings.arc42.org** includes `_subtle-ads.html` directly via Jekyll and does *not* use the backend. This ensures availability even if the backend fails.
+- **trainings.arc42.org** renders its own home-page timeline (`_includes/timeline_auto.html`) straight from `_data/trainings.yml` at build time and does *not* use the backend, nor the generated `_subtle-ads.html`. This ensures availability even if the backend fails.
 - **All other arc42 sites** load the training data dynamically using HTMX, which fetches the HTML from the backend API and replaces a placeholder div. On these sites, the HTMX snippet is contained in a Jekyll include as well, and can be inserted via `{% include subtle-ads/subtle-ads.html %}`.
 
 ## Fallback Behavior
 
-If the backend is unreachable or blocked (e.g. by browser settings), users are directed to [trainings.arc42.org](https://trainings.arc42.org), which always reflects the latest content via the static include.
+If the backend is unreachable or blocked (e.g. by browser settings), users are directed to [trainings.arc42.org](https://trainings.arc42.org), which always reflects the latest content via its build-time timeline.
 
 ## Maintaining training dates
 

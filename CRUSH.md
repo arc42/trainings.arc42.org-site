@@ -43,7 +43,8 @@ Everything runs in Docker via the Makefile - no local Ruby/bundler needed.
 
 ### Configuration
 - Site settings in `_config.yml` - restart server after changes
-- Training dates maintained in `_includes/_subtle-ads.html`
+- Training dates maintained in `_data/trainings.yml` (single source of truth);
+  `_includes/_subtle-ads.html` is a generated artifact (`ruby scripts/generate_subtle_ads.rb`) — never edit it by hand
 - Use Jekyll collections and data files for structured content
 
 ### JavaScript
