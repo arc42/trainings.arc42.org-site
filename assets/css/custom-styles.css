@@ -11,10 +11,10 @@ li {
     padding-left: 0 !important;
 }
 
+/* Sponsor mark in the footer — same sizing ladder as docs.arc42.org. */
 .supported-by-innoq {
-    margin-bottom: 0;
-    width: 120px;
-    margin-left: 20px;
+    margin-bottom: 8px;
+    width: 110px;
 }
 
 .supported-by-innoq:hover {
@@ -24,12 +24,12 @@ li {
 
 @media (max-width: 900px) {
     .supported-by-innoq {
-        width: 105px;
+        width: 100px;
     }
 }
 
 @media (max-width: 600px) {
     .supported-by-innoq {
-        width: 95px;
+        width: 90px;
     }
 }

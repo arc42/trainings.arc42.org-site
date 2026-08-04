@@ -41,39 +41,8 @@ background-image-overlay : rgba(255, 255, 255, 0.5) # Set overlay for the backgr
 
 
 
-# Site Footer.
-footer:
-  links: # replace the URL's with your own for every link you want to have in your footer.
-    - label: "Website"
-      icon: "fa fa-globe"
-      # url: "https://perstarke-webdev.de"
-    - label: "Email"
-      icon: "fa fa-envelope"
-      # url: "mailto: per@starke-team.de"
-    - label: "LinkedIn"
-      icon: "fab fa-linkedin"
-      url: "https://linkedin.com/in/gernotstarke"
-    - label: "X/Twitter"
-      icon: "fab fa-x-twitter"
-      # url:
-    - label: "Facebook"
-      icon: "fab fa-facebook"
-      # url:
-    - label: "GitHub"
-      icon: "fab fa-github"
-      url: "https://github.com/arc42"
-    - label: "Instagram"
-      icon: "fab fa-instagram"
-      # url: "https://www.instagram.com/per.starke/"
-  
-    - label: "Dev"
-      icon: "fab fa-dev"
-      url: "https://www.youtube.com/arc42-video/"
-  copyright: "Dr. Peter Hruschka and Dr. Gernot Starke" # Replace with your own
-  creator: # Replace with your own creator name or remove this if you don't want any "created by" in the footer
-      name: "Kröner & Starke"
-      url: "https://kroener-starke.ch/projekte/"
-
+# Site Footer: no config. _includes/footer.html carries the link list,
+# the sponsor mark and the copyright line literally, matching arc42.org.
 
 
 # Reading Files
