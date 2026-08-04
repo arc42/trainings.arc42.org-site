@@ -3,7 +3,7 @@ title: "OOPS!"
 layout: page
 permalink: /anmeldung-fail/
 lang: de
-# jekyll-seo-tag reads page.locale (not page.lang) for og:locale
+# og:locale comes from page.locale via the vendored _includes/seo.html (no jekyll-seo-tag plugin)
 locale: de_DE
 translation_url: /registration-fail/
 ---

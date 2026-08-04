@@ -35,8 +35,8 @@ Everything runs in Docker via the Makefile - no local Ruby/bundler needed.
   no twin, so no `translation_url` and no switch. The masthead builds the DE | EN
   switch from those two fields. There is no site search — the theme's search
   toggle was removed and the switch occupies its slot
-- German pages also carry `locale: de_DE` — `jekyll-seo-tag` reads `page.locale`,
-  not `page.lang`, when emitting `og:locale`
+- German pages also carry `locale: de_DE` — the vendored `_includes/seo.html`
+  (no jekyll-seo-tag plugin) emits `og:locale` from `page.locale`
 - Masthead nav is per language: `_data/navigation.yml` holds `main` (EN) and
   `main_de` (DE); `page.lang == "de"` selects `main_de`
 - `_includes/head.html` emits the `hreflang` triple (en, de, x-default) — *not*

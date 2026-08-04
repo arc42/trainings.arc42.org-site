@@ -35,8 +35,9 @@ which registration form they point at (`/registration/` vs `/anmeldung/`).
   (`en`, `de`, `x-default`) from the same front matter. (Not
   `_includes/head/custom.html` — that one holds favicons, `theme-color` and
   font preloads.)
-- German pages additionally declare `locale: de_DE`, which is the key
-  `jekyll-seo-tag` reads for `og:locale` (it does not look at `lang`).
+- German pages additionally declare `locale: de_DE`; the vendored
+  `_includes/seo.html` (there is no jekyll-seo-tag plugin) emits it as
+  `og:locale` via `page.locale | default: site.locale`.
 - Timeline cards are bilingual: `_includes/timeline_auto.html` takes a
   `page_lang` parameter (`"en"` / `"de"`) and renders all card copy, buttons and
   date labels in the **page's** language,
