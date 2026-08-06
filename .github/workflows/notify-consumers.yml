@@ -3,12 +3,14 @@ on:
   push:
     branches: [main]
     paths: ["_data/trainings.yml"]
+  workflow_dispatch:   # manual test of the dispatch fan-out, without touching the data
 jobs:
   dispatch:
     if: github.repository == 'arc42/trainings.arc42.org-site'
     runs-on: ubuntu-latest
     steps:
       - name: Wait for GitHub Pages to republish /api/trainings.json
+        if: github.event_name == 'push'   # a manual run republishes nothing, so there is nothing to wait for
         run: |
           # A fixed sleep races the actual deploy: too short and consumers pull the
           # stale JSON, too long and we waste CI minutes. Poll the published
@@ -33,7 +35,7 @@ jobs:
           if [ "$published" -eq 0 ]; then
             echo "::warning::Pages did not republish within 10 minutes - dispatching anyway; consumer may pick up the change on its weekly schedule"
           fi
-      - name: repository_dispatch to arc42.de-site
+      - name: repository_dispatch to consumer sites
         env:
           TOKEN: ${{ secrets.CONSUMER_DISPATCH_TOKEN }}
         run: |
@@ -41,8 +43,25 @@ jobs:
             echo "::notice::CONSUMER_DISPATCH_TOKEN not set - consumers update via their weekly schedule instead."
             exit 0
           fi
-          curl --fail -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $TOKEN" \
-            https://api.github.com/repos/arc42/arc42.de-site/dispatches \
-            -d '{"event_type":"trainings-updated"}'
+          # Per ADR-0006 the dispatch is an accelerator, never a dependency: one
+          # unreachable consumer must not stop the others from being notified,
+          # so collect failures and report them all at the end. A failed repo
+          # still updates via its weekly schedule; a red run here means the
+          # token is missing access to that repo and should be fixed.
+          failed=""
+          for repo in arc42.de-site docs.arc42.org-site faq.arc42.org-site arc42.org-site; do
+            if curl --fail -X POST \
+                 -H "Accept: application/vnd.github+json" \
+                 -H "Authorization: Bearer $TOKEN" \
+                 "https://api.github.com/repos/arc42/${repo}/dispatches" \
+                 -d '{"event_type":"trainings-updated"}'; then
+              echo "dispatched to ${repo}"
+            else
+              echo "::warning::dispatch to ${repo} failed - it will update via its weekly schedule instead"
+              failed="${failed} ${repo}"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::dispatch failed for:${failed} - check that CONSUMER_DISPATCH_TOKEN grants Contents read/write on these repos"
+            exit 1
+          fi

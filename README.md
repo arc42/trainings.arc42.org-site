@@ -114,7 +114,7 @@ This automatically updates the content:
 
 - On trainings.arc42.org (both home-page timelines render `_data/trainings.yml` directly)
 - Across the consumer sites (GitHub Pages republishes `/api/trainings.json`,
-  which the consumers pull weekly — see [Consumers](#consumers))
+  which the consumers pull weekly and on dispatch — see [Consumers](#consumers))
 
 See [Maintaining training dates](#maintaining-training-dates) for the full
 branch/PR workflow and how consumer sites pick the changes up.
@@ -147,6 +147,24 @@ expiry-filtered `_data/trainings.json` into its own repository:
 
 Because the dates are baked into the consumers' HTML at build time, a failing
 refresh workflow means "dates at most one week stale" — never a broken page.
+
+In addition, every push to `main` that touches `_data/trainings.yml` triggers
+[`notify-consumers.yml`](/.github/workflows/notify-consumers.yml): it waits for
+GitHub Pages to republish the feed, then sends a `repository_dispatch` event
+(`trainings-updated`) to all four consumer repos, so they refresh within
+minutes instead of waiting for their weekly cron. It authenticates with the
+repo secret `CONSUMER_DISPATCH_TOKEN` — a fine-grained PAT that needs
+**Contents: read and write** on each of the four consumer repos. If the secret
+is absent the workflow exits gracefully; if a dispatch to one repo fails, the
+others are still notified, a warning names the failed repo, and the run ends
+red as a signal to fix the token's access. Test the fan-out manually (without
+touching the data) via `gh workflow run notify-consumers.yml` — a manual run
+skips the Pages poll.
+
+The dispatch is an accelerator, never a dependency
+([ADR-0006](https://github.com/arc42/meta.arc42.org/blob/main/adr/0006-training-dates-single-source.md)):
+the weekly pull alone keeps consumers correct, so worst-case staleness without
+any dispatch is one week.
 
 ## Deprecated: Vercel Fragment Backend
 
@@ -250,9 +268,9 @@ source of truth). To change dates:
 3. Open a PR. CI re-validates and checks the generated fragment is fresh.
 4. On merge: GitHub Pages republishes `/api/trainings.json`; Vercel redeploys the
    deprecated htmx fragment; the [consumer sites](#consumers) pull the JSON
-   weekly (Monday mornings UTC, staggered crons), immediately if the
-   `CONSUMER_DISPATCH_TOKEN` secret is set
-   (fine-grained PAT, Contents read/write on the consumer repos), or on demand
-   via their `Refresh training dates` workflow_dispatch button.
+   weekly (Monday mornings UTC, staggered crons), immediately when
+   `notify-consumers.yml` dispatches to all four repos (see
+   [Consumers](#consumers) for the token requirement), or on demand via their
+   `Refresh training dates` workflow_dispatch button.
 
 ## Created with [OneFlow Jekyl Theme](https://oneflow-jekyll-theme.github.io/)
