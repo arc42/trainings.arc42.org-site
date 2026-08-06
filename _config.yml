@@ -28,7 +28,7 @@ logo                     : "/images/arc42-logo-white.svg" # Site logo displayed 
                                 # per site: dark (on paper) and light (on band)"). The old
                                 # arc42-site-logo.webp is the dark-on-white mark and is unreadable
                                 # on a saturated band; it stays in /images for other uses.
-show-popup               : true # set to false if you don't need / want to show a cookie-banner / cdn-usage popup.
+show-popup               : false # set to true to show the cookie-banner / cdn-usage popup.
                                 # Edit the popup itself in the respective /includes file
 masthead_title           : " "  # Overrides the website title displayed in the masthead, use " " for no title
 sticky-masthead          : true # if true, masthead/navigation bar will stay visible when the user scrolls down.
