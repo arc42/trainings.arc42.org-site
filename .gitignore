@@ -6,3 +6,5 @@ _site
 # IDE project/workspace files
 *.iml
 *.code-workspace
+
+admin-app/.env

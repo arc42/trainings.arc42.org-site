@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help dev build stop site check-links clean install update shell logs
+.PHONY: help dev build stop site check-links clean install update shell logs app app-test app-stop app-logs app-shell
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -44,3 +44,30 @@ shell: build ## Open a shell inside the dev container for debugging
 
 logs: ## Tail logs from the running dev container
 	docker compose logs -f jekyll
+
+app: ## Run the trainings admin app at http://localhost:8080
+	@test -f admin-app/.env || { \
+		echo "==> admin-app/.env is missing."; \
+		echo "==> Run: cp admin-app/.env.template admin-app/.env  and fill it in."; \
+		exit 1; \
+	}
+	@holder=$$(docker ps --filter "publish=8080" --format '{{.Names}}'); \
+	if [ -n "$$holder" ]; then \
+		echo "==> Port 8080 is already in use by another container: $$holder"; \
+		echo "==> Stop it first, e.g.:  docker stop $$holder"; \
+		exit 1; \
+	fi
+	@echo "==> Open http://localhost:8080"
+	docker compose up --build admin
+
+app-test: ## Run the admin app's Go test suite (includes the Ruby cross-check)
+	docker compose run --rm --no-deps admin go test ./... -v
+
+app-stop: ## Stop and remove the running admin container
+	docker compose rm -sf admin
+
+app-logs: ## Tail logs from the running admin container
+	docker compose logs -f admin
+
+app-shell: ## Open a shell inside the admin container
+	docker compose run --rm --no-deps admin sh

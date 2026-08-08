@@ -5,3 +5,15 @@ services:
       - .:/srv/jekyll
     ports:
       - '4000:4000'
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin-app/Dockerfile.dev
+    volumes:
+      - .:/src
+    working_dir: /src/admin-app
+    env_file:
+      - admin-app/.env
+    ports:
+      - '8080:8080'
