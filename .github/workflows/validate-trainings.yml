@@ -2,9 +2,9 @@ name: Validate training data
 on:
   push:
     branches: ["**"]
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/_subtle-ads.html", "_includes/registration-form.html", "_includes/training-date-label.html"]
+    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html"]
   pull_request:
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/_subtle-ads.html", "_includes/registration-form.html", "_includes/training-date-label.html"]
+    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html"]
 jobs:
   validate:
     if: github.repository == 'arc42/trainings.arc42.org-site'
@@ -17,8 +17,6 @@ jobs:
           bundler-cache: true
       - name: Validate trainings.yml (structure, language, dates)
         run: ruby scripts/validate_trainings.rb
-      - name: Check _subtle-ads.html is regenerated
-        run: ruby scripts/generate_subtle_ads.rb --check
       - name: Build site
         run: bundle exec jekyll build
       - name: Validate published JSON against schema

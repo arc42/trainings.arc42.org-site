@@ -14,10 +14,6 @@ All training dates are maintained in a single data file ([`/_data/trainings.yml`
   `/de/`, both rendered from the same `_data/trainings.yml`
 - The JSON feed ([`/api/trainings.json`](/api/trainings.json)), served by GitHub
   Pages — the supported machine interface for all other arc42 sites
-- *(deprecated)* A generated HTML fragment
-  ([`/_includes/_subtle-ads.html`](/_includes/_subtle-ads.html)) served by a
-  Vercel backend, kept only until the last consumers' migration to the JSON
-  feed is live — see [Deprecated: Vercel Fragment Backend](#deprecated-vercel-fragment-backend)
 
 ## Languages
 
@@ -105,9 +101,7 @@ dead in-page anchors.
 To change or add training dates:
 
 1. Edit [`/_data/trainings.yml`](/_data/trainings.yml)
-2. Run `ruby scripts/validate_trainings.rb` and `ruby scripts/generate_subtle_ads.rb`
-   (the latter regenerates the deprecated fragment — still required while it
-   exists, because CI checks its freshness)
+2. Run `ruby scripts/validate_trainings.rb`
 3. Commit and push your changes
 
 This automatically updates the content:
@@ -166,96 +160,17 @@ The dispatch is an accelerator, never a dependency
 the weekly pull alone keeps consumers correct, so worst-case staleness without
 any dispatch is one week.
 
-## Deprecated: Vercel Fragment Backend
-
-> **Deprecated.** The HTML fragment backend described below is superseded by
-> the JSON feed above. It is kept only until the last consumers' migration to
-> the feed is live; the removal steps are tracked in the workspace rollout
-> plan, Phase B:
-> `docs/superpowers/plans/2026-08-04-trainings-consumers-rollout.md`.
-
-The legacy backend is deployed on Vercel as a simple serverless function, written in the format Vercel expects for [Next.js API routes](https://nextjs.org/docs/api-routes/introduction).
-
-It reads the contents of `_subtle-ads.html` from the filesystem and serves it as raw HTML via this endpoint:
-
-```
-https://arc42-subtle-ads-backend.vercel.app/api
-```
-
-The endpoint returns the HTML with appropriate CORS and caching headers. The backend is automatically redeployed on each push to this repository, so any site still fetching the fragment sees updated training data.
-
-If the backend is unreachable or blocked (e.g. by browser settings), sites
-still on the fragment fall back to a plain link to
-[trainings.arc42.org](https://trainings.arc42.org), which always reflects the
-latest content via its build-time timeline.
-
-### Further Details (deprecated fragment)
-
-The function for the deprecated backend is located in [`/api/index.js`](/api/index.js).  
-Here’s the full implementation:
-
-```
-const fs = require('fs').promises;
-const path = require('path');
-
-// Enable CORS headers for browser access
-const allowCors = fn => async (req, res) => {
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, hx-target, hx-current-url, hx-request, hx-trigger'
-  );
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-  return await fn(req, res);
-};
-
-const handler = async (req, res) => {
-  try {
-    const delay = (duration) => new Promise(resolve => setTimeout(resolve, duration));
-    await delay(6000); // artificial delay for testing
-
-    const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');
-    const htmlContent = await fs.readFile(filePath, 'utf8');
-
-    res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.status(200).end(htmlContent);
-  } catch (error) {
-    res.status(500).end('Error loading the HTML file.');
-  }
-};
-
-module.exports = allowCors(handler);
-```
-
-Because the backend is part of the same repository as the `_subtle-ads.html` file, it can access the training data at runtime using a relative path:
-
-`const filePath = path.join(__dirname, '..', '_includes', '_subtle-ads.html');`
-
-The fragment itself is generated from `_data/trainings.yml` by
-[`scripts/generate_subtle_ads.rb`](/scripts/generate_subtle_ads.rb) — run it
-after every date change while the fragment still exists; CI fails if the
-committed fragment is stale.
-
-### How Deployment Works
-
-When you commit and push changes to the repo:
-
-- **GitHub** rebuilds the Jekyll frontend (`trainings.arc42.org`), which also
-  republishes the JSON feed at `/api/trainings.json`
-- **Vercel** *(deprecated path)* detects the push and automatically re-deploys
-  the serverless backend; the repository contents (including
-  `_subtle-ads.html`) are bundled into the function’s read-only filesystem
-
 ## Frontend Integration
 
-- **trainings.arc42.org** renders its own home-page timelines (`_includes/timeline_auto.html`, once per language) straight from `_data/trainings.yml` at build time and uses neither the JSON feed nor the deprecated backend. This ensures availability even if everything else fails.
-- **The consumer sites** (see [Consumers](#consumers)) render the dates at build time from their committed, expiry-filtered copy of the JSON feed. The former runtime HTMX fetch against the Vercel fragment backend is deprecated; any site still on it should migrate per the rollout plan referenced above.
+- **trainings.arc42.org** renders its own home-page timelines (`_includes/timeline_auto.html`, once per language) straight from `_data/trainings.yml` at build time, without going through its own JSON feed. This ensures availability even if everything else fails.
+
+  Because those timelines — and the registration-form `<select>`s — filter
+  against `today` **at build time**, and a date passing its `end` touches no git
+  history, [`weekly-refresh.yml`](/.github/workflows/weekly-refresh.yml) asks
+  GitHub for a Pages build every Monday. Without it this site alone would keep
+  advertising ended courses until an unrelated commit landed. The consumer sites
+  are unaffected either way: they filter expired dates themselves.
+- **The consumer sites** (see [Consumers](#consumers)) render the dates at build time from their committed, expiry-filtered copy of the JSON feed. Nothing is fetched in the reader's browser: the former runtime HTMX fetch against a Vercel-hosted HTML fragment was retired in 2026-08 along with the fragment itself.
 
 ## Maintaining training dates
 
@@ -264,10 +179,10 @@ source of truth). To change dates:
 
 1. Edit `_data/trainings.yml` on a branch (every date needs `language: de|en` —
    validation fails loudly otherwise).
-2. Run `ruby scripts/validate_trainings.rb` and `ruby scripts/generate_subtle_ads.rb`.
-3. Open a PR. CI re-validates and checks the generated fragment is fresh.
-4. On merge: GitHub Pages republishes `/api/trainings.json`; Vercel redeploys the
-   deprecated htmx fragment; the [consumer sites](#consumers) pull the JSON
+2. Run `ruby scripts/validate_trainings.rb`.
+3. Open a PR. CI re-validates against the schema.
+4. On merge: GitHub Pages republishes `/api/trainings.json`; the
+   [consumer sites](#consumers) pull the JSON
    weekly (Monday mornings UTC, staggered crons), immediately when
    `notify-consumers.yml` dispatches to all four repos (see
    [Consumers](#consumers) for the token requirement), or on demand via their

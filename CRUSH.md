@@ -18,7 +18,6 @@ Everything runs in Docker via the Makefile - no local Ruby/bundler needed.
 
 ## Testing
 - `ruby scripts/validate_trainings.rb` - Validate `_data/trainings.yml`
-- `ruby scripts/generate_subtle_ads.rb --check` - Assert the generated fragment is fresh
 - `make check-links` - html-proofer: internal links, images, `alt` attributes, in-page anchors
 - No unit-test suite; everything else is manual testing via `make dev`
 
@@ -64,7 +63,6 @@ Everything runs in Docker via the Makefile - no local Ruby/bundler needed.
 ### Configuration
 - Site settings in `_config.yml` - restart server after changes
 - Training dates maintained in `_data/trainings.yml` (single source of truth);
-  `_includes/_subtle-ads.html` is a generated artifact (`ruby scripts/generate_subtle_ads.rb`) — never edit it by hand
 - Use Jekyll collections and data files for structured content
 
 ### JavaScript

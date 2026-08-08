@@ -2,7 +2,6 @@
 # SINGLE SOURCE OF TRUTH for all arc42 training dates.
 # Edit THIS file (via PR) to change dates everywhere:
 #   - trainings.arc42.org home page + /api/trainings.json  (Jekyll build)
-#   - _includes/_subtle-ads.html                 (run scripts/generate_subtle_ads.rb)
 #   - arc42.de termine page + registration forms (pulled by its refresh workflow)
 # Keep start/end QUOTED "YYYY-MM-DD" strings. Quote country codes ("NO" is false!).
 # language (de|en) is REQUIRED on every date - no default, validation fails loudly.

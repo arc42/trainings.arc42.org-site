@@ -1,37 +1,32 @@
-name: Weekly refresh of generated fragment
-# Nothing else re-triggers this: a date passing its `end` doesn't touch git history,
-# so without this cron the generated _subtle-ads.html (and anything downstream of it)
-# would keep advertising ended courses until an unrelated edit to trainings.yml
-# happened to land. Running generate_subtle_ads.rb against "today" drops newly-expired
-# dates and, if that changes the fragment, commits + pushes it - the push then
-# triggers the normal Pages rebuild, which also re-evaluates the `today` filters
-# baked into the Jekyll-rendered pages (home page, registration forms).
+name: Weekly Pages rebuild
+# Why this exists at all: the home-page timeline and the registration-form
+# <select>s filter dates against `today` AT BUILD TIME. A date passing its `end`
+# touches no git history, so without a periodic rebuild this site would keep
+# advertising ended courses until some unrelated commit happened to land.
+#
+# It used to work by regenerating _includes/_subtle-ads.html and pushing the
+# result — the push was what triggered the Pages rebuild. That fragment was
+# retired (zero consumers since 2026-08), so the rebuild is now requested
+# directly instead of as a side effect of a bot commit. Same guarantee, no
+# generated artifact and no synthetic commit in the history.
+#
+# The four consumer sites do NOT depend on this: they filter expired dates
+# themselves when their own refresh-trainings.yml pulls the feed.
 on:
   schedule:
     - cron: "43 4 * * 1"   # Mondays 04:43 UTC
   workflow_dispatch:
 permissions:
-  contents: write
+  pages: write
 jobs:
-  refresh:
+  rebuild:
     if: github.repository == 'arc42/trainings.arc42.org-site'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-          bundler-cache: true
-      - name: Regenerate _subtle-ads.html for today
-        run: ruby scripts/generate_subtle_ads.rb
-      - name: Commit and push if expired dates were dropped
-        run: |
-          if git diff --quiet -- _includes/_subtle-ads.html; then
-            echo "No expired dates to drop - fragment unchanged"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add _includes/_subtle-ads.html
-          git commit -m "chore: drop expired training dates from generated fragment"
-          git push
+      - name: Request a Pages build
+        # Legacy Pages mode builds on push; this endpoint asks for the same
+        # build without one. A failure here means stale dates on the site, not
+        # a broken page, so it is worth a red run but not an alarm.
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
