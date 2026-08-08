@@ -1,0 +1,24 @@
+# header comment must survive
+courses:
+  - id: msa
+    short_title: "MSA"
+    dates:
+      - id: a
+        code: "A"
+        start: "2026-01-01"
+        end: "2026-01-02"
+        city: "München"
+        country: "DE"
+        language: de
+        format: public
+        url: "https://example.org/a"
+        status: waitlist
+
+      - id: b
+        code: "B"
+        start: "2026-02-01"
+        end: "2026-02-02"
+        language: en
+        format: online
+        url: "https://example.org/b"
+        status: open
