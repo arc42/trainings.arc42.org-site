@@ -67,10 +67,37 @@ origin**.
 | --- | --- |
 | Create the fly app | `fly launch` / `fly apps create arc42-trainings-admin` (`fly.toml` already exists) |
 | Set fly secrets | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_KEY` |
-| DNS | `trainings-admin` **CNAME** → `arc42-trainings-admin.fly.dev` (GoDaddy, which now owns Host Europe; `arc42.org` answers from `ns29/ns30.domaincontrol.com`) |
+| DNS | `trainings-admin` **A** → `66.241.124.107` and **AAAA** → `2a09:8280:1::165:17ca:0` — *not* a CNAME, see below (GoDaddy, which now owns Host Europe; `arc42.org` answers from `ns29/ns30.domaincontrol.com`) |
 | TLS | `fly certs add trainings-admin.arc42.org` |
 | `admin-app/fly.toml` | `PUBLIC_URL = "https://trainings-admin.arc42.org"` |
 | GitHub OAuth app (`arc42-trainings-admin-prod`) | Authorization callback → `https://trainings-admin.arc42.org/auth/callback` |
+
+
+### DNS: A/AAAA, not CNAME
+
+The design's CNAME to `arc42-trainings-admin.fly.dev` **cannot be entered** in
+the `arc42.org` DNS panel (GoDaddy, which now owns Host Europe). The panel
+rejects any target ending in `.dev` as *"syntaktisch nicht korrekt"* — a stale
+TLD allow-list that predates the 2019 `.dev` gTLD. A trailing dot and other
+`.dev` hostnames fail identically, so it is the extension, not the syntax.
+
+Address records avoid the question entirely:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| `A` | `trainings-admin` | `66.241.124.107` (fly **shared** IPv4) |
+| `AAAA` | `trainings-admin` | `2a09:8280:1::165:17ca:0` (fly **dedicated** IPv6) |
+
+`fly certs` validates identically for A/AAAA and CNAME, so nothing else changes.
+
+**The trade-off, recorded because it will not announce itself:** a CNAME follows
+fly automatically if the app's address changes; an A record does not. The IPv6
+address is dedicated and therefore stable. The IPv4 is *shared* — stable in
+practice, not contractually ours. If it is ever reassigned, the hostname breaks
+silently, with no failing build and no alert. `fly ips allocate-v4` (about
+$2/month) removes that risk; for a tool used once or twice a quarter the shared
+address was judged an acceptable exposure. Dual-stack clients prefer the
+dedicated IPv6 anyway.
 
 `PUBLIC_URL` was made configurable in `e0f54cd` for exactly this. The last two
 rows **must change together** — a mismatch makes GitHub reject the
@@ -84,7 +111,7 @@ The footer commit lands **last**. `make check-links` runs html-proofer with
 link early would point every page on the site at a 404, silently.
 
 1. Create the fly app, set secrets, deploy.
-2. Add the DNS record and the fly cert; confirm HTTPS resolves.
+2. Add the A and AAAA records and the fly cert; confirm HTTPS resolves.
 3. Set `PUBLIC_URL` and the OAuth callback together; redeploy.
 4. **Verify a real sign-in end to end** at `https://trainings-admin.arc42.org`,
    including that a non-maintainer account gets the 403 "No access" page
