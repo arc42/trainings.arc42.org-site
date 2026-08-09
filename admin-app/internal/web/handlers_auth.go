@@ -19,11 +19,39 @@ func (s *Server) handleAuthStart(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	// CSRF: the state in the URL must match the one we set before redirecting.
+	// Failing this is routine, not sinister — the cookie lives ten minutes, and
+	// reloading or bookmarking this URL reproduces it — so it gets a page with a
+	// way forward rather than bare text.
 	stateCookie, err := r.Cookie(stateCookieName)
 	if err != nil || stateCookie.Value == "" || stateCookie.Value != r.URL.Query().Get("state") {
-		http.Error(w, "invalid OAuth state", http.StatusBadRequest)
+		s.clearState(w)
+		w.WriteHeader(http.StatusBadRequest)
+		s.render(w, "login.gohtml", map[string]any{
+			"Title":       "Sign-in link expired",
+			"NoticeTitle": "That sign-in link is no longer valid",
+			"Notice": "Sign-in links are good for ten minutes and can only be used once, " +
+				"so this happens if you reloaded the page or came back to an old tab. " +
+				"Nothing is wrong — start again.",
+			"Bare": true,
+		})
 		return
 	}
+	s.clearState(w)
+
+	// GitHub reports a declined authorization here, with no code. Choosing not
+	// to continue is a decision, not a failure, and must not surface as a crash.
+	if ghErr := r.URL.Query().Get("error"); ghErr != "" {
+		w.WriteHeader(http.StatusOK)
+		s.render(w, "login.gohtml", map[string]any{
+			"Title":       "Sign-in cancelled",
+			"NoticeTitle": "Sign-in was cancelled",
+			"Notice": "You chose not to give the app access to GitHub, so nothing happened " +
+				"and no data was touched. You can start again whenever you like.",
+			"Bare": true,
+		})
+		return
+	}
+
 	token, err := s.oauth.Exchange(r.Context(), r.URL.Query().Get("code"))
 	if err != nil {
 		s.fail(w, "could not complete GitHub sign-in", err)
@@ -44,6 +72,15 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// clearState expires the one-shot CSRF cookie so a replayed callback cannot
+// reuse it.
+func (s *Server) clearState(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name: stateCookieName, Value: "", Path: "/", HttpOnly: true,
+		Secure: s.cfg.Environment == "PRODUCTION", SameSite: http.SameSiteLaxMode, MaxAge: -1,
+	})
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {

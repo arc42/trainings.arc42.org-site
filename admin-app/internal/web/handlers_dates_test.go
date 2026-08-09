@@ -500,3 +500,41 @@ func TestNavIsHiddenBeforeAuthentication(t *testing.T) {
 		t.Error("nav is missing for an authenticated maintainer")
 	}
 }
+
+func TestAuthCallbackHandlesCancelAndStaleState(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	// Cancelling on GitHub's authorize screen is a user choice, not a fault:
+	// GitHub sends back error=access_denied and no code.
+	req := httptest.NewRequest(http.MethodGet, "/auth/callback?state=abc&error=access_denied", nil)
+	req.AddCookie(&http.Cookie{Name: stateCookieName, Value: "abc"})
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, req)
+
+	if rec.Code >= 500 {
+		t.Errorf("cancelling produced status %d — a server error", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "/auth/github") {
+		t.Error("cancel page offers no way to start again")
+	}
+	if strings.Contains(rec.Body.String(), "Something went wrong") {
+		t.Error("cancel is reported as a crash")
+	}
+
+	// A stale or missing state cookie is routine — the cookie lives 10 minutes,
+	// and reloading the callback URL reproduces it. It must not be bare text.
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/auth/callback?state=abc&code=x", nil))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("stale state: status = %d, want 400", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "<html") {
+		t.Errorf("stale state returned bare text, not a page: %q", body)
+	}
+	if !strings.Contains(body, "/auth/github") {
+		t.Error("stale-state page offers no way to start again")
+	}
+}

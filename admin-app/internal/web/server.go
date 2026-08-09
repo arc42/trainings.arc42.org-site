@@ -127,8 +127,12 @@ func (s *Server) authed(next authedFunc) http.Handler {
 			if r.Method != http.MethodGet && r.Method != http.MethodHead {
 				w.WriteHeader(http.StatusUnauthorized)
 				s.render(w, "login.gohtml", map[string]any{
-					"Title":   "Session expired",
-					"Expired": true,
+					"Title":       "Session expired",
+					"NoticeTitle": "That change was not saved",
+					"Notice": "Your session ended before it was submitted, and unpublished " +
+						"edits live only for the length of a session, so any draft is gone. " +
+						"Nothing was published and nothing in the repository changed.",
+					"Bare": true,
 				})
 				return
 			}
