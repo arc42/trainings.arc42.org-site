@@ -14,6 +14,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.23"
+          # go.sum is not at the repo root; without this the cache step warns
+          # "Dependencies file is not found" on every run.
+          cache-dependency-path: admin-app/go.sum
       # Ruby 3.3 matches the version validate-trainings.yml already pins, so
       # the anti-drift cross-check runs against the same interpreter CI uses
       # elsewhere in this repo.
@@ -35,6 +38,15 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy
         working-directory: admin-app
-        run: flyctl deploy --remote-only
+        # Exits gracefully when the secret is absent, the same way
+        # notify-consumers.yml handles CONSUMER_DISPATCH_TOKEN. Until the fly
+        # app exists there is nothing to deploy to, and a red run on every push
+        # to admin-app/** trains people to ignore this workflow.
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::notice title=Deploy skipped::FLY_API_TOKEN is not set. Create the fly app and add the secret to enable deployment."
+            exit 0
+          fi
+          flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

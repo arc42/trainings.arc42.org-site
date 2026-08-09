@@ -15,7 +15,11 @@ dev: ## Start the local Jekyll dev server with live reload (http://localhost:400
 		echo "==>   docker stop $$holder"; \
 		exit 1; \
 	fi
-	docker compose up --build
+	@# Name the service explicitly: a bare `up` starts every service in
+	@# docker-compose.yml, including `admin`, whose env_file admin-app/.env is
+	@# gitignored. Site-only contributors would hit "env file not found" instead
+	@# of a dev server.
+	docker compose up --build jekyll
 
 build: ## Build the Docker dev image from the Gemfile-pinned gems
 	docker compose build
