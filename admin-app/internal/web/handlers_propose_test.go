@@ -113,3 +113,42 @@ func TestBranchNameIsSafe(t *testing.T) {
 		t.Errorf("branchName %q contains characters git refs forbid", got)
 	}
 }
+
+// TestProposeEscapesUserContentInTheDiff guards a deliberate use of
+// template.HTML. The diff is built from the edited document, which contains
+// whatever the user typed into the form, so rendering it unescaped would turn
+// any field into stored XSS against the other maintainer. safeDiff escapes
+// first and only then marks the result trusted; this test is what keeps the
+// escaping from being dropped as "redundant" later.
+func TestProposeEscapesUserContentInTheDiff(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	const payload = `<script>alert(1)</script>`
+	form := url.Values{
+		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
+		"start": {"2026-01-01"}, "end": {"2026-01-02"},
+		"city":    {payload},
+		"country": {"DE"}, "language": {"de"}, "format": {"public"},
+		"url": {"https://example.org/a"}, "status": {"open"},
+	}
+	s.Routes().ServeHTTP(httptest.NewRecorder(),
+		signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
+	body := rec.Body.String()
+
+	if strings.Contains(body, payload) {
+		t.Error("raw <script> from a form field reached the rendered diff")
+	}
+	if !strings.Contains(body, "&lt;script&gt;") {
+		t.Errorf("escaped form of the payload not found; is the diff rendering at all?\n%s", body)
+	}
+	// The whole reason safeDiff exists: html/template turns + into &#43;, which
+	// mangles every added line. Escaping must not reintroduce that.
+	if strings.Contains(body, "&#43;") {
+		t.Error("diff contains &#43; — plus signs are being over-escaped again")
+	}
+}
