@@ -370,3 +370,47 @@ button.secondary:hover {
   font-weight: 700;
   font-size: 1.1rem;
 }
+
+/* ---- Mascot ---------------------------------------------------------------
+   The bar grows to give the mascot room: at the old 3.25rem it rendered about
+   28px tall and read as a favicon rather than a logo. Transparent PNG, so it
+   sits directly on the band with no white plate. */
+:root { --bar-h: 4.5rem; }
+
+.masthead .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: #ffffff;                 /* 5.69:1 on --band */
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+.masthead .mascot {
+  height: 3rem;
+  width: auto;
+  display: block;
+  flex: none;
+}
+
+/* Hero: the sign-in screen is the app's front door and the only page an
+   outsider is likely to see, so the mascot gets real size there. */
+.hero { max-width: 48ch; padding-top: 1rem; }
+.hero-mascot {
+  height: 9rem;
+  width: auto;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+.hero h1 { margin: 0 0 0.5rem; }
+.hero .lede { margin-top: 0; }
+.hero .hint { margin-top: 0.75rem; }
+
+@media (max-width: 30rem) {
+  /* Keep the wordmark readable before the mascot: on a narrow phone the two
+     together overflow the bar. */
+  .masthead .mascot { height: 2.25rem; }
+  .masthead .brand { font-size: 1rem; }
+  .hero-mascot { height: 7rem; }
+}

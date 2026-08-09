@@ -1,11 +1,17 @@
 {{define "login.gohtml"}}{{template "layout" .}}{{end}}
 {{define "content"}}
-{{if .NoticeTitle}}
-<h1>{{.NoticeTitle}}</h1>
-<p class="lede">{{.Notice}}</p>
-{{else}}
-<h1>Sign in</h1>
-<p>Editing arc42 training dates requires push access to the trainings repository.</p>
-{{end}}
-<p><a class="button" href="/auth/github">Sign in with GitHub</a></p>
+<div class="hero">
+  <img class="hero-mascot" src="/static/mascot.png" alt="" width="242" height="256">
+  {{if .NoticeTitle}}
+  <h1>{{.NoticeTitle}}</h1>
+  <p class="lede">{{.Notice}}</p>
+  {{else}}
+  <h1>arc42 trainings admin</h1>
+  <p class="lede">Add, change and cancel arc42 training dates. Every editing
+    session becomes one pull request against <code>_data/trainings.yml</code> —
+    reviewed and merged on GitHub, so nothing publishes by accident.</p>
+  {{end}}
+  <p><a class="button" href="/auth/github">Sign in with GitHub</a></p>
+  <p class="hint">Requires push access to the trainings repository.</p>
+</div>
 {{end}}

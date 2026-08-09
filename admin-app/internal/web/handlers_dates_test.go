@@ -538,3 +538,42 @@ func TestAuthCallbackHandlesCancelAndStaleState(t *testing.T) {
 		t.Error("stale-state page offers no way to start again")
 	}
 }
+
+func TestMascotIsServedAndReferenced(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	// Present on the sign-in page (bar + hero) and for a signed-in maintainer.
+	for _, c := range []struct {
+		name string
+		req  *http.Request
+	}{
+		{"anonymous", httptest.NewRequest(http.MethodGet, "/", nil)},
+		{"signed in", signedIn(t, s, http.MethodGet, "/", nil)},
+	} {
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, c.req)
+		if !strings.Contains(rec.Body.String(), "/static/mascot-small.png") {
+			t.Errorf("%s: masthead is missing the mascot", c.name)
+		}
+	}
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if !strings.Contains(rec.Body.String(), "/static/mascot.png") {
+		t.Error("sign-in page is missing the hero mascot")
+	}
+
+	// The files must actually be embedded, or every page ships a broken image.
+	for _, path := range []string{"/static/mascot.png", "/static/mascot-small.png"} {
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s -> %d, want 200 (is it embedded?)", path, rec.Code)
+		}
+		if rec.Body.Len() < 1000 {
+			t.Errorf("GET %s served only %d bytes", path, rec.Body.Len())
+		}
+	}
+}

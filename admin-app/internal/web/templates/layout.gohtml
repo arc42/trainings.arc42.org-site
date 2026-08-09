@@ -3,6 +3,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} — arc42 trainings admin</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="icon" href="/static/mascot-small.png" type="image/png">
 <script src="/static/htmx.min.js" defer></script>
 </head><body>
 {{/* Navigation appears only for a signed-in maintainer. Before sign-in every
@@ -10,7 +11,7 @@
      dead ends — in both cases the nav would advertise structure to someone who
      has not established they may see any of it. */}}
 {{$nav := and .Login (not .Bare)}}
-<header class="masthead">{{if $nav}}<a href="/">arc42 trainings admin</a>{{else}}<span class="wordmark">arc42 trainings admin</span>{{end}}
+<header class="masthead">{{if $nav}}<a class="brand" href="/"><img class="mascot" src="/static/mascot-small.png" alt="" width="48" height="51">arc42 trainings admin</a>{{else}}<span class="brand wordmark"><img class="mascot" src="/static/mascot-small.png" alt="" width="48" height="51">arc42 trainings admin</span>{{end}}
 {{if $nav}}<nav><a href="/">Dates</a> <a href="/courses">Courses</a>
 <span class="who">{{.Login}}</span>
 <form method="post" action="/auth/logout"><button class="link">Sign out</button></form></nav>{{end}}

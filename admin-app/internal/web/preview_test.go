@@ -33,6 +33,13 @@ func TestDumpPreview(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// The sign-in page: same route, no session.
+	rec0 := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec0, httptest.NewRequest(http.MethodGet, "/", nil))
+	if err := os.WriteFile(dir+"/login.html", rec0.Body.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	// The denied page has no route of its own — it is rendered from the OAuth
 	// callback — so drive the handler directly.
 	rec := httptest.NewRecorder()
