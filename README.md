@@ -98,6 +98,12 @@ dead in-page anchors.
 
 ## Updating Training Dates (requires write access)
 
+The supported way to change dates is the **trainings admin app**
+([`admin-app/`](/admin-app/)): sign in with GitHub, edit the forms, and it opens
+a single pull request with a minimal diff. Hand-editing `_data/trainings.yml`
+as described below still works and remains the fallback — the app is never in
+the publishing path.
+
 To change or add training dates:
 
 1. Edit [`/_data/trainings.yml`](/_data/trainings.yml)

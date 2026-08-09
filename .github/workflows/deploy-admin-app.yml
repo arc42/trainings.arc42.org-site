@@ -1,0 +1,40 @@
+name: Deploy admin app
+
+on:
+  push:
+    branches: [main]
+    paths: ["admin-app/**", ".github/workflows/deploy-admin-app.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      # Ruby 3.3 matches the version validate-trainings.yml already pins, so
+      # the anti-drift cross-check runs against the same interpreter CI uses
+      # elsewhere in this repo.
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - name: Test
+        working-directory: admin-app
+        run: go test ./... -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-admin-app
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        working-directory: admin-app
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

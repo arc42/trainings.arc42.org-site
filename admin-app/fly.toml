@@ -1,0 +1,26 @@
+# Deployed from admin-app/. There is no [mounts] section and there never should
+# be: the app keeps no state. Drafts live in memory and are meant to be
+# disposable; everything published is a commit in the repository.
+app = "arc42-trainings-admin"
+primary_region = "ams"
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[env]
+  ENVIRONMENT = "PRODUCTION"
+  GITHUB_REPO = "arc42/trainings.arc42.org-site"
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "5s"
+  method = "GET"
+  path = "/healthz"
