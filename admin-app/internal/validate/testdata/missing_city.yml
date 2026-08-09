@@ -1,0 +1,44 @@
+# header comment must survive
+courses:
+  - id: msa
+    short_title: "MSA"
+    title: "Certified Professional for Software Architecture - Foundation Level"
+    url: "https://example.org/msa"
+    trainers:
+      - "Peter Hruschka"
+    dates:
+      - id: a
+        code: "A"
+        start: "2026-01-01"
+        end: "2026-01-02"
+        country: "DE"
+        language: de
+        format: public
+        url: "https://example.org/a"
+        status: open
+
+      - id: b
+        code: "B"
+        start: "2026-02-01"
+        end: "2026-02-02"
+        language: en
+        format: online
+        url: "https://example.org/b"
+        status: open
+  - id: flex
+    short_title: "FLEX"
+    title: "Flexible Architecture Training"
+    url: "https://example.org/flex"
+    trainers:
+      - "Gernot Starke"
+    dates:
+      - id: c
+        code: "C"
+        start: "2026-03-01"
+        end: "2026-03-02"
+        city: "Berlin"
+        country: "DE"
+        language: de
+        format: inhouse
+        url: "https://example.org/c"
+        status: open
