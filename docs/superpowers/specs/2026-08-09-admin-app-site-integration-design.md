@@ -38,9 +38,10 @@ origin**.
 | D1 | The two systems couple through **exactly one string**: the admin URL | No session, cookie, CORS, JS or build-time coupling. The site stays a pure static artifact whose correctness is independent of the app's existence. |
 | D2 | Entry point is **one quiet link in the existing footer**, not a masthead item or homepage button | The app has two users; every other visitor is not one. A prominent "Login" promises an account that cannot be obtained. The footer is where site-infrastructure links (Status, GitHub, Imprint) already live. |
 | D3 | The label is **"Maintainers"**, not "Login" | A label that names *who it is for* reads as "not me" to every visitor and "that's me" to the two maintainers. "Login" reads as an invitation and provokes "where do I sign up?". |
-| D4 | The app gets the custom hostname **`admin.trainings.arc42.org`** | The public footer of an arc42 site should not advertise a hosting provider. More importantly it decouples the published URL from fly.io: moving hosts later becomes a DNS change, not a dead bookmark plus a re-registered OAuth callback. |
+| D4 | The app gets the custom hostname **`trainings-admin.arc42.org`** *(revised 2026-08-09; originally `admin.trainings.arc42.org`)* | The public footer of an arc42 site should not advertise a hosting provider. More importantly it decouples the published URL from fly.io: moving hosts later becomes a DNS change, not a dead bookmark plus a re-registered OAuth callback. |
 | D5 | The URL is **hardcoded to production** in the footer; no `jekyll.environment` branch | Neither dev loop clicks that link — site work does not care where it points, and app work reaches `localhost:8080` from the terminal. An env branch would be this repo's *first* dev/prod split (there is no `url:`, `baseurl:` or `jekyll.environment` anywhere today) and would sit inside an `include_cached` block. Not worth it for a link nobody clicks in dev. |
 | D6 | The link is **public**, and that is accepted deliberately | Access is gated by GitHub OAuth, a live `permissions.push` check, and the PR-only boundary. Security rests on those, not on the URL being unguessable. Obscurity here would buy nothing real and cost daily usability. |
+| D4a | The hostname is a **single label**, not `admin.trainings` | The DNS panel for `arc42.org` accepts only one label in the host field, so a two-label name cannot be entered at all. It also sidesteps a real grey area: `trainings.arc42.org` is itself a CNAME, and RFC 1034 says a name carrying a CNAME should carry no other data. `trainings-admin` sorts beside `trainings` and reads as "the trainings admin". |
 | D7 | Design specs live in **this repository** under `docs/superpowers/specs/`, and `docs` is added to Jekyll's `exclude:` | Keeps the documentation next to the thing it documents. The exclusion is mandatory, not tidy-up: Jekyll copies every unexcluded directory into `_site/` verbatim, so without it the specs would be served at `https://trainings.arc42.org/docs/…`. |
 
 ## 4. The change
@@ -50,7 +51,7 @@ origin**.
 `_includes/footer.html`, appended to the `.footer-links` list after `GitHub`:
 
 ```html
-<li><a href="https://admin.trainings.arc42.org">Maintainers</a></li>
+<li><a href="https://trainings-admin.arc42.org">Maintainers</a></li>
 ```
 
 - **English only.** The footer is single-language by design
@@ -66,10 +67,10 @@ origin**.
 | --- | --- |
 | Create the fly app | `fly launch` / `fly apps create arc42-trainings-admin` (`fly.toml` already exists) |
 | Set fly secrets | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_KEY` |
-| DNS | `admin.trainings` **CNAME** → `arc42-trainings-admin.fly.dev` |
-| TLS | `fly certs add admin.trainings.arc42.org` |
-| `admin-app/fly.toml` | `PUBLIC_URL = "https://admin.trainings.arc42.org"` |
-| GitHub OAuth app (`arc42-trainings-admin-prod`) | Authorization callback → `https://admin.trainings.arc42.org/auth/callback` |
+| DNS | `trainings-admin` **CNAME** → `arc42-trainings-admin.fly.dev` (GoDaddy, which now owns Host Europe; `arc42.org` answers from `ns29/ns30.domaincontrol.com`) |
+| TLS | `fly certs add trainings-admin.arc42.org` |
+| `admin-app/fly.toml` | `PUBLIC_URL = "https://trainings-admin.arc42.org"` |
+| GitHub OAuth app (`arc42-trainings-admin-prod`) | Authorization callback → `https://trainings-admin.arc42.org/auth/callback` |
 
 `PUBLIC_URL` was made configurable in `e0f54cd` for exactly this. The last two
 rows **must change together** — a mismatch makes GitHub reject the
@@ -85,7 +86,7 @@ link early would point every page on the site at a 404, silently.
 1. Create the fly app, set secrets, deploy.
 2. Add the DNS record and the fly cert; confirm HTTPS resolves.
 3. Set `PUBLIC_URL` and the OAuth callback together; redeploy.
-4. **Verify a real sign-in end to end** at `https://admin.trainings.arc42.org`,
+4. **Verify a real sign-in end to end** at `https://trainings-admin.arc42.org`,
    including that a non-maintainer account gets the 403 "No access" page
    (`internal/web/handlers_auth.go:38`).
 5. Only then: the footer commit, together with the doc updates in §6.

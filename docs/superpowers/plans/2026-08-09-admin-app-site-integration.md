@@ -8,7 +8,7 @@ site's readers or coupling the static site to the app.
 
 **Architecture:** The site and the app couple through exactly one string — the
 admin URL — hardcoded in one footer `<li>`. No shared session, cookie, CORS, JS
-or build-time dependency. The app lives on `admin.trainings.arc42.org` (DNS
+or build-time dependency. The app lives on `trainings-admin.arc42.org` (DNS
 CNAME → fly.io), so the published URL survives a change of hosting provider.
 
 **Tech Stack:** Jekyll 4 / Liquid (site, built by GitHub Pages), Go 1.x on
@@ -18,7 +18,7 @@ fly.io (app), GitHub OAuth, Docker Compose + `make` for local work.
 
 ## Global Constraints
 
-- **The admin URL is exactly `https://admin.trainings.arc42.org`** — no trailing
+- **The admin URL is exactly `https://trainings-admin.arc42.org`** — no trailing
   slash, no path. It appears verbatim in the footer, in `fly.toml`'s
   `PUBLIC_URL`, and (with `/auth/callback` appended) in the GitHub OAuth app.
 - **The footer label is exactly `Maintainers`** — not "Login", not "Admin".
@@ -247,7 +247,7 @@ Claude-Session: https://claude.ai/code/session_01D42RK2ztXWqEVrDFctBSJL"
 
 ---
 
-## Task 3: Deploy the app on `admin.trainings.arc42.org` — **HUMAN ONLY**
+## Task 3: Deploy the app on `trainings-admin.arc42.org` — **HUMAN ONLY**
 
 **An agent must stop here.** This task needs fly.io credentials, DNS control
 over `arc42.org`, and permission to create a GitHub OAuth app. Nothing in it can
@@ -258,8 +258,8 @@ be verified from the repository.
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
-- Produces: a live HTTPS origin at `https://admin.trainings.arc42.org` whose
-  OAuth callback is `https://admin.trainings.arc42.org/auth/callback`. Task 4
+- Produces: a live HTTPS origin at `https://trainings-admin.arc42.org` whose
+  OAuth callback is `https://trainings-admin.arc42.org/auth/callback`. Task 4
   verifies it; Task 5 links to it.
 
 - [ ] **Step 1: Create the fly app**
@@ -281,8 +281,8 @@ At <https://github.com/settings/developers> → **New OAuth App**:
 | Field | Value |
 | --- | --- |
 | Application name | `arc42-trainings-admin-prod` |
-| Homepage URL | `https://admin.trainings.arc42.org` |
-| Authorization callback URL | `https://admin.trainings.arc42.org/auth/callback` |
+| Homepage URL | `https://trainings-admin.arc42.org` |
+| Authorization callback URL | `https://trainings-admin.arc42.org/auth/callback` |
 
 Keep the Client ID and generate a Client Secret. This is a **separate** OAuth
 app from any development one — a dev app's callback points at
@@ -306,7 +306,7 @@ obvious placeholders.
 - [ ] **Step 4: Set `PUBLIC_URL` in `fly.toml`**
 
 ```toml
-  PUBLIC_URL = "https://admin.trainings.arc42.org"
+  PUBLIC_URL = "https://trainings-admin.arc42.org"
 ```
 
 This value and the OAuth callback from Step 2 are a **matched pair**. The app
@@ -336,7 +336,7 @@ admin.trainings    CNAME    arc42-trainings-admin.fly.dev
 Then confirm it resolves before asking fly for a certificate:
 
 ```bash
-dig +short admin.trainings.arc42.org
+dig +short trainings-admin.arc42.org
 ```
 
 Expected: a CNAME/A answer pointing at fly. An empty answer means the record has
@@ -345,8 +345,8 @@ not propagated — wait and retry rather than proceeding.
 - [ ] **Step 7: Issue the TLS certificate**
 
 ```bash
-fly certs add admin.trainings.arc42.org --app arc42-trainings-admin
-fly certs show admin.trainings.arc42.org --app arc42-trainings-admin
+fly certs add trainings-admin.arc42.org --app arc42-trainings-admin
+fly certs show trainings-admin.arc42.org --app arc42-trainings-admin
 ```
 
 Expected: the certificate reaches a ready/issued state. Fly validates via the
@@ -355,7 +355,7 @@ DNS record from Step 6, so this fails if Step 6 has not propagated.
 - [ ] **Step 8: Confirm the origin answers**
 
 ```bash
-curl -sI https://admin.trainings.arc42.org/healthz | head -1
+curl -sI https://trainings-admin.arc42.org/healthz | head -1
 ```
 
 Expected: `HTTP/2 200`. The `/healthz` endpoint is the same one `fly.toml`
@@ -365,7 +365,7 @@ health-checks.
 
 ```bash
 git add admin-app/fly.toml
-git commit -m "chore(admin-app): serve on admin.trainings.arc42.org
+git commit -m "chore(admin-app): serve on trainings-admin.arc42.org
 
 PUBLIC_URL and the OAuth app's authorization callback are a matched
 pair: the app builds redirect_uri as PUBLIC_URL + /auth/callback, and
@@ -390,7 +390,7 @@ to `arc42/trainings.arc42.org-site`, and one without. Nothing is committed here.
 
 - [ ] **Step 1: Sign in as a maintainer**
 
-Open <https://admin.trainings.arc42.org> in a browser and sign in with GitHub.
+Open <https://trainings-admin.arc42.org> in a browser and sign in with GitHub.
 
 Expected: after the GitHub authorization round-trip you land on the dates list
 with real data from `_data/trainings.yml`. A `redirect_uri` error here means
@@ -446,7 +446,7 @@ The site currently has no such link. Confirm:
 
 ```bash
 make site
-grep -c "admin.trainings.arc42.org" _site/index.html _site/de/index.html
+grep -c "trainings-admin.arc42.org" _site/index.html _site/de/index.html
 ```
 
 Expected: `_site/index.html:0` and `_site/de/index.html:0`.
@@ -464,7 +464,7 @@ In `_includes/footer.html`, append to the `.footer-links` list, after the
     <li><a href="/imprint/">Imprint &amp; Privacy</a></li>
     <li><a href="https://status.arc42.org/">Status</a></li>
     <li><a href="https://github.com/arc42">GitHub</a></li>
-    <li><a href="https://admin.trainings.arc42.org">Maintainers</a></li>
+    <li><a href="https://trainings-admin.arc42.org">Maintainers</a></li>
   </ul>
 ```
 
@@ -474,7 +474,7 @@ No `target`, no `rel`, no `class`, no icon, no German variant.
 
 ```bash
 make site
-grep -c "admin.trainings.arc42.org" _site/index.html _site/de/index.html
+grep -c "trainings-admin.arc42.org" _site/index.html _site/de/index.html
 grep -o "Maintainers" _site/imprint/index.html
 ```
 
@@ -541,7 +541,7 @@ Replace the `> **In development.** …` block under *Updating Training Dates
 There are two ways to change training dates.
 
 **The admin app** ([`admin-app/`](/admin-app/)) at
-<https://admin.trainings.arc42.org> is the supported route: sign in with
+<https://trainings-admin.arc42.org> is the supported route: sign in with
 GitHub, edit the forms, and publish. It opens a single pull request against
 [`_data/trainings.yml`](/_data/trainings.yml) with a minimal diff. It never
 commits to `main` — merging still needs a maintainer on GitHub. Sign-in
@@ -564,7 +564,7 @@ Replace the final sentence of § *Deployment* ("As of this writing the fly.io ap
 itself has not been created yet … rather than a new engineering task.") with:
 
 ```markdown
-The app runs at <https://admin.trainings.arc42.org>, a DNS CNAME to the fly
+The app runs at <https://trainings-admin.arc42.org>, a DNS CNAME to the fly
 app plus a fly-managed certificate. Two values must always agree: `PUBLIC_URL`
 in [`fly.toml`](fly.toml), and the authorization callback registered on the
 `arc42-trainings-admin-prod` GitHub OAuth app, which must be `PUBLIC_URL` +
@@ -580,7 +580,7 @@ workflow — they remain accurate.
 
 ```bash
 grep -n "In development\|not finished or deployed\|has not been created yet" README.md admin-app/README.md && echo "STALE REMAINS" || echo "clean"
-grep -c "admin.trainings.arc42.org" README.md admin-app/README.md
+grep -c "trainings-admin.arc42.org" README.md admin-app/README.md
 make check-links
 ```
 
@@ -592,7 +592,7 @@ introduced above).
 
 ```bash
 git add README.md admin-app/README.md
-git commit -m "docs: the admin app is live at admin.trainings.arc42.org
+git commit -m "docs: the admin app is live at trainings-admin.arc42.org
 
 Hand-editing _data/trainings.yml stays documented as the permanent
 fallback: the app is never in the publishing path.
@@ -605,7 +605,7 @@ Claude-Session: https://claude.ai/code/session_01D42RK2ztXWqEVrDFctBSJL"
 
 ## Done when
 
-- `https://admin.trainings.arc42.org` serves the app over HTTPS; a maintainer can
+- `https://trainings-admin.arc42.org` serves the app over HTTPS; a maintainer can
   sign in, a non-maintainer gets the 403 page.
 - Every page of trainings.arc42.org shows a `Maintainers` item in the footer.
 - `make site` emits no `_site/docs` and no `_site/admin-app`, and still emits
