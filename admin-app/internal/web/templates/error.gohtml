@@ -1,0 +1,6 @@
+{{define "error.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+<h1>Something went wrong</h1>
+<p>{{.Message}}</p>
+<p>Your draft is still here — <a href="/">go back to the list</a>.</p>
+{{end}}

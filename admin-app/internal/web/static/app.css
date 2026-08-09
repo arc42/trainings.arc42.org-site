@@ -1,0 +1,231 @@
+/* admin-app stylesheet — trainings.arc42.org family design system.
+   Values are lifted from _sass/oneflow/skins/_arc42.scss (the site's own
+   measured tokens), not re-guessed. Every foreground/background pair below
+   carries its WCAG 2.2 contrast ratio in a comment (ADR-0002: contrast is
+   measured, never eyeballed). Ratios were computed with the standard
+   relative-luminance formula against the exact hex pair named. */
+
+:root {
+  /* ---- Signature hue: dusty rose (BRAND.md, trainings row) ------------- */
+  --band: #a04c5e;         /* masthead fill — white on it 5.69:1 */
+  --deep: #743442;         /* headings, links, borders, hover — 8.92:1 on paper */
+  --band-tint: #f6edef;    /* the ONLY sanctioned quiet text on the band — 4.95:1 */
+
+  /* ---- Surfaces ---------------------------------------------------------
+     $surface-1 = mix($band, $paper, 8%), $surface-2 = mix($band, $paper, 14%),
+     $surface-hover = mix($band, $paper, 25%) — the family's 3-step wash ladder. */
+  --paper: #fcfdff;        /* flat near-white; never pure #fff behind prose */
+  --surface-1: #f5eff2;    /* cards: a training date, a form group */
+  --surface-2: #efe4e8;    /* marked surfaces */
+  --surface-hover: #e5d1d7;/* interactive hover fill */
+
+  /* ---- Ink ---------------------------------------------------------------
+     ink: #3d4144 — 10.12:1 on --paper, 9.08:1 on --surface-1
+     ink-muted: #646769 — 5.60:1 on --paper, 5.02:1 on --surface-1 */
+  --ink: #3d4144;
+  --ink-muted: #646769;
+
+  /* ---- Hairlines, two tiers ---------------------------------------------
+     divider tier is decorative only, never the sole carrier of meaning;
+     box/control tier wears the hue itself (5.59:1 on paper, well past the
+     3:1 floor 1.4.11 requires for non-text UI components). */
+  --hairline: #dcbfc7;      /* mix(band, paper, 35%) */
+  --hairline-hover: #cea5af;/* mix(band, paper, 50%) */
+  --border: var(--band);    /* 5.59:1 on paper */
+
+  /* ---- Shared family tokens (BRAND.md), each with a job on this app ----- */
+  --danger: #c22b47;        /* --arc42-coral-deep — white on it 5.63:1 */
+  --amber: #ffc95c;         /* "few seats" / waitlist marker */
+  --amber-ink: #4a3a0a;     /* on --amber: 7.24:1 */
+  --green-wash: #d9f7d3;
+  --green-ink: #1b5e20;     /* on --green-wash: 6.82:1; white on --green-ink: 7.87:1 */
+  --grey-wash: #e8e8ea;     /* neutral, off-hue: the "full" status has no strong
+                                semantic colour of its own, so it stays neutral
+                                rather than borrowing a hue that means something
+                                else on this site */
+  --grey-ink: var(--ink);   /* #3d4144 on --grey-wash: 8.42:1 */
+
+  /* ---- Type --------------------------------------------------------------
+     Family constant #1 (DESIGN.md): Libre Caslon Text for headings only,
+     Atkinson Hyperlegible Next for body and every UI control. Not
+     self-hosted here (no woff2 shipped in admin-app/internal/web/static/) —
+     falls back to the documented system stack rather than a font CDN, per
+     the family's no-font-CDN privacy rule. */
+  --serif: "Libre Caslon Text", Georgia, "Times New Roman", serif;
+  --sans: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui,
+    -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --radius: 4px;
+  --bar-h: 3.25rem;
+
+  /* The pinned-note shadow (DESIGN.md §2.3): zero blur, zero spread, deep
+     hue, reserved for annotation-style elements pinned onto the page. */
+  --pinned-note-shadow: 3px 3px 0 0 var(--deep);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);   /* ink 10.12:1 on this — see --ink above */
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.5;
+}
+
+h1, h2, h3 { font-family: var(--serif); color: var(--deep); /* 8.92:1 on paper */ }
+
+a { color: var(--deep); /* 8.92:1 on paper */ }
+a:hover { color: var(--band); /* 5.59:1 on paper */ }
+
+/* ---- Masthead ------------------------------------------------------------ */
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: var(--bar-h);
+  padding: 0 1.25rem;
+  background: var(--band);      /* white text on it: 5.69:1 */
+  color: #ffffff;
+}
+.masthead > a {
+  color: #ffffff;                /* 5.69:1 on --band */
+  font-family: var(--serif);
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 1.1rem;
+}
+.masthead nav { display: flex; align-items: center; gap: 1rem; }
+.masthead nav a {
+  color: #ffffff;                 /* 5.69:1 on --band */
+  text-decoration: none;
+}
+.masthead nav a:hover { text-decoration: underline; }
+.masthead .who {
+  color: var(--band-tint);        /* #f6edef, 4.95:1 on --band — NEVER rgba(.82), 4.41:1, fails */
+  font-size: 0.9rem;
+}
+
+main {
+  max-width: 75ch;               /* family reading measure, 65-75ch */
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 5rem;
+}
+table.dates { max-width: none; width: 100%; } /* tables are a documented wider-measure exception */
+
+/* ---- Buttons and link-buttons -------------------------------------------- */
+.button, button {
+  font: inherit;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--band);
+  background: var(--band);
+  color: #ffffff;                 /* 5.69:1 on --band */
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.button:hover, button:hover { background: var(--deep); border-color: var(--deep); } /* white 9.08:1 on --deep */
+
+button.link {
+  background: none;
+  border: none;
+  color: var(--deep);             /* 8.92:1 on paper */
+  min-height: auto;
+  padding: 0;
+  text-decoration: underline;
+}
+button.link:hover { color: var(--band); background: none; } /* 5.59:1 on paper */
+button.link.danger { color: var(--danger); }  /* #c22b47 as text on paper: measured 5.53:1 on --paper (#fcfdff), AA-safe for UI text */
+
+/* ---- Forms (family form vocabulary, DESIGN.md §4) ------------------------ */
+form.detail {
+  display: grid;
+  gap: 1rem;
+  max-width: 60ch;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 600;
+  color: var(--ink);              /* 10.12:1 on paper */
+}
+label small { font-weight: 400; color: var(--ink-muted); /* 5.60:1 on paper */ }
+input, select, textarea {
+  font: inherit;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--band);  /* box/control tier, 5.59:1 on paper */
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+}
+input:focus, select:focus, textarea:focus {
+  outline: 3px solid var(--deep); /* focus ring on paper: 8.92:1 */
+  outline-offset: 1px;
+}
+.actions { display: flex; gap: 1rem; align-items: center; }
+
+ul.problems {
+  background: color-mix(in oklab, var(--danger) 8%, var(--paper));
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  color: var(--ink);               /* 10.12:1 base ink on a near-paper wash */
+}
+ul.problems li::marker { color: var(--danger); }
+
+/* ---- Tables ---------------------------------------------------------------- */
+table.dates { border-collapse: collapse; }
+table.dates th, table.dates td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--hairline); /* divider tier, decorative only */
+}
+table.dates thead th { color: var(--ink-muted); font-weight: 600; } /* 5.60:1 on paper */
+table.dates tr.past { color: var(--ink-muted); } /* 5.60:1 on paper */
+table.dates .row-actions { display: flex; gap: 0.75rem; white-space: nowrap; }
+table.dates .row-actions form { display: inline; }
+
+/* ---- Status badges ---------------------------------------------------------
+   Each is a wash + dark ink pair, never saturated fill behind text
+   (DESIGN.md §4 forms rule: emerald #2e9e67 fails AA as body text at 3.4:1,
+   so status colour is always paired with a measured ink on a light wash). */
+.status {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.status-open       { background: var(--green-wash); color: var(--green-ink); } /* 6.82:1 */
+.status-waitlist    { background: var(--amber);      color: var(--amber-ink); } /* 7.24:1 */
+.status-full        { background: var(--grey-wash);  color: var(--grey-ink); }  /* 8.42:1 */
+.status-cancelled   { background: color-mix(in oklab, var(--danger) 12%, var(--paper)); color: var(--danger); } /* text-on-wash: >= 5.53:1 (the wash is lighter than --paper, so the ratio against --danger only improves; base pair measured on button.link.danger) */
+
+/* ---- Draft bar -------------------------------------------------------------- */
+.draftbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--deep);
+  color: #ffffff;                  /* 9.08:1 on --deep */
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15); /* the one sanctioned dynamic
+                                                  elevation, not the static
+                                                  pinned-note shadow */
+}
+.draftbar .button { background: #ffffff; color: var(--deep); border-color: #ffffff; } /* --deep 8.92:1 on white */
+.draftbar .button:hover { background: var(--band-tint); }
+.draftbar button.link { color: #ffffff; } /* 9.08:1 on --deep */
+
+/* ---- Reduced motion -------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

@@ -1,0 +1,22 @@
+{{define "list.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+<h1>Training dates</h1>
+<p><a class="button" href="/dates/new">New date</a></p>
+<table class="dates">
+<thead><tr><th>Code</th><th>Course</th><th>When</th><th>Where</th><th>Lang</th><th>Status</th><th></th></tr></thead>
+<tbody>
+{{range .Rows}}<tr class="{{if .Past}}past{{end}}">
+<td><a href="/dates/{{.Date.ID}}">{{.Date.Code}}</a></td>
+<td>{{.CourseShortTitle}}</td>
+<td>{{.Date.Start}} → {{.Date.End}}</td>
+<td>{{if eqStr .Date.Format "online"}}online{{else}}{{.Date.City}}{{end}}</td>
+<td>{{.Date.Language}}</td>
+<td><span class="status status-{{.Date.Status}}">{{.Date.Status}}</span></td>
+<td class="row-actions">
+  <a href="/dates/new?from={{.Date.ID}}">Duplicate</a>
+  <form method="post" action="/dates/{{.Date.ID}}/delete"><button class="link danger">Remove</button></form>
+</td></tr>{{else}}
+<tr><td colspan="7">No dates yet.</td></tr>
+{{end}}
+</tbody></table>
+{{end}}

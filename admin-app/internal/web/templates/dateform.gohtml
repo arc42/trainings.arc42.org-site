@@ -1,0 +1,27 @@
+{{define "dateform.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+<h1>{{.Title}}</h1>
+{{if .Problems}}<ul class="problems">{{range .Problems}}<li>{{.String}}</li>{{end}}</ul>{{end}}
+<form method="post" action="/dates/{{if .IsNew}}new{{else}}{{.Date.ID}}{{end}}" class="detail">
+<label>Course<select name="course_id">{{$cid := .CourseID}}{{range .Courses}}
+  <option value="{{.ID}}" {{if eqStr .ID $cid}}selected{{end}}>{{.ShortTitle}}</option>{{end}}</select></label>
+<label>ID<input name="id" value="{{.Date.ID}}" required pattern="[a-z0-9-]+"></label>
+<label>Booking code<input name="code" value="{{.Date.Code}}" required></label>
+<label>Start<input type="date" name="start" value="{{.Date.Start}}" required></label>
+<label>End<input type="date" name="end" value="{{.Date.End}}" required></label>
+<label>Format<select name="format">{{$f := .Date.Format}}{{range .Formats}}
+  <option value="{{.}}" {{if eqStr . $f}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>City<input name="city" value="{{.Date.City}}"> <small>required unless online</small></label>
+<label>Country<input name="country" value="{{.Date.Country}}" maxlength="2" placeholder="DE"></label>
+<label>Language<select name="language">{{$l := .Date.Language}}{{range .Languages}}
+  <option value="{{.}}" {{if eqStr . $l}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>Status<select name="status">{{$s := .Date.Status}}{{range .Statuses}}
+  <option value="{{.}}" {{if eqStr . $s}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>Trainers <small>comma-separated; leave empty to use the course's</small>
+  <input name="trainers" value="{{range $i, $t := .Date.Trainers}}{{if $i}}, {{end}}{{$t}}{{end}}"></label>
+<label>Pricing<input name="pricing" value="{{.Date.Pricing}}"></label>
+<label>Few seats note<input name="few_seats" value="{{.Date.FewSeats}}"></label>
+<label>URL<input name="url" value="{{.Date.URL}}" required></label>
+<div class="actions"><button type="submit">Save to draft</button> <a href="/">Cancel</a></div>
+</form>
+{{end}}

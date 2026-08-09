@@ -1,0 +1,7 @@
+{{define "draftbar.gohtml"}}{{with .Draft}}{{if .Dirty}}
+<div id="draftbar" class="draftbar" hx-get="/keepalive" hx-trigger="every 60s" hx-swap="outerHTML">
+  <span>{{len .Changes}} unpublished change{{if ne (len .Changes) 1}}s{{end}}</span>
+  <a class="button" href="/propose">Review &amp; propose</a>
+  <form method="post" action="/discard"><button class="link">Discard</button></form>
+</div>
+{{end}}{{end}}{{end}}
