@@ -49,7 +49,10 @@ func Load() (Config, error) {
 		missing = append(missing, "GITHUB_CLIENT_SECRET (too short to be real)")
 	}
 	if len(c.SessionKey) < 32 {
-		missing = append(missing, "SESSION_KEY (needs >= 32 chars)")
+		// Unlike the OAuth pair, this one is not issued by anybody — it is a
+		// local random key for encrypting the session cookie. Say so, or the
+		// reader goes hunting for a value that does not exist.
+		missing = append(missing, "SESSION_KEY (not issued by anyone — generate one: openssl rand -hex 32)")
 	}
 	if !strings.Contains(c.GitHubRepo, "/") {
 		missing = append(missing, `GITHUB_REPO (needs "owner/name" form)`)

@@ -51,6 +51,20 @@ app: ## Run the trainings admin app at http://localhost:8080
 		echo "==> Run: cp admin-app/.env.template admin-app/.env  and fill it in."; \
 		exit 1; \
 	}
+	@# SESSION_KEY is not looked up anywhere - it is just a local random key that
+	@# encrypts the session cookie. Making a human generate randomness is a bad
+	@# prompt, so fill it in here when it is empty. Never overwrite an existing
+	@# one: that would sign everybody out. Production sets it as a fly secret.
+	@if ! grep -qE '^SESSION_KEY=.{32,}' admin-app/.env; then \
+		key=$$(openssl rand -hex 32); \
+		if grep -qE '^SESSION_KEY=' admin-app/.env; then \
+			awk -v k="$$key" '/^SESSION_KEY=/ { print "SESSION_KEY=" k; next } { print }' \
+				admin-app/.env > admin-app/.env.tmp && mv admin-app/.env.tmp admin-app/.env; \
+		else \
+			printf 'SESSION_KEY=%s\n' "$$key" >> admin-app/.env; \
+		fi; \
+		echo "==> Generated a SESSION_KEY in admin-app/.env (local cookie key - nothing to look up)."; \
+	fi
 	@holder=$$(docker ps --filter "publish=8080" --format '{{.Names}}'); \
 	if [ -n "$$holder" ]; then \
 		echo "==> Port 8080 is already in use by another container: $$holder"; \
