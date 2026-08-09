@@ -77,3 +77,61 @@ func TestLoadAcceptsRealisticCredentials(t *testing.T) {
 		t.Fatalf("Load rejected realistic credentials: %v", err)
 	}
 }
+
+func TestPublicURLDefaultsPerEnvironment(t *testing.T) {
+	realish := func(t *testing.T) {
+		t.Helper()
+		t.Setenv("GITHUB_CLIENT_ID", "Ov23liABCDEFGHIJKLMN")
+		t.Setenv("GITHUB_CLIENT_SECRET", "0123456789abcdef0123456789abcdef01234567")
+		t.Setenv("SESSION_KEY", "0123456789abcdef0123456789abcdef")
+	}
+
+	t.Run("development", func(t *testing.T) {
+		realish(t)
+		c, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if c.PublicURL != "http://localhost:8080" {
+			t.Errorf("PublicURL = %q", c.PublicURL)
+		}
+	})
+
+	t.Run("production", func(t *testing.T) {
+		realish(t)
+		t.Setenv("ENVIRONMENT", "PRODUCTION")
+		c, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if c.PublicURL != "https://arc42-trainings-admin.fly.dev" {
+			t.Errorf("PublicURL = %q", c.PublicURL)
+		}
+	})
+
+	// A custom domain or a differently-named fly app must not require a code
+	// change: the registered OAuth callback has to match byte for byte.
+	t.Run("override", func(t *testing.T) {
+		realish(t)
+		t.Setenv("ENVIRONMENT", "PRODUCTION")
+		t.Setenv("PUBLIC_URL", "https://admin.arc42.org/")
+		c, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		// Trailing slash stripped, or the callback becomes "…//auth/callback"
+		// and GitHub rejects it as a mismatch.
+		if c.PublicURL != "https://admin.arc42.org" {
+			t.Errorf("PublicURL = %q, want the trailing slash stripped", c.PublicURL)
+		}
+	})
+
+	t.Run("production must be https", func(t *testing.T) {
+		realish(t)
+		t.Setenv("ENVIRONMENT", "PRODUCTION")
+		t.Setenv("PUBLIC_URL", "http://admin.arc42.org")
+		if _, err := Load(); err == nil {
+			t.Fatal("Load accepted a plain-http PUBLIC_URL in PRODUCTION")
+		}
+	})
+}

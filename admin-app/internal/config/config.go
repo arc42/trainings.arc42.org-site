@@ -14,6 +14,10 @@ type Config struct {
 	ClientSecret string
 	SessionKey   string
 	Environment  string
+	// PublicURL is the origin GitHub redirects back to. It must match the
+	// OAuth app's registered callback byte for byte, so it is configurable:
+	// a renamed fly app or a custom domain must not need a code change.
+	PublicURL string
 }
 
 // Load reads configuration from the environment, applying defaults and
@@ -27,6 +31,13 @@ func Load() (Config, error) {
 		SessionKey:   os.Getenv("SESSION_KEY"),
 		Environment:  envOr("ENVIRONMENT", "DEVELOPMENT"),
 	}
+	defaultPublic := "http://localhost:8080"
+	if c.Environment == "PRODUCTION" {
+		defaultPublic = "https://arc42-trainings-admin.fly.dev"
+	}
+	// A trailing slash would build "…//auth/callback", which GitHub rejects as
+	// a redirect_uri mismatch — an error that reads as an app bug, not a typo.
+	c.PublicURL = strings.TrimRight(envOr("PUBLIC_URL", defaultPublic), "/")
 	// Real GitHub OAuth credentials are long: client ids are 20 hex characters
 	// (classic) or ~22 starting "Ov23li" (current); secrets are 40 hex. A short
 	// value is always a placeholder, and letting one through is expensive — the
@@ -56,6 +67,9 @@ func Load() (Config, error) {
 	}
 	if !strings.Contains(c.GitHubRepo, "/") {
 		missing = append(missing, `GITHUB_REPO (needs "owner/name" form)`)
+	}
+	if c.Environment == "PRODUCTION" && !strings.HasPrefix(c.PublicURL, "https://") {
+		missing = append(missing, fmt.Sprintf("PUBLIC_URL (%q must be https:// in PRODUCTION)", c.PublicURL))
 	}
 	if len(missing) > 0 {
 		return Config{}, fmt.Errorf("missing configuration: %s\n\nCopy admin-app/.env.template to admin-app/.env and fill it in", strings.Join(missing, ", "))

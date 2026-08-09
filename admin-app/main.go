@@ -13,15 +13,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("startup: %v", err)
 	}
-	publicURL := "http://localhost:8080"
-	if cfg.Environment == "PRODUCTION" {
-		publicURL = "https://arc42-trainings-admin.fly.dev"
-	}
-	srv, err := web.NewServer(cfg, "https://api.github.com", publicURL)
+	srv, err := web.NewServer(cfg, "https://api.github.com", cfg.PublicURL)
 	if err != nil {
 		log.Fatalf("startup: %v", err)
 	}
-	log.Printf("trainings-admin listening on %s (repo %s, env %s)", cfg.Addr, cfg.GitHubRepo, cfg.Environment)
+	// The callback is logged because it MUST equal the OAuth app's registered
+	// callback URL; a mismatch is otherwise only visible as a GitHub error page.
+	log.Printf("trainings-admin listening on %s (repo %s, env %s, callback %s/auth/callback)",
+		cfg.Addr, cfg.GitHubRepo, cfg.Environment, cfg.PublicURL)
 	if err := http.ListenAndServe(cfg.Addr, srv.Routes()); err != nil {
 		log.Fatal(err)
 	}

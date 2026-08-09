@@ -17,6 +17,11 @@ primary_region = "ams"
 [env]
   ENVIRONMENT = "PRODUCTION"
   GITHUB_REPO = "arc42/trainings.arc42.org-site"
+  # Must match the arc42-trainings-admin-prod OAuth app's registered callback,
+  # which is this value + "/auth/callback". Change both together, or GitHub
+  # rejects the redirect_uri. Defaults to the fly.dev host if unset; set it
+  # explicitly when moving to a custom domain.
+  PUBLIC_URL = "https://arc42-trainings-admin.fly.dev"
 
 [[http_service.checks]]
   interval = "30s"
