@@ -7,7 +7,7 @@ _site
 *.iml
 *.code-workspace
 
+# The app no longer runs locally, so this file should not exist any more.
+# Kept ignored so a leftover copy can never be committed: it holds real
+# GitHub OAuth credentials.
 admin-app/.env
-
-# Throwaway credentials for local test runs; never the operator .env
-admin-app/.env.test

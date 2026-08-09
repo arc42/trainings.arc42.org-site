@@ -1,3 +1,6 @@
+# Only the Jekyll site is built and served locally. The trainings admin app
+# has no local mode: it is developed by pushing to a branch, and it only ever
+# proposes pull requests, so a mistake is reverted by closing one.
 services:
   jekyll:
     build: .
@@ -5,15 +8,3 @@ services:
       - .:/srv/jekyll
     ports:
       - '4000:4000'
-
-  admin:
-    build:
-      context: .
-      dockerfile: admin-app/Dockerfile.dev
-    volumes:
-      - .:/src
-    working_dir: /src/admin-app
-    env_file:
-      - admin-app/.env
-    ports:
-      - '8080:8080'

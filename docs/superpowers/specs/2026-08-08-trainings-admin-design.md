@@ -185,36 +185,31 @@ decorative.
 | Unit | `model` — flatten, sort, course membership | — |
 | Integration | **`gh`** — against `httptest`, asserting the exact API call sequence and payloads | No network in tests; pins the publish flow's contract |
 | Handler | **`web`** — `httptest` + a fake `gh`: list → edit → propose, plus the conflict path and the 403 path | Covers the flows a user actually performs |
-| Manual | `make app` with `GITHUB_REPO` pointed at a **fork** | Open real PRs without touching arc42's repo. Also where draft loss is deliberately exercised by restarting mid-session |
+| Manual | Sign in to the deployed app and publish, then close the PR unmerged | ~~Originally against a fork from a local instance~~ — see §10. Also where draft loss is deliberately exercised, by letting the machine idle out mid-session |
 
 No browser/e2e tests — four screens do not justify the maintenance.
 
-## 10. Local development
+## 10. Local development — **superseded 2026-08-09: there is none**
 
-Docker, matching the site's existing conventions (`docker compose` services,
-`##`-annotated Makefile targets, a port guard).
+As originally specified, the app ran locally through Docker (`make app`,
+`make app-test`, `make app-stop`, `make app-logs`, `make app-shell`), configured
+by a gitignored `admin-app/.env` copied from a committed template, with a second
+GitHub OAuth app registered against `http://localhost:8080/auth/callback` and
+`GITHUB_REPO` pointed at a fork so test runs opened harmless PRs.
 
-| Target | What it does |
-|---|---|
-| `make app` | Build and run the admin app at <http://localhost:8080> |
-| `make app-test` | Run the Go test suite in the container (includes the Ruby cross-check) |
-| `make app-stop` | Stop and remove the admin container |
-| `make app-logs` | Tail its logs |
-| `make app-shell` | Shell into the container |
+That was all removed once the app was live. The reason is the PR-only boundary
+(§2): the app proposes and never publishes, so working directly against
+production risks a closed pull request and nothing else. Against that, a local
+mode costs a second OAuth app, a second set of credentials on each maintainer's
+laptop, a `Dockerfile.dev`, a compose service, five Makefile targets, and a
+fork — a standing divergence between two environments, maintained for two people
+who use the app a few times a quarter.
 
-`make app` refuses to start if another container holds port 8080, mirroring
-`make dev`'s guard on 4000.
-
-Configuration comes from `admin-app/.env` (gitignored), with
-`admin-app/.env.template` committed. `make app` fails with an actionable message
-if `.env` is missing.
-
-| Variable | Purpose |
-|---|---|
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | OAuth app credentials |
-| `SESSION_KEY` | Cookie encryption key |
-| `GITHUB_REPO` | Target repo; default `arc42/trainings.arc42.org-site`, set to a fork for smoke testing |
-| `ENVIRONMENT` | `DEVELOPMENT` \| `PRODUCTION` |
+What remains: `go test ./...` runs the suite anywhere Go 1.23 is installed (the
+Ruby cross-check skips itself if Ruby is absent; CI always runs it), and pushing
+to `main` tests and deploys. Configuration is `fly.toml` plus three fly secrets
+(`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_KEY`) — see §11 and
+[`admin-app/README.md`](/admin-app/README.md).
 
 ## 11. Deployment
 

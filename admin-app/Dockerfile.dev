@@ -1,6 +1,0 @@
-FROM golang:1.23-alpine
-RUN apk add --no-cache ruby git
-WORKDIR /src/admin-app
-COPY admin-app/go.mod admin-app/go.sum* ./
-RUN go mod download || true
-CMD ["go", "run", "."]

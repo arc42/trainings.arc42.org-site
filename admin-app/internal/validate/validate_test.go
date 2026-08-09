@@ -108,7 +108,9 @@ func TestSchemaAcceptsTheRealFile(t *testing.T) {
 // Without this, the duplication silently rots.
 func TestAgreesWithRubyValidator(t *testing.T) {
 	if _, err := exec.LookPath("ruby"); err != nil {
-		t.Skip("ruby not installed; run via `make app-test`")
+		// Skipping here is safe: CI installs Ruby 3.3, so the cross-check
+		// always runs before anything deploys.
+		t.Skip("ruby not installed; this check runs in CI")
 	}
 	script, err := filepath.Abs(filepath.Join("..", "..", "..", "scripts", "validate_trainings.rb"))
 	if err != nil {

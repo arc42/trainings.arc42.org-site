@@ -22,44 +22,46 @@ live `permissions.push` check against the repository on every request that
 needs it — access is granted and revoked entirely on GitHub's side, and the
 app has nothing locally that could go stale or leak.
 
-## Running it locally
+## There is no local mode
 
-Everything runs in Docker via the root [`Makefile`](/Makefile), the same way
-the Jekyll site does:
+The app runs in exactly one place: <https://trainings-admin.arc42.org>. You
+change it by pushing, not by starting it on your laptop.
 
-| Target | What it does |
+1. Edit the code and run the tests from this directory: `go test ./...`
+   (Go 1.23, no Docker, no configuration, no network).
+2. Push to `main`. [`deploy-admin-app.yml`](/.github/workflows/deploy-admin-app.yml)
+   runs the same tests and then deploys — there is no manual `flyctl deploy`.
+3. Try the change on the live app.
+
+This trades a fast local loop for having one environment instead of two, and
+it is affordable only because of what the app can do: it opens pull requests
+and nothing else. A change that turns out wrong costs a closed PR and another
+push. There is no data to corrupt and, with two users who touch this a few
+times a quarter, nobody to interrupt.
+
+A caveat that follows from it: pressing **Publish** while trying something out
+opens a real pull request against this repository. That is harmless — close it
+unmerged and delete its branch — but do not leave it sitting in the queue,
+where the next person reads it as a proposal.
+
+**Configuration** lives in two places, both in production. Non-secrets
+(`GITHUB_REPO`, `ENVIRONMENT`, `PUBLIC_URL`) are in [`fly.toml`](fly.toml) and
+are reviewable. The three secrets are set once with `flyctl secrets set … -a
+arc42-trainings-admin` and never appear in the repository:
+
+| Secret | Meaning |
 | --- | --- |
-| `make app` | Start the app at <http://localhost:8080> |
-| `make app-test` | Run the Go test suite, including the `validate_trainings.rb` cross-check |
-| `make app-stop` | Stop and remove the running container |
-| `make app-logs` | Tail logs from the running container |
-| `make app-shell` | Open a shell inside the container |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | The `arc42-trainings-admin-prod` GitHub OAuth app, which signs users in |
+| `SESSION_KEY` | 32+ random bytes encrypting the session cookie. Nobody issues this — generate it with `openssl rand -hex 32`. Replacing it signs everyone out; that is its only effect |
 
-`make app` refuses to start if port 8080 is already held by another
-container, and it refuses to start at all until `admin-app/.env` exists.
-Copy the template and fill it in:
-
-```bash
-cp admin-app/.env.template admin-app/.env
-```
-
-`.env` (gitignored) holds:
-
-| Variable | Meaning |
-| --- | --- |
-| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Credentials of the GitHub OAuth app used to sign users in |
-| `SESSION_KEY` | 32+ bytes used to encrypt the session cookie — generate with `openssl rand -hex 32` |
-| `GITHUB_REPO` | The repo the app reads from and opens PRs against. Defaults to `arc42/trainings.arc42.org-site`; point it at **your own fork** while smoke-testing so real PRs land somewhere harmless (see below) |
-| `ENVIRONMENT` | `DEVELOPMENT` or `PRODUCTION` — cosmetic, logged at startup |
-
-The container image used locally is `Dockerfile.dev`, which additionally
-installs Ruby so `make app-test` can shell out to
-[`scripts/validate_trainings.rb`](/scripts/validate_trainings.rb) as an
-anti-drift check: the app's own validation rules must never silently diverge
-from what CI already enforces. The production image
-([`Dockerfile`](Dockerfile)) has no Ruby at all — the deployed binary never
-runs the validator itself, it only relies on the schema and the four
-cross-field rules baked into `internal/validate`.
+The test suite includes an anti-drift check that shells out to
+[`scripts/validate_trainings.rb`](/scripts/validate_trainings.rb) and requires
+the Go and Ruby validators to reach the same verdict on every fixture — the
+duplication would otherwise rot silently. It skips itself when Ruby is absent,
+so it is optional locally and mandatory in CI, which pins Ruby 3.3. The
+production image ([`Dockerfile`](Dockerfile)) has no Ruby at all: the deployed
+binary never runs the validator, only the schema and the four cross-field
+rules in `internal/validate`.
 
 ## Drafts are in-memory, on purpose
 
@@ -72,24 +74,6 @@ allowed to persist is what is already in the repository, or what is on its
 way there as a PR. A draft that outlived a restart would be a second, hidden
 source of truth for training dates, which is exactly what this app exists to
 avoid.
-
-## Smoke-testing against a fork
-
-Because a real run opens a real pull request, never point a development
-instance at `arc42/trainings.arc42.org-site` while you're testing a change to
-the app itself. Instead:
-
-1. Fork `arc42/trainings.arc42.org-site` on GitHub.
-2. Register (or reuse) a GitHub OAuth app whose authorization callback points
-   at `http://localhost:8080/auth/callback`, and put its ID/secret in
-   `admin-app/.env`.
-3. Set `GITHUB_REPO=<your-github-username>/trainings.arc42.org-site` in
-   `admin-app/.env`.
-4. `make app`, sign in, make a change, publish it, and check that the PR
-   lands on your fork with the diff you expect.
-
-Delete the fork's PR (and the branch it opened) when you're done — it never
-needs to be merged, it only needs to prove the round-trip works.
 
 ## Deployment
 

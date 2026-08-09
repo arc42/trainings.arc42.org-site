@@ -86,8 +86,26 @@ func TestPublicURLDefaultsPerEnvironment(t *testing.T) {
 		t.Setenv("SESSION_KEY", "0123456789abcdef0123456789abcdef")
 	}
 
+	// Unset means PRODUCTION: the app runs nowhere else, and the strict
+	// branch (Secure cookies, https required) has to be what you get by
+	// forgetting to say.
+	t.Run("unset defaults to production", func(t *testing.T) {
+		realish(t)
+		c, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if c.Environment != "PRODUCTION" {
+			t.Errorf("Environment = %q, want PRODUCTION", c.Environment)
+		}
+		if c.PublicURL != "https://arc42-trainings-admin.fly.dev" {
+			t.Errorf("PublicURL = %q", c.PublicURL)
+		}
+	})
+
 	t.Run("development", func(t *testing.T) {
 		realish(t)
+		t.Setenv("ENVIRONMENT", "DEVELOPMENT")
 		c, err := Load()
 		if err != nil {
 			t.Fatalf("Load: %v", err)

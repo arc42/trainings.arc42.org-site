@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help dev build stop site check-links clean install update shell logs app app-test app-stop app-logs app-shell
+.PHONY: help dev build stop site check-links clean install update shell logs
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -15,10 +15,6 @@ dev: ## Start the local Jekyll dev server with live reload (http://localhost:400
 		echo "==>   docker stop $$holder"; \
 		exit 1; \
 	fi
-	@# Name the service explicitly: a bare `up` starts every service in
-	@# docker-compose.yml, including `admin`, whose env_file admin-app/.env is
-	@# gitignored. Site-only contributors would hit "env file not found" instead
-	@# of a dev server.
 	docker compose up --build jekyll
 
 build: ## Build the Docker dev image from the Gemfile-pinned gems
@@ -49,43 +45,5 @@ shell: build ## Open a shell inside the dev container for debugging
 logs: ## Tail logs from the running dev container
 	docker compose logs -f jekyll
 
-app: ## Run the trainings admin app at http://localhost:8080
-	@test -f admin-app/.env || { \
-		echo "==> admin-app/.env is missing."; \
-		echo "==> Run: cp admin-app/.env.template admin-app/.env  and fill it in."; \
-		exit 1; \
-	}
-	@# SESSION_KEY is not looked up anywhere - it is just a local random key that
-	@# encrypts the session cookie. Making a human generate randomness is a bad
-	@# prompt, so fill it in here when it is empty. Never overwrite an existing
-	@# one: that would sign everybody out. Production sets it as a fly secret.
-	@if ! grep -qE '^SESSION_KEY=.{32,}' admin-app/.env; then \
-		key=$$(openssl rand -hex 32); \
-		if grep -qE '^SESSION_KEY=' admin-app/.env; then \
-			awk -v k="$$key" '/^SESSION_KEY=/ { print "SESSION_KEY=" k; next } { print }' \
-				admin-app/.env > admin-app/.env.tmp && mv admin-app/.env.tmp admin-app/.env; \
-		else \
-			printf 'SESSION_KEY=%s\n' "$$key" >> admin-app/.env; \
-		fi; \
-		echo "==> Generated a SESSION_KEY in admin-app/.env (local cookie key - nothing to look up)."; \
-	fi
-	@holder=$$(docker ps --filter "publish=8080" --format '{{.Names}}'); \
-	if [ -n "$$holder" ]; then \
-		echo "==> Port 8080 is already in use by another container: $$holder"; \
-		echo "==> Stop it first, e.g.:  docker stop $$holder"; \
-		exit 1; \
-	fi
-	@echo "==> Open http://localhost:8080"
-	docker compose up --build admin
-
-app-test: ## Run the admin app's Go test suite (includes the Ruby cross-check)
-	docker compose run --rm --no-deps admin go test ./... -v
-
-app-stop: ## Stop and remove the running admin container
-	docker compose rm -sf admin
-
-app-logs: ## Tail logs from the running admin container
-	docker compose logs -f admin
-
-app-shell: ## Open a shell inside the admin container
-	docker compose run --rm --no-deps admin sh
+# The trainings admin app (admin-app/) has no target here on purpose: it runs
+# only on fly.io. Push to main and CI tests and deploys it; see admin-app/README.md.

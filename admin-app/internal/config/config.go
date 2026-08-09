@@ -29,11 +29,17 @@ func Load() (Config, error) {
 		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		SessionKey:   os.Getenv("SESSION_KEY"),
-		Environment:  envOr("ENVIRONMENT", "DEVELOPMENT"),
+		// Defaults to PRODUCTION because that is now the only place this app
+		// runs (there is no local mode). Environment still gates the Secure
+		// cookie flag and the https check below, so the default has to be the
+		// strict one: an ENVIRONMENT accidentally dropped from fly.toml must
+		// not silently downgrade session cookies. DEVELOPMENT remains valid
+		// and is what the tests use.
+		Environment: envOr("ENVIRONMENT", "PRODUCTION"),
 	}
-	defaultPublic := "http://localhost:8080"
-	if c.Environment == "PRODUCTION" {
-		defaultPublic = "https://arc42-trainings-admin.fly.dev"
+	defaultPublic := "https://arc42-trainings-admin.fly.dev"
+	if c.Environment != "PRODUCTION" {
+		defaultPublic = "http://localhost:8080"
 	}
 	// A trailing slash would build "…//auth/callback", which GitHub rejects as
 	// a redirect_uri mismatch — an error that reads as an app bug, not a typo.
@@ -72,7 +78,13 @@ func Load() (Config, error) {
 		missing = append(missing, fmt.Sprintf("PUBLIC_URL (%q must be https:// in PRODUCTION)", c.PublicURL))
 	}
 	if len(missing) > 0 {
-		return Config{}, fmt.Errorf("missing configuration: %s\n\nCopy admin-app/.env.template to admin-app/.env and fill it in", strings.Join(missing, ", "))
+		// The only place this app runs is fly.io, so the only place these come
+		// from is fly secrets. Naming the command beats naming the variables:
+		// this message is read in a crash log, minutes after a deploy.
+		return Config{}, fmt.Errorf("missing configuration: %s\n\n"+
+			"Set these with: flyctl secrets set NAME=value -a arc42-trainings-admin\n"+
+			"(GITHUB_REPO, ENVIRONMENT and PUBLIC_URL come from fly.toml instead)",
+			strings.Join(missing, ", "))
 	}
 	return c, nil
 }
