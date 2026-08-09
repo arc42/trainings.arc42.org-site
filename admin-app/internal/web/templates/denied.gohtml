@@ -1,0 +1,9 @@
+{{define "denied.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+<h1>No access</h1>
+<p>You are signed in as <strong>{{.Login}}</strong>, but that account does not have
+push access to <code>{{.Repo}}</code>.</p>
+<p>Access is read live from GitHub — there is no separate list in this app — so
+the fix is to grant push access on the repository.</p>
+<form method="post" action="/auth/logout"><button>Sign out</button></form>
+{{end}}

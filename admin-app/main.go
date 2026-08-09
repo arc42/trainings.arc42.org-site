@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"arc42-trainings-admin/internal/config"
+	"arc42-trainings-admin/internal/web"
 )
 
 func main() {
@@ -12,13 +13,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("startup: %v", err)
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		_, _ = w.Write([]byte("ok\n"))
-	})
+	publicURL := "http://localhost:8080"
+	if cfg.Environment == "PRODUCTION" {
+		publicURL = "https://arc42-trainings-admin.fly.dev"
+	}
+	srv, err := web.NewServer(cfg, "https://api.github.com", publicURL)
+	if err != nil {
+		log.Fatalf("startup: %v", err)
+	}
 	log.Printf("trainings-admin listening on %s (repo %s, env %s)", cfg.Addr, cfg.GitHubRepo, cfg.Environment)
-	if err := http.ListenAndServe(cfg.Addr, mux); err != nil {
+	if err := http.ListenAndServe(cfg.Addr, srv.Routes()); err != nil {
 		log.Fatal(err)
 	}
 }
