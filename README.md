@@ -98,14 +98,9 @@ dead in-page anchors.
 
 ## Updating Training Dates (requires write access)
 
-> **In development.** The **trainings admin app** ([`admin-app/`](/admin-app/))
-> will become the supported way to change dates: sign in with GitHub, edit the
-> forms, and it opens a single pull request with a minimal diff. It is not
-> finished or deployed yet, so the manual steps below are today's actual
-> procedure — and they remain the permanent fallback, because the app is never
-> in the publishing path.
+Use the **trainings admin app** at [https://trainings-admin.arc42.org](https://trainings-admin.arc42.org) (also linked as **Maintainers** in the site footer): sign in with GitHub, edit courses or dates via forms, and publish — the app turns your editing session into a single pull request against `_data/trainings.yml` with a minimal diff.
 
-To change or add training dates:
+Manual editing remains the permanent fallback, as the app is never in the publishing path:
 
 1. Edit [`/_data/trainings.yml`](/_data/trainings.yml)
 2. Run `ruby scripts/validate_trainings.rb`
