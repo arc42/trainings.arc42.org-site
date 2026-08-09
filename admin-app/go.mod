@@ -8,4 +8,7 @@ require github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 
 require golang.org/x/oauth2 v0.30.0
 
-require github.com/gorilla/securecookie v1.1.2
+require (
+	github.com/gorilla/securecookie v1.1.2
+	github.com/hexops/gotextdiff v1.0.3
+)

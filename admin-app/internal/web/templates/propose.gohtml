@@ -1,0 +1,16 @@
+{{define "propose.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+<h1>Review &amp; propose</h1>
+{{if .Problems}}<ul class="problems">{{range .Problems}}<li>{{.String}}</li>{{end}}</ul>
+<p>Fix these before opening a pull request — CI would reject them anyway.</p>{{end}}
+<h2>Changes</h2>
+<ul class="changes">{{range .Draft.Changes}}<li><strong>{{.Kind}}</strong> {{.DateID}} — {{.Summary}}</li>{{end}}</ul>
+<h2>Diff against <code>main</code></h2>
+<pre class="diff">{{.Diff}}</pre>
+{{if not .Problems}}
+<form method="post" action="/propose" class="detail">
+<label>Pull request title<input name="title" value="{{.PRTitle}}" required></label>
+<label>Description<textarea name="body" rows="8">{{.PRBody}}</textarea></label>
+<div class="actions"><button type="submit">Open pull request</button> <a href="/">Keep editing</a></div>
+</form>{{end}}
+{{end}}

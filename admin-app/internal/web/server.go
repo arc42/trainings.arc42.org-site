@@ -34,9 +34,12 @@ type Server struct {
 // for every page. Each entry here is parsed from layout + draftbar + the page
 // file alone.
 //
-// courselist.gohtml, courseform.gohtml, propose.gohtml, conflict.gohtml and
-// published.gohtml land in Tasks 9-10 and are added to this list then.
-var pages = []string{"list.gohtml", "dateform.gohtml", "login.gohtml", "denied.gohtml", "error.gohtml"}
+// courselist.gohtml and courseform.gohtml land in Task 10 and are added to
+// this list then.
+var pages = []string{
+	"list.gohtml", "dateform.gohtml", "login.gohtml", "denied.gohtml", "error.gohtml",
+	"propose.gohtml", "conflict.gohtml", "published.gohtml",
+}
 
 func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
 	set := map[string]*template.Template{}
@@ -153,9 +156,9 @@ func templateFuncs() template.FuncMap {
 	}
 }
 
-// Placeholder handlers for the course screens and the propose flow. Both land
-// in Tasks 9-10; Routes() already names them so the routing table is complete
-// and stable, but until those tasks land there is nothing to serve.
+// Placeholder handlers for the course screens. They land in Task 10;
+// Routes() already names them so the routing table is complete and stable,
+// but until that task lands there is nothing to serve.
 func (s *Server) handleCourseList(w http.ResponseWriter, r *http.Request, _ Session, _ *gh.Client) {
 	http.NotFound(w, r)
 }
@@ -165,13 +168,5 @@ func (s *Server) handleCourseForm(w http.ResponseWriter, r *http.Request, _ Sess
 }
 
 func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, _ Session, _ *gh.Client) {
-	http.NotFound(w, r)
-}
-
-func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request, _ Session, _ *gh.Client) {
-	http.NotFound(w, r)
-}
-
-func (s *Server) handleProposeSubmit(w http.ResponseWriter, r *http.Request, _ Session, _ *gh.Client) {
 	http.NotFound(w, r)
 }

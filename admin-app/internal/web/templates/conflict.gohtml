@@ -1,0 +1,11 @@
+{{define "conflict.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+<h1>The file changed on GitHub</h1>
+<p><code>_data/trainings.yml</code> was modified since you started editing — most
+likely the other maintainer merged something. Opening a pull request now would
+propose reverting their change.</p>
+<p><strong>Your draft is still here.</strong> Note your edits, then discard and
+redo them against the current file.</p>
+<ul class="changes">{{range .Draft.Changes}}<li><strong>{{.Kind}}</strong> {{.DateID}} — {{.Summary}}</li>{{end}}</ul>
+<form method="post" action="/discard"><button>Discard my draft and reload</button></form>
+{{end}}
