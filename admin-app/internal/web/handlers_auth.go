@@ -36,10 +36,7 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !canPush {
-		w.WriteHeader(http.StatusForbidden)
-		s.render(w, "denied.gohtml", map[string]any{
-			"Title": "No access", "Login": login, "Repo": s.cfg.GitHubRepo,
-		})
+		s.renderDenied(w, login)
 		return
 	}
 	if err := s.sessions.Set(w, Session{ID: newID(), Login: login, Token: token}); err != nil {
@@ -66,4 +63,23 @@ func (s *Server) handleKeepalive(w http.ResponseWriter, r *http.Request, sess Se
 		return
 	}
 	s.render(w, "draftbar.gohtml", map[string]any{"Draft": d})
+}
+
+// renderDenied explains, to someone who is not a maintainer, why there is
+// nothing here for them — and points at what they were probably looking for.
+//
+// This is the most-seen screen in the app: everyone who follows the site's
+// "Maintainers" footer link out of curiosity lands here, and being turned away
+// is the expected outcome for all but two people. It stays a 403 rendered in
+// place rather than a redirect, because the one recoverable case — a maintainer
+// signed into the wrong GitHub account — depends on naming the account, and a
+// redirect would throw that away.
+func (s *Server) renderDenied(w http.ResponseWriter, login string) {
+	w.WriteHeader(http.StatusForbidden)
+	s.render(w, "denied.gohtml", map[string]any{
+		"Title": "For arc42 maintainers",
+		"Login": login,
+		"Repo":  s.cfg.GitHubRepo,
+		"Bare":  true, // no nav: every link in it is a dead end from here
+	})
 }

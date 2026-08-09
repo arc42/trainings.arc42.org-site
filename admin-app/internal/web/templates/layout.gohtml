@@ -5,10 +5,10 @@
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/htmx.min.js" defer></script>
 </head><body>
-<header class="masthead"><a href="/">arc42 trainings admin</a>
-<nav><a href="/">Dates</a> <a href="/courses">Courses</a>
+<header class="masthead">{{if .Bare}}<span class="wordmark">arc42 trainings admin</span>{{else}}<a href="/">arc42 trainings admin</a>{{end}}
+{{if not .Bare}}<nav><a href="/">Dates</a> <a href="/courses">Courses</a>
 {{if .Login}}<span class="who">{{.Login}}</span>
-<form method="post" action="/auth/logout"><button class="link">Sign out</button></form>{{end}}</nav>
+<form method="post" action="/auth/logout"><button class="link">Sign out</button></form>{{end}}</nav>{{end}}
 </header>
 <main>{{template "content" .}}</main>
 {{if .Draft}}{{template "draftbar.gohtml" .}}{{end}}

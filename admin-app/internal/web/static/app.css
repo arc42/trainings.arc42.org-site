@@ -321,3 +321,52 @@ ul.courses li {
   border-radius: var(--radius);
 }
 ul.courses small { color: var(--ink-muted); margin-left: 0.5rem; } /* 5.60:1 */
+
+/* ---- Notice page (non-maintainer landing) ---------------------------------
+   Deliberately NOT styled as an error. Being turned away here is the expected
+   outcome for everyone except two people, so it uses the calm surface wash and
+   the signature hue — never --danger, which on this site means "something went
+   wrong" and would frame an ordinary visitor as a fault. */
+.notice { max-width: 62ch; }
+.notice h1 { margin-top: 0.5rem; }
+.notice h2 {
+  font-size: 1.05rem;
+  margin-top: 2rem;
+  margin-bottom: 0.4rem;   /* more space above a heading than below it */
+}
+.notice .lede {
+  background: var(--surface-1);   /* ink 9.08:1 on this */
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  color: var(--ink);
+  margin-bottom: 1.75rem;
+}
+.notice code {
+  background: var(--surface-2);   /* ink on --surface-2 stays above 8:1 */
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.notice form { margin: 0.75rem 0 0; }
+.notice .hint { margin-top: 2.5rem; }
+
+/* Secondary action: the recovery path, subordinate to the primary link out. */
+button.secondary {
+  background: var(--paper);
+  color: var(--deep);              /* 8.92:1 on --paper */
+  border: 1px solid var(--band);   /* 5.59:1 on paper, past the 3:1 UI floor */
+}
+button.secondary:hover {
+  background: var(--surface-1);
+  color: var(--deep);              /* 8.55:1 on --surface-1 */
+  border-color: var(--deep);
+}
+
+/* The wordmark on a bare page: same type as the linked version, without
+   implying it goes anywhere. */
+.masthead .wordmark {
+  color: #ffffff;                  /* 5.69:1 on --band */
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.1rem;
+}

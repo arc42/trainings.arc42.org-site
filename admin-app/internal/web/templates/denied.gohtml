@@ -1,9 +1,27 @@
 {{define "denied.gohtml"}}{{template "layout" .}}{{end}}
 {{define "content"}}
-<h1>No access</h1>
-<p>You are signed in as <strong>{{.Login}}</strong>, but that account does not have
-push access to <code>{{.Repo}}</code>.</p>
-<p>Access is read live from GitHub — there is no separate list in this app — so
-the fix is to grant push access on the repository.</p>
-<form method="post" action="/auth/logout"><button>Sign out</button></form>
+<div class="notice">
+  <h1>This tool is for the arc42 maintainers</h1>
+  <p class="lede">You are signed in as <strong>{{.Login}}</strong>. Editing training
+    dates requires push access to <code>{{.Repo}}</code>, which only the two arc42
+    maintainers have. Nothing is wrong with your account — there is simply nothing
+    here for it to do.</p>
+
+  <h2>Looking for the training dates?</h2>
+  <p>Every upcoming arc42 training — dates, cities, languages and booking links —
+    is on the public site. That is almost certainly what you came for.</p>
+  <p><a class="button" href="https://trainings.arc42.org">Go to trainings.arc42.org</a></p>
+
+  <h2>Are you a maintainer?</h2>
+  <p>Then you are probably signed in with the wrong GitHub account — an easy thing
+    to do when one browser is signed into several. Sign out, then sign in again
+    with the account that has push access.</p>
+  <form method="post" action="/auth/logout">
+    <button class="secondary">Sign out of {{.Login}}</button>
+  </form>
+
+  <p class="hint">Access is checked against GitHub on every sign-in; this app keeps
+    no user list of its own. Like the rest of arc42, it is open source — the code
+    lives in <a href="https://github.com/{{.Repo}}">{{.Repo}}</a>.</p>
+</div>
 {{end}}

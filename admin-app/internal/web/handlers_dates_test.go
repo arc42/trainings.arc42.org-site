@@ -422,3 +422,50 @@ func TestExistingTrainerNamesArePreserved(t *testing.T) {
 		t.Error("a title was silently added to a published trainer name")
 	}
 }
+
+// TestDeniedPageIsInformativeNotAnError covers the screen most people who ever
+// click the site's "Maintainers" link will see. Being turned away is the
+// EXPECTED outcome for everyone except two people, so the page has to explain
+// and redirect attention, not report a failure.
+func TestDeniedPageIsInformativeNotAnError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			_, _ = w.Write([]byte(`{"login":"curious-visitor"}`))
+		default:
+			_, _ = w.Write([]byte(`{"permissions":{"push":false}}`))
+		}
+	}))
+	defer srv.Close()
+	s := testServer(t, srv.URL)
+
+	rec := httptest.NewRecorder()
+	s.renderDenied(rec, "curious-visitor")
+	body := rec.Body.String()
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want 403", rec.Code)
+	}
+	// Names who you are — the fact that makes the wrong-account case solvable.
+	if !strings.Contains(body, "curious-visitor") {
+		t.Error("page does not say which account is signed in")
+	}
+	// Sends them where they actually wanted to go.
+	if !strings.Contains(body, "https://trainings.arc42.org") {
+		t.Error("page does not offer the public training dates")
+	}
+	// Lets a maintainer who picked the wrong account recover.
+	if !strings.Contains(body, "/auth/logout") {
+		t.Error("page offers no way to sign out and switch account")
+	}
+	// Must NOT dangle links the visitor cannot use.
+	if strings.Contains(body, `href="/courses"`) {
+		t.Error("masthead still offers Courses, which is a dead end here")
+	}
+	// Must not imply a request process that does not exist.
+	for _, forbidden := range []string{"grant push access", "request access", "No access"} {
+		if strings.Contains(body, forbidden) {
+			t.Errorf("page still contains unhelpful copy: %q", forbidden)
+		}
+	}
+}

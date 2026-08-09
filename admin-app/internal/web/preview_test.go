@@ -33,6 +33,14 @@ func TestDumpPreview(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// The denied page has no route of its own — it is rendered from the OAuth
+	// callback — so drive the handler directly.
+	rec := httptest.NewRecorder()
+	s.renderDenied(rec, "curious-visitor")
+	if err := os.WriteFile(dir+"/denied.html", rec.Body.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	css, err := assets.ReadFile("static/app.css")
 	if err != nil {
 		t.Fatal(err)
