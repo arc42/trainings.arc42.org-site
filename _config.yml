@@ -51,9 +51,16 @@ background-image-overlay : rgba(255, 255, 255, 0.5) # Set overlay for the backgr
 include:
   - .htaccess
   - _pages
+# Anything not listed here is copied verbatim into _site/ and served publicly.
+# Two entries below are load-bearing rather than cosmetic:
+#   - admin-app: the Go source of the trainings admin app. Without this line
+#     https://trainings.arc42.org/admin-app/main.go serves the app's source.
+#   - docs: the design specs. Repository documents, not site content.
 exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"
+  - admin-app
+  - docs
   - vendor
   - .asset-cache
   - .bundle
