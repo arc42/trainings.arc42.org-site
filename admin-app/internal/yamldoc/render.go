@@ -134,3 +134,11 @@ func wrapWords(s string, width int) []string {
 	}
 	return append(out, line)
 }
+
+// RenderCourse emits a complete new course entry, bullet included, ending in an
+// empty dates sequence. validate_trainings.rb requires `dates` to be an Array on
+// every course, so a course with no dates yet still needs "dates: []" — omitting
+// the key would fail CI on the first pull request.
+func RenderCourse(c model.Course, indent string) string {
+	return renderCourseScalars(c, indent) + indent + "  dates: []\n"
+}

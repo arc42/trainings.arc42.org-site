@@ -2,11 +2,49 @@ package web
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 
 	"arc42-trainings-admin/internal/gh"
 	"arc42-trainings-admin/internal/model"
+	"arc42-trainings-admin/internal/validate"
 )
+
+// otherTrainers returns the names that are not on the canonical roster. They
+// are shown in the free-text field and preserved exactly as stored — an
+// existing "Peter Hruschka" is never silently promoted to "Dr. Peter Hruschka",
+// because that would change what the public site prints.
+func otherTrainers(all []string) []string {
+	var out []string
+	for _, t := range all {
+		if !slices.Contains(model.KnownTrainers, t) {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// parseTrainers merges the checked roster names with the free-text ones. Roster
+// names come first, in roster order, so the YAML ordering stays stable no
+// matter which checkbox the browser reports first.
+func parseTrainers(r *http.Request) []string {
+	picked := map[string]bool{}
+	for _, v := range r.PostForm["trainer"] {
+		picked[v] = true
+	}
+	var out []string
+	for _, name := range model.KnownTrainers {
+		if picked[name] {
+			out = append(out, name)
+		}
+	}
+	for _, name := range strings.Split(r.PostFormValue("trainers_other"), ",") {
+		if n := strings.TrimSpace(name); n != "" && !slices.Contains(out, n) {
+			out = append(out, n)
+		}
+	}
+	return out
+}
 
 func (s *Server) handleCourseList(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
 	d, err := s.loadDraft(r.Context(), sess, client)
@@ -25,16 +63,60 @@ func (s *Server) handleCourseForm(w http.ResponseWriter, r *http.Request, sess S
 		s.fail(w, "could not read the training dates from GitHub", err)
 		return
 	}
+	data := map[string]any{
+		"Draft": d, "Login": sess.Login, "KnownTrainers": model.KnownTrainers,
+	}
 	id := r.PathValue("id")
+	if id == "" { // the literal /courses/new route carries no {id}
+		data["Title"] = "New course"
+		data["IsNew"] = true
+		data["Course"] = model.Course{}
+		data["OtherTrainers"] = nil
+		s.render(w, "courseform.gohtml", data)
+		return
+	}
 	for _, c := range d.Doc.Model().Courses {
 		if c.ID == id {
-			s.render(w, "courseform.gohtml", map[string]any{
-				"Title": "Edit " + c.ShortTitle, "Course": c, "Draft": d, "Login": sess.Login,
-			})
+			data["Title"] = "Edit " + c.ShortTitle
+			data["IsNew"] = false
+			data["Course"] = c
+			data["OtherTrainers"] = otherTrainers(c.Trainers)
+			s.render(w, "courseform.gohtml", data)
 			return
 		}
 	}
 	http.NotFound(w, r)
+}
+
+// courseProblems checks what HTML validation cannot: uniqueness of the id, and
+// that a course actually names a trainer. The feed schema enforces both at
+// propose time, but catching them here keeps a broken course out of the draft.
+func courseProblems(c model.Course, existing []model.Course, isNew bool) []validate.Problem {
+	var problems []validate.Problem
+	field := "courses." + c.ID
+	if c.ID == "" {
+		problems = append(problems, validate.Problem{Field: "courses.id", Message: "a course needs an id"})
+	}
+	for _, ex := range existing {
+		if isNew && ex.ID == c.ID {
+			problems = append(problems, validate.Problem{
+				Field: field + ".id", Message: "a course with id " + c.ID + " already exists",
+			})
+		}
+	}
+	for _, f := range []struct{ name, val string }{
+		{"short_title", c.ShortTitle}, {"title", c.Title}, {"url", c.URL},
+	} {
+		if strings.TrimSpace(f.val) == "" {
+			problems = append(problems, validate.Problem{Field: field + "." + f.name, Message: "must not be empty"})
+		}
+	}
+	if len(c.Trainers) == 0 {
+		problems = append(problems, validate.Problem{
+			Field: field + ".trainers", Message: "name at least one trainer",
+		})
+	}
+	return problems
 }
 
 func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
@@ -51,14 +133,25 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	c := model.Course{
 		ID: get("id"), ShortTitle: get("short_title"), Title: get("title"),
 		Blurb: get("blurb"), Certification: get("certification"),
-		Credits: get("credits"), URL: get("url"),
+		Credits: get("credits"), URL: get("url"), Trainers: parseTrainers(r),
 	}
-	for _, name := range strings.Split(get("trainers"), ",") {
-		if n := strings.TrimSpace(name); n != "" {
-			c.Trainers = append(c.Trainers, n)
-		}
+	isNew := r.PathValue("id") == ""
+
+	if problems := courseProblems(c, d.Doc.Model().Courses, isNew); len(problems) > 0 {
+		s.render(w, "courseform.gohtml", map[string]any{
+			"Title": "Fix these first", "Course": c, "Draft": d, "Login": sess.Login,
+			"IsNew": isNew, "Problems": problems,
+			"KnownTrainers": model.KnownTrainers, "OtherTrainers": otherTrainers(c.Trainers),
+		})
+		return
 	}
-	if err := d.UpdateCourse(r.PathValue("id"), c); err != nil {
+
+	if isNew {
+		err = d.AddCourse(c)
+	} else {
+		err = d.UpdateCourse(r.PathValue("id"), c)
+	}
+	if err != nil {
 		s.fail(w, "could not apply the course edit", err)
 		return
 	}

@@ -188,3 +188,83 @@ func TestGoldenUpdateStatus(t *testing.T) {
 		t.Errorf("output differs from golden:\n--- got ---\n%s", doc.Bytes())
 	}
 }
+
+func TestAddCourseAppendsAValidCourse(t *testing.T) {
+	doc, err := Parse([]byte(twoDates))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	err = doc.AddCourse(model.Course{
+		ID: "flex", ShortTitle: "FLEX", Title: "Flexible Architectures",
+		URL: "https://example.org/flex", Trainers: []string{"Dr. Gernot Starke"},
+		Blurb: "A course about keeping architectures able to change.",
+	})
+	if err != nil {
+		t.Fatalf("AddCourse: %v", err)
+	}
+	out := string(doc.Bytes())
+
+	reparsed, err := Parse(doc.Bytes())
+	if err != nil {
+		t.Fatalf("reparse after AddCourse: %v\n%s", err, out)
+	}
+	m := reparsed.Model()
+	if len(m.Courses) != 2 {
+		t.Fatalf("want 2 courses, got %d:\n%s", len(m.Courses), out)
+	}
+	c := m.Courses[1]
+	if c.ID != "flex" || c.ShortTitle != "FLEX" {
+		t.Errorf("new course = %+v", c)
+	}
+	// validate_trainings.rb requires 'dates' to be an Array on every course, so
+	// a brand-new course must carry an empty one rather than nothing.
+	if c.Dates != nil && len(c.Dates) != 0 {
+		t.Errorf("new course should start with no dates, got %d", len(c.Dates))
+	}
+	if !strings.Contains(out, "dates: []") {
+		t.Errorf("new course is missing an empty dates array:\n%s", out)
+	}
+	// The existing course must be untouched.
+	if !strings.Contains(out, "# header comment must survive") {
+		t.Error("header comment was lost")
+	}
+	if !strings.Contains(out, "\n\n      - id: b\n") {
+		t.Error("the existing course's dates were reformatted")
+	}
+}
+
+// TestAddDateIntoFreshCourse covers the sequel to AddCourse: the first date
+// added to a course whose dates key is the empty flow sequence "[]". Inserting
+// block entries under "dates: []" would produce YAML that no longer parses, so
+// that line has to be rewritten rather than appended to.
+func TestAddDateIntoFreshCourse(t *testing.T) {
+	doc, _ := Parse([]byte(twoDates))
+	if err := doc.AddCourse(model.Course{
+		ID: "flex", ShortTitle: "FLEX", Title: "Flexible Architectures",
+		URL: "https://example.org/flex", Trainers: []string{"Dr. Gernot Starke"},
+	}); err != nil {
+		t.Fatalf("AddCourse: %v", err)
+	}
+	err := doc.AddDate("flex", model.Date{
+		ID: "flex-1", Code: "26-11 FLEX", Start: "2026-11-02", End: "2026-11-04",
+		City: "Berlin", Country: "DE", Language: "de", Format: "public",
+		URL: "https://example.org/flex-1", Status: "open",
+	})
+	if err != nil {
+		t.Fatalf("AddDate into fresh course: %v", err)
+	}
+	reparsed, err := Parse(doc.Bytes())
+	if err != nil {
+		t.Fatalf("reparse: %v\n%s", err, doc.Bytes())
+	}
+	m := reparsed.Model()
+	if len(m.Courses) != 2 || len(m.Courses[1].Dates) != 1 {
+		t.Fatalf("expected 1 date on the new course:\n%s", doc.Bytes())
+	}
+	if m.Courses[1].Dates[0].ID != "flex-1" {
+		t.Errorf("date = %+v", m.Courses[1].Dates[0])
+	}
+	if strings.Contains(string(doc.Bytes()), "dates: []") {
+		t.Error("the empty flow sequence should have been replaced by a block sequence")
+	}
+}

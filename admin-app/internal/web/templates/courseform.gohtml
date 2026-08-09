@@ -1,16 +1,65 @@
 {{define "courseform.gohtml"}}{{template "layout" .}}{{end}}
 {{define "content"}}
 <h1>{{.Title}}</h1>
-<form method="post" action="/courses/{{.Course.ID}}" class="detail">
-<label>ID<input name="id" value="{{.Course.ID}}" required pattern="[a-z0-9-]+"></label>
-<label>Short title<input name="short_title" value="{{.Course.ShortTitle}}" required></label>
-<label>Title<input name="title" value="{{.Course.Title}}" required></label>
-<label>Blurb<textarea name="blurb" rows="4">{{.Course.Blurb}}</textarea></label>
-<label>Certification<input name="certification" value="{{.Course.Certification}}"></label>
-<label>Credits<input name="credits" value="{{.Course.Credits}}"></label>
-<label>URL<input name="url" value="{{.Course.URL}}" required></label>
-<label>Trainers <small>comma-separated</small>
-<input name="trainers" value="{{range $i, $t := .Course.Trainers}}{{if $i}}, {{end}}{{$t}}{{end}}" required></label>
-<div class="actions"><button type="submit">Save to draft</button> <a href="/courses">Cancel</a></div>
+<p class="lede">A course is the thing people book a date of — MSA, FLEX and so on.
+  Fields marked <span class="req" aria-hidden="true">*</span> are required.
+  {{if .IsNew}}A new course starts with no dates; add them from the
+  <a href="/">dates list</a> once it is saved.{{end}}</p>
+
+{{template "problems" .Problems}}
+
+<form method="post" action="/courses/{{if .IsNew}}new{{else}}{{.Course.ID}}{{end}}" class="detail">
+
+  <fieldset class="group">
+    <legend>Identity</legend>
+    <label>Course ID <span class="req" aria-hidden="true">*</span>
+      <input name="id" value="{{.Course.ID}}" required pattern="[a-z0-9-]+"
+             aria-describedby="cid-hint" placeholder="msa" {{if not .IsNew}}readonly{{end}}>
+      <small id="cid-hint" class="hint">Lower-case letters, digits and hyphens.
+        {{if .IsNew}}Every date links to its course by this value.
+        {{else}}Not editable — the dates below reference it.{{end}}</small>
+    </label>
+    <label>Short title <span class="req" aria-hidden="true">*</span>
+      <input name="short_title" value="{{.Course.ShortTitle}}" required
+             aria-describedby="st-hint" placeholder="Mastering SW Architectures">
+      <small id="st-hint" class="hint">Used where space is tight: the dates table
+        and the timeline cards.</small>
+    </label>
+    <label>Full title <span class="req" aria-hidden="true">*</span>
+      <input name="title" value="{{.Course.Title}}" required
+             placeholder="Mastering Software Architectures">
+    </label>
+    <label>Course URL <span class="req" aria-hidden="true">*</span>
+      <input type="url" name="url" value="{{.Course.URL}}" required
+             placeholder="https://www.arc42.de/info-msa/">
+    </label>
+  </fieldset>
+
+  {{template "trainers" dict "Selected" .Course.Trainers "Known" .KnownTrainers "Other" .OtherTrainers}}
+
+  <fieldset class="group">
+    <legend>Description</legend>
+    <label>Blurb
+      <textarea name="blurb" rows="4" aria-describedby="blurb-hint"
+                placeholder="Two expert trainers at all times, highly practical and pragmatic.">{{.Course.Blurb}}</textarea>
+      <small id="blurb-hint" class="hint">Two or three sentences. Appears on the
+        timeline card under the course name.</small>
+    </label>
+    <div class="row">
+      <label>Certification
+        <input name="certification" value="{{.Course.Certification}}"
+               placeholder="iSAQB CPSA-Foundation">
+      </label>
+      <label>Credits
+        <input name="credits" value="{{.Course.Credits}}" aria-describedby="credits-hint">
+        <small id="credits-hint" class="hint">Leave empty if the course carries none.</small>
+      </label>
+    </div>
+  </fieldset>
+
+  <div class="actions">
+    <button type="submit">{{if .IsNew}}Add to draft{{else}}Save to draft{{end}}</button>
+    <a href="/courses">Cancel</a>
+  </div>
 </form>
 {{end}}

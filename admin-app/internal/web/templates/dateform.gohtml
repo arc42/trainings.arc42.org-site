@@ -1,27 +1,110 @@
 {{define "dateform.gohtml"}}{{template "layout" .}}{{end}}
 {{define "content"}}
 <h1>{{.Title}}</h1>
-{{if .Problems}}<ul class="problems">{{range .Problems}}<li>{{.String}}</li>{{end}}</ul>{{end}}
+<p class="lede">Fields marked <span class="req" aria-hidden="true">*</span> are
+  required. Nothing is published from here: saving adds the change to your draft,
+  and you review the whole diff before it becomes a pull request.</p>
+
+{{template "problems" .Problems}}
+
 <form method="post" action="/dates/{{if .IsNew}}new{{else}}{{.Date.ID}}{{end}}" class="detail">
-<label>Course<select name="course_id">{{$cid := .CourseID}}{{range .Courses}}
-  <option value="{{.ID}}" {{if eqStr .ID $cid}}selected{{end}}>{{.ShortTitle}}</option>{{end}}</select></label>
-<label>ID<input name="id" value="{{.Date.ID}}" required pattern="[a-z0-9-]+"></label>
-<label>Booking code<input name="code" value="{{.Date.Code}}" required></label>
-<label>Start<input type="date" name="start" value="{{.Date.Start}}" required></label>
-<label>End<input type="date" name="end" value="{{.Date.End}}" required></label>
-<label>Format<select name="format">{{$f := .Date.Format}}{{range .Formats}}
-  <option value="{{.}}" {{if eqStr . $f}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-<label>City<input name="city" value="{{.Date.City}}"> <small>required unless online</small></label>
-<label>Country<input name="country" value="{{.Date.Country}}" maxlength="2" placeholder="DE"></label>
-<label>Language<select name="language">{{$l := .Date.Language}}{{range .Languages}}
-  <option value="{{.}}" {{if eqStr . $l}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-<label>Status<select name="status">{{$s := .Date.Status}}{{range .Statuses}}
-  <option value="{{.}}" {{if eqStr . $s}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-<label>Trainers <small>comma-separated; leave empty to use the course's</small>
-  <input name="trainers" value="{{range $i, $t := .Date.Trainers}}{{if $i}}, {{end}}{{$t}}{{end}}"></label>
-<label>Pricing<input name="pricing" value="{{.Date.Pricing}}"></label>
-<label>Few seats note<input name="few_seats" value="{{.Date.FewSeats}}"></label>
-<label>URL<input name="url" value="{{.Date.URL}}" required></label>
-<div class="actions"><button type="submit">Save to draft</button> <a href="/">Cancel</a></div>
+
+  <fieldset class="group">
+    <legend>Which course</legend>
+    <label>Course <span class="req" aria-hidden="true">*</span>
+      <select name="course_id" required>
+        {{$cid := .CourseID}}
+        {{range .Courses}}<option value="{{.ID}}" {{if eqStr .ID $cid}}selected{{end}}>{{.ShortTitle}} — {{.Title}}</option>{{end}}
+      </select>
+    </label>
+    <label>Date ID <span class="req" aria-hidden="true">*</span>
+      <input name="id" value="{{.Date.ID}}" required pattern="[a-z0-9-]+"
+             aria-describedby="id-hint" placeholder="msa-dez-2026">
+      <small id="id-hint" class="hint">Lower-case letters, digits and hyphens. Used
+        in the anchor link on arc42.de, so it never changes once published.</small>
+    </label>
+    <label>Booking code <span class="req" aria-hidden="true">*</span>
+      <input name="code" value="{{.Date.Code}}" required
+             aria-describedby="code-hint" placeholder="26-12 MSA">
+      <small id="code-hint" class="hint">The Formspark option value. Must be unique —
+        a duplicate silently misroutes a registration.</small>
+    </label>
+  </fieldset>
+
+  <fieldset class="group">
+    <legend>When</legend>
+    <div class="row">
+      <label>First day <span class="req" aria-hidden="true">*</span>
+        <input type="date" name="start" value="{{.Date.Start}}" required>
+      </label>
+      <label>Last day <span class="req" aria-hidden="true">*</span>
+        <input type="date" name="end" value="{{.Date.End}}" required>
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="group">
+    <legend>Where</legend>
+    <label>Format <span class="req" aria-hidden="true">*</span>
+      <select name="format" required>
+        {{$f := .Date.Format}}
+        {{range .Formats}}<option value="{{.}}" {{if eqStr . $f}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </label>
+    <div class="row">
+      <label>City
+        <input name="city" value="{{.Date.City}}" aria-describedby="city-hint"
+               placeholder="München">
+        <small id="city-hint" class="hint">Required for public and inhouse; leave
+          empty for online.</small>
+      </label>
+      <label>Country
+        <input name="country" value="{{.Date.Country}}" maxlength="2"
+               pattern="[A-Za-z]{2}" placeholder="DE" aria-describedby="country-hint">
+        <small id="country-hint" class="hint">Two-letter code, optional.</small>
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="group">
+    <legend>How it is offered</legend>
+    <div class="row">
+      <label>Language taught in <span class="req" aria-hidden="true">*</span>
+        <select name="language" required>
+          {{$l := .Date.Language}}
+          {{range .Languages}}<option value="{{.}}" {{if eqStr . $l}}selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label>Booking status <span class="req" aria-hidden="true">*</span>
+        <select name="status" required>
+          {{$s := .Date.Status}}
+          {{range .Statuses}}<option value="{{.}}" {{if eqStr . $s}}selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+    </div>
+    <label>Registration URL <span class="req" aria-hidden="true">*</span>
+      <input type="url" name="url" value="{{.Date.URL}}" required
+             placeholder="https://www.arc42.de/termine#msa-dez-2026">
+    </label>
+  </fieldset>
+
+  {{template "trainers" dict "Selected" .Date.Trainers "Known" .KnownTrainers "Other" .OtherTrainers}}
+
+  <fieldset class="group">
+    <legend>Optional notes</legend>
+    <label>Pricing
+      <input name="pricing" value="{{.Date.Pricing}}" aria-describedby="pricing-hint">
+      <small id="pricing-hint" class="hint">Shown verbatim on the card, in the
+        language of the date.</small>
+    </label>
+    <label>Few seats note
+      <input name="few_seats" value="{{.Date.FewSeats}}" placeholder="nur noch wenige Plätze">
+    </label>
+  </fieldset>
+
+  <div class="actions">
+    <button type="submit">{{if .IsNew}}Add to draft{{else}}Save to draft{{end}}</button>
+    <a href="/">Cancel</a>
+  </div>
 </form>
 {{end}}

@@ -64,6 +64,9 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 		"Title": "New date", "Courses": m.Courses, "Draft": d, "Login": sess.Login,
 		"Formats": model.Formats, "Languages": model.Languages, "Statuses": model.Statuses,
 		"IsNew": true, "Date": model.Date{Status: "open", Format: "public", Language: "de"},
+		// CourseID is set unconditionally: a key the template reads but the
+		// handler never wrote used to abort rendering halfway down the form.
+		"CourseID": "", "KnownTrainers": model.KnownTrainers, "OtherTrainers": []string{},
 	}
 	// "Duplicate" is the common real action — next year's run of a course — so
 	// /dates/new?from=<id> pre-fills from an existing date with a cleared id.
@@ -73,6 +76,7 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 			src.ID, src.Code, src.URL = "", "", ""
 			data["Date"] = src
 			data["CourseID"] = row.CourseID
+			data["OtherTrainers"] = otherTrainers(src.Trainers)
 		}
 	}
 	if id := r.PathValue("id"); id != "" {
@@ -84,6 +88,7 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 		data["Title"] = "Edit " + row.Date.Code
 		data["Date"] = row.Date
 		data["CourseID"] = row.CourseID
+		data["OtherTrainers"] = otherTrainers(row.Date.Trainers)
 		data["IsNew"] = false
 	}
 	s.render(w, "dateform.gohtml", data)
@@ -100,13 +105,7 @@ func parseDateForm(r *http.Request) (model.Date, string) {
 		Pricing: get("pricing"), FewSeats: get("few_seats"),
 		URL: get("url"), Status: get("status"),
 	}
-	if t := get("trainers"); t != "" {
-		for _, name := range strings.Split(t, ",") {
-			if n := strings.TrimSpace(name); n != "" {
-				d.Trainers = append(d.Trainers, n)
-			}
-		}
-	}
+	d.Trainers = parseTrainers(r)
 	return d, get("course_id")
 }
 
@@ -133,6 +132,7 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 			"Title": "Fix these first", "Courses": m.Courses, "Draft": d, "Login": sess.Login,
 			"Formats": model.Formats, "Languages": model.Languages, "Statuses": model.Statuses,
 			"IsNew": isNew, "Date": nd, "CourseID": courseID, "Problems": problems,
+			"KnownTrainers": model.KnownTrainers, "OtherTrainers": otherTrainers(nd.Trainers),
 		})
 		return
 	}

@@ -1,0 +1,35 @@
+{{/* Shared form fragments. Parsed into every page (see NewServer), so both the
+     date and the course form speak the same control vocabulary — same required
+     marker, same trainer picker, same hint style. */}}
+
+{{/* trainers expects: dict "Selected" []string "Known" []string */}}
+{{define "trainers"}}
+{{$selected := .Selected}}
+<fieldset class="group">
+  <legend>Trainers <span class="req" aria-hidden="true">*</span></legend>
+  <p class="hint" id="trainers-hint">Tick who is teaching. Anyone not on the list
+    goes in the last field — guest trainers do not need to be added here first.</p>
+  <ul class="checks" aria-describedby="trainers-hint">
+    {{range .Known}}
+    <li><label class="check">
+      <input type="checkbox" name="trainer" value="{{.}}" {{if has $selected .}}checked{{end}}>
+      <span>{{.}}</span>
+    </label></li>
+    {{end}}
+  </ul>
+  <label>Other trainers <small>comma-separated</small>
+    <input name="trainers_other" value="{{join .Other ", "}}"
+           placeholder="e.g. Jane Doe, John Smith">
+  </label>
+</fieldset>
+{{end}}
+
+{{/* problems expects the []validate.Problem slice directly */}}
+{{define "problems"}}
+{{if .}}
+<div class="problems" role="alert">
+  <h2>Fix these before saving</h2>
+  <ul>{{range .}}<li>{{.String}}</li>{{end}}</ul>
+</div>
+{{end}}
+{{end}}

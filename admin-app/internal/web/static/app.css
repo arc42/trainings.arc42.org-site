@@ -229,3 +229,95 @@ table.dates .row-actions form { display: inline; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---- Form structure (added with the grouped date/course forms) -------------
+   Operate mode: the form is a task, so grouping and scanability outrank
+   expression. Fieldsets carry the grouping semantically as well as visually,
+   so a screen reader announces the legend with each control. */
+.lede { color: var(--ink-muted); max-width: 62ch; } /* 5.60:1 on paper */
+
+fieldset.group {
+  border: 1px solid var(--hairline);   /* divider tier: decorative only */
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem 1.25rem;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+  background: var(--paper);
+}
+fieldset.group > legend {
+  font-family: var(--serif);
+  color: var(--deep);                  /* 8.92:1 on paper */
+  font-size: 1.05rem;
+  padding: 0 0.4rem;
+}
+
+/* Two controls side by side where they are read as one fact (start/end,
+   city/country). Collapses below the phone breakpoint rather than shrinking
+   the fields into unusability. */
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 34rem) { .row { grid-template-columns: 1fr; } }
+
+/* The required marker is decorative for assistive tech (aria-hidden) because
+   the control itself carries `required`; it exists so the eye can triage the
+   form without reading every label. */
+.req { color: var(--danger); font-weight: 700; margin-left: 0.15rem; } /* 5.53:1 on paper */
+
+.hint {
+  font-weight: 400;
+  color: var(--ink-muted);             /* 5.60:1 on paper */
+  font-size: 0.85rem;
+  margin: 0;
+}
+label > .hint { margin-top: 0.1rem; }
+
+/* Checkbox roster. Stays a plain checkbox — Operate mode does not reinvent
+   standard form controls, and a custom toggle here would buy nothing. */
+ul.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+@media (min-width: 40rem) { ul.checks { grid-template-columns: 1fr 1fr; } }
+label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 400;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius);
+  min-height: 44px;                    /* same target size as every other control */
+  cursor: pointer;
+}
+label.check:hover { background: var(--surface-1); }
+label.check input[type="checkbox"] {
+  min-height: auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--band);
+  margin: 0;
+  flex: none;
+}
+
+input[readonly] {
+  background: var(--surface-1);        /* ink 9.08:1 on this */
+  border-color: var(--hairline);
+}
+input::placeholder, textarea::placeholder { color: var(--ink-muted); } /* 5.60:1 — placeholders are text and hold the same floor */
+
+/* Validation summary. role="alert" moves focus-order attention here; the
+   heading names the job rather than the failure count. */
+.problems {
+  background: color-mix(in oklab, var(--danger) 8%, var(--paper));
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  color: var(--ink);                   /* 10.12:1 on a near-paper wash */
+}
+.problems h2 { margin: 0.25rem 0 0.5rem; font-size: 1rem; color: var(--danger); } /* 5.53:1 */
+.problems ul { margin: 0; padding-left: 1.2rem; }
+.problems li::marker { color: var(--danger); }
+
+ul.courses { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
+ul.courses li {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+}
+ul.courses small { color: var(--ink-muted); margin-left: 0.5rem; } /* 5.60:1 */

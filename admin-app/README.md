@@ -104,8 +104,11 @@ one-time `fly launch` away rather than a new engineering task.
 
 ## See also
 
-- Design spec: `docs/superpowers/specs/2026-08-08-trainings-admin-design.md`
-  (implementation planning doc, not part of this repository).
+- Design spec: [`docs/superpowers/specs/2026-08-08-trainings-admin-design.md`](/docs/superpowers/specs/2026-08-08-trainings-admin-design.md)
+  — how the app itself is designed, and
+  [`…/2026-08-09-admin-app-site-integration-design.md`](/docs/superpowers/specs/2026-08-09-admin-app-site-integration-design.md)
+  — how the site links to it. `docs/` is excluded from the Jekyll build
+  (`_config.yml`), so these are repository documents and are never published.
 - [meta.arc42.org/training-dates.md](https://github.com/arc42/meta.arc42.org/blob/main/training-dates.md) —
   the training-dates contract shared by this site and its four consumers,
   including §6 on how dates are edited.

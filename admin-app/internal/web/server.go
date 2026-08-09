@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"crypto/rand"
 	"embed"
 	"encoding/hex"
@@ -8,6 +9,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 
 	"arc42-trainings-admin/internal/config"
 	"arc42-trainings-admin/internal/gh"
@@ -43,7 +45,8 @@ func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
 	set := map[string]*template.Template{}
 	for _, p := range pages {
 		t, err := template.New(p).Funcs(templateFuncs()).ParseFS(assets,
-			"templates/layout.gohtml", "templates/draftbar.gohtml", "templates/"+p)
+			"templates/layout.gohtml", "templates/draftbar.gohtml",
+			"templates/_fields.gohtml", "templates/"+p)
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", p, err)
 		}
@@ -89,7 +92,9 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("POST /dates/{id}", s.authed(s.handleDateSave))
 	mux.Handle("POST /dates/{id}/delete", s.authed(s.handleDateDelete))
 	mux.Handle("GET /courses", s.authed(s.handleCourseList))
+	mux.Handle("GET /courses/new", s.authed(s.handleCourseForm))
 	mux.Handle("GET /courses/{id}", s.authed(s.handleCourseForm))
+	mux.Handle("POST /courses/new", s.authed(s.handleCourseSave))
 	mux.Handle("POST /courses/{id}", s.authed(s.handleCourseSave))
 	mux.Handle("GET /propose", s.authed(s.handlePropose))
 	mux.Handle("POST /propose", s.authed(s.handleProposeSubmit))
@@ -143,10 +148,19 @@ func (s *Server) render(w http.ResponseWriter, name string, data any) {
 		http.Error(w, "template missing", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := t.ExecuteTemplate(w, name, data); err != nil {
+	// Render into a buffer first. html/template streams, so executing straight
+	// into the ResponseWriter means a mid-render error leaves a half-written
+	// page already committed with a 200 — which is how a broken form silently
+	// shipped a heading, one <select> and nothing else.
+	var buf bytes.Buffer
+	if err := t.ExecuteTemplate(&buf, name, data); err != nil {
 		log.Printf("render %s: %v", name, err)
+		http.Error(w, "The page could not be rendered. This is a bug; see the server log.",
+			http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = buf.WriteTo(w)
 }
 
 func (s *Server) fail(w http.ResponseWriter, msg string, err error) {
@@ -163,6 +177,35 @@ func newID() string {
 
 func templateFuncs() template.FuncMap {
 	return template.FuncMap{
-		"eqStr": func(a, b string) bool { return a == b },
+		// Deliberately `any`, not `string`. The templates are driven by
+		// map[string]any, where a key the handler never set yields an untyped
+		// nil — and a strictly-typed helper turns that omission into a
+		// mid-render abort rather than an empty comparison.
+		"eqStr": func(a, b any) bool { return fmt.Sprint(a) == fmt.Sprint(b) },
+		// has and join also take `any`: values reaching a shared partial go
+		// through dict, which erases []string to interface{}, and a nil slice
+		// is the normal case for a blank form.
+		"has": func(list any, v string) bool {
+			ss, _ := list.([]string)
+			for _, item := range ss {
+				if item == v {
+					return true
+				}
+			}
+			return false
+		},
+		// join renders a trainer list back into the "additional names" field.
+		"join": func(list any, sep string) string {
+			ss, _ := list.([]string)
+			return strings.Join(ss, sep)
+		},
+		// dict lets one partial take several named values.
+		"dict": func(pairs ...any) map[string]any {
+			m := map[string]any{}
+			for i := 0; i+1 < len(pairs); i += 2 {
+				m[fmt.Sprint(pairs[i])] = pairs[i+1]
+			}
+			return m
+		},
 	}
 }

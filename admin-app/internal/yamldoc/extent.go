@@ -110,3 +110,44 @@ func maxInt(a, b int) int {
 	}
 	return b
 }
+
+// courseExtent returns the 1-based inclusive line range covering one course
+// entry, plus the indentation of its "- " bullet. Same trailing-trim rule as
+// dateExtent: blank lines and comments after the entry introduce whatever
+// follows and belong to it, not to this course.
+func (d *Doc) courseExtent(courseID string) (start, end int, indent string, ok bool) {
+	courses := mapValue(d.root, "courses")
+	if courses == nil {
+		return 0, 0, "", false
+	}
+	var entry, next *yaml.Node
+	for ci, cn := range courses.Content {
+		if scalar(cn, "id") != courseID {
+			continue
+		}
+		entry = cn
+		if ci+1 < len(courses.Content) {
+			next = courses.Content[ci+1]
+		}
+	}
+	if entry == nil {
+		return 0, 0, "", false
+	}
+	src := d.lines()
+	start = entry.Line
+	if next != nil {
+		end = next.Line - 1
+	} else {
+		end = len(src)
+	}
+	for end > start {
+		l := strings.TrimSpace(src[end-1])
+		if l == "" || strings.HasPrefix(l, "#") {
+			end--
+			continue
+		}
+		break
+	}
+	indent = strings.Repeat(" ", maxInt(entry.Column-3, 0))
+	return start, end, indent, true
+}

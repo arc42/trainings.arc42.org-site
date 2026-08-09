@@ -75,6 +75,14 @@ func (d *Draft) DeleteDate(id string) error {
 	return nil
 }
 
+func (d *Draft) AddCourse(nc model.Course) error {
+	if err := d.Doc.AddCourse(nc); err != nil {
+		return err
+	}
+	d.record("added", "course:"+nc.ID, nc.ShortTitle+" — "+nc.Title)
+	return nil
+}
+
 func (d *Draft) UpdateCourse(id string, nc model.Course) error {
 	if err := d.Doc.UpdateCourse(id, nc); err != nil {
 		return err

@@ -1,7 +1,10 @@
 {{define "courselist.gohtml"}}{{template "layout" .}}{{end}}
 {{define "content"}}
 <h1>Courses</h1>
-<p>Course details change rarely. Day-to-day work happens on the <a href="/">dates</a>.</p>
+<p class="lede">Course details change rarely — day-to-day work happens on the
+<a href="/">dates</a>. Add a course when you start offering a new training, then
+add its dates from the dates list.</p>
+<p><a class="button" href="/courses/new">New course</a></p>
 <ul class="courses">{{range .Courses}}
 <li><a href="/courses/{{.ID}}">{{.ShortTitle}}</a> — {{.Title}}
 <small>{{len .Dates}} date{{if ne (len .Dates) 1}}s{{end}}</small></li>{{end}}</ul>

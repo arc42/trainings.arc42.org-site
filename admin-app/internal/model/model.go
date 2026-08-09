@@ -34,6 +34,22 @@ type Date struct {
 	Status   string // "open" | "waitlist" | "full" | "cancelled"
 }
 
+// KnownTrainers is the roster offered as checkboxes on both forms. It is a
+// convenience, not a constraint: any other name can still be typed in, because
+// guest trainers happen and a closed list would block a real booking.
+//
+// Note the titles. Dates already in _data/trainings.yml were written without
+// them ("Peter Hruschka"), so an existing entry will not match one of these and
+// shows up in the free-text field instead, preserved exactly as stored. Nothing
+// is silently rewritten — changing a published trainer name is the operator's
+// call, not a side effect of opening a form.
+var KnownTrainers = []string{
+	"Dr. Carola Lilienthal",
+	"Dr. Peter Hruschka",
+	"Dr. Gernot Starke",
+	"Wolfgang Reimesch",
+}
+
 // Formats, Languages and Statuses back the form <select>s and the validator.
 var (
 	Formats   = []string{"public", "inhouse", "online"}

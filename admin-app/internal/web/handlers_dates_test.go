@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/base64"
 	"encoding/json"
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -210,7 +211,11 @@ func TestCourseSaveLeavesDatesAlone(t *testing.T) {
 	form := url.Values{
 		"id": {"msa"}, "short_title": {"MSA neu"},
 		"title": {"Mastering Software Architectures"},
-		"url":   {"https://example.org/msa"}, "trainers": {"Peter Hruschka, Gernot Starke"},
+		"url":   {"https://example.org/msa"},
+		// Roster checkboxes plus the free-text field, which is how the form
+		// posts trainers now.
+		"trainer":        {"Dr. Peter Hruschka", "Dr. Gernot Starke"},
+		"trainers_other": {"Jane Guest"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/msa", form))
@@ -256,5 +261,164 @@ func TestUnauthenticatedWriteIsRejected(t *testing.T) {
 	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Sign in with GitHub") {
 		t.Errorf("anonymous GET /: status = %d, want a 200 sign-in page", rec.Code)
+	}
+}
+
+// TestNewDateFormRendersCompletely is the regression test for a form that
+// rendered its heading, the Course label and an open <select>, then stopped.
+// html/template streams output, so an execution error mid-render leaves a
+// half-written page — served as 200, because the status was already sent.
+// Two bugs in one: the template blew up on a map key the handler never set,
+// and render() had no way to take the partial output back.
+func TestNewDateFormRendersCompletely(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+
+	// The course options must actually be there — an empty <select> was the
+	// visible symptom.
+	if !strings.Contains(body, `value="msa"`) {
+		t.Error("course dropdown has no options")
+	}
+	// Every required field must render, i.e. execution reached the end.
+	for _, field := range []string{
+		`name="id"`, `name="code"`, `name="start"`, `name="end"`,
+		`name="format"`, `name="language"`, `name="status"`, `name="url"`,
+	} {
+		if !strings.Contains(body, field) {
+			t.Errorf("form is missing %s — rendering stopped early", field)
+		}
+	}
+	if !strings.Contains(body, "</form>") {
+		t.Error("form element is not closed — rendering stopped early")
+	}
+}
+
+// TestRenderFailsLoudlyNotPartially pins the framework guarantee: a broken
+// template must never emit a 200 with half a page.
+func TestRenderFailsLoudlyNotPartially(t *testing.T) {
+	s := testServer(t, "http://127.0.0.1:1")
+	// index-out-of-range fails at EXECUTION time, after "start" is already
+	// written — which is precisely the shape of the real bug.
+	s.set["boom.gohtml"] = template.Must(template.New("boom.gohtml").
+		Parse(`start{{ index .Empty 5 }}end`))
+
+	rec := httptest.NewRecorder()
+	s.render(rec, "boom.gohtml", map[string]any{"Empty": []string{}})
+
+	if rec.Code == http.StatusOK {
+		t.Errorf("status = 200 for a template that failed to execute")
+	}
+	if strings.Contains(rec.Body.String(), "start") {
+		t.Errorf("partial output was written: %q", rec.Body.String())
+	}
+}
+
+func TestNewCourseFormRendersAndCreates(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/courses/new", nil))
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK || !strings.Contains(body, "New course") {
+		t.Fatalf("status %d, body:\n%s", rec.Code, body)
+	}
+	for _, want := range []string{`name="id"`, `name="short_title"`, `name="title"`,
+		`name="url"`, `name="trainer"`, `name="trainers_other"`, "</form>"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("new-course form is missing %s", want)
+		}
+	}
+	// The roster must be offered as checkboxes.
+	for _, name := range []string{"Dr. Carola Lilienthal", "Dr. Peter Hruschka",
+		"Dr. Gernot Starke", "Wolfgang Reimesch"} {
+		if !strings.Contains(body, name) {
+			t.Errorf("roster is missing %q", name)
+		}
+	}
+
+	form := url.Values{
+		"id": {"flex"}, "short_title": {"FLEX"}, "title": {"Flexible Architectures"},
+		"url": {"https://example.org/flex"}, "trainer": {"Dr. Gernot Starke"},
+	}
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", form))
+
+	d, ok := s.drafts.Get("sid")
+	if !ok {
+		t.Fatal("no draft after creating a course")
+	}
+	m := d.Doc.Model()
+	if len(m.Courses) != 2 || m.Courses[1].ID != "flex" {
+		t.Fatalf("course not added:\n%s", d.Doc.Bytes())
+	}
+	if len(m.Courses[1].Trainers) != 1 || m.Courses[1].Trainers[0] != "Dr. Gernot Starke" {
+		t.Errorf("trainers = %v", m.Courses[1].Trainers)
+	}
+}
+
+func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	// "msa" already exists in the fixture.
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", url.Values{
+		"id": {"msa"}, "short_title": {"Dup"}, "title": {"Dup"},
+		"url": {"https://example.org/x"}, "trainer": {"Dr. Gernot Starke"},
+	}))
+	if !strings.Contains(rec.Body.String(), "already exists") {
+		t.Errorf("duplicate course id was accepted:\n%s", rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", url.Values{
+		"id": {"flex"}, "short_title": {"FLEX"}, "title": {"Flexible"},
+		"url": {"https://example.org/flex"},
+	}))
+	if !strings.Contains(rec.Body.String(), "at least one trainer") {
+		t.Errorf("course without a trainer was accepted:\n%s", rec.Body.String())
+	}
+}
+
+// TestExistingTrainerNamesArePreserved guards the deliberate decision not to
+// normalise. _data/trainings.yml stores "Peter Hruschka"; the roster offers
+// "Dr. Peter Hruschka". Opening and re-saving a date must not quietly rename a
+// trainer on the public website.
+func TestExistingTrainerNamesArePreserved(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	stored := []string{"Peter Hruschka"}
+	if got := otherTrainers(stored); len(got) != 1 || got[0] != "Peter Hruschka" {
+		t.Fatalf("otherTrainers(%v) = %v — an off-roster name must survive verbatim", stored, got)
+	}
+
+	req := signedIn(t, s, http.MethodPost, "/dates/msa-a", url.Values{
+		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
+		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
+		"language": {"de"}, "format": {"public"}, "status": {"open"},
+		"url": {"https://example.org/a"}, "trainers_other": {"Peter Hruschka"},
+	})
+	s.Routes().ServeHTTP(httptest.NewRecorder(), req)
+
+	d, _ := s.drafts.Get("sid")
+	if !strings.Contains(string(d.Doc.Bytes()), `"Peter Hruschka"`) {
+		t.Errorf("stored trainer name was rewritten:\n%s", d.Doc.Bytes())
+	}
+	if strings.Contains(string(d.Doc.Bytes()), `"Dr. Peter Hruschka"`) {
+		t.Error("a title was silently added to a published trainer name")
 	}
 }

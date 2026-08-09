@@ -75,6 +75,14 @@ func (d *Doc) addFirstDate(courseID string, nd model.Date) error {
 		indent := strings.Repeat(" ", datesKey.Column+1)
 		line := datesKey.Line
 		existing := d.lines()[line-1]
+		// A course created by AddCourse carries "dates: []". Appending block
+		// entries under a flow sequence yields YAML that no longer parses, so
+		// the key line is rewritten as a plain "dates:" instead.
+		if strings.HasSuffix(strings.TrimSpace(existing), "[]") {
+			keyIndent := strings.Repeat(" ", maxInt(datesKey.Column-1, 0))
+			d.replaceLines(line, line, keyIndent+"dates:\n"+RenderDate(nd, indent))
+			return nil
+		}
 		d.replaceLines(line, line, existing+"\n"+RenderDate(nd, indent))
 		return nil
 	}
@@ -114,5 +122,26 @@ func mappingKeyNode(n *yaml.Node, key string) *yaml.Node {
 			return n.Content[i]
 		}
 	}
+	return nil
+}
+
+// AddCourse appends a new course to the end of the courses sequence.
+func (d *Doc) AddCourse(nc model.Course) error {
+	m := d.Model()
+	if len(m.Courses) == 0 {
+		return fmt.Errorf("add course: the file has no courses to append to")
+	}
+	for _, c := range m.Courses {
+		if c.ID == nc.ID {
+			return fmt.Errorf("add course: id %q already exists", nc.ID)
+		}
+	}
+	last := m.Courses[len(m.Courses)-1]
+	start, end, indent, ok := d.courseExtent(last.ID)
+	if !ok {
+		return fmt.Errorf("add course: cannot locate the last course")
+	}
+	existing := strings.Join(d.lines()[start-1:end], "\n") + "\n"
+	d.replaceLines(start, end, existing+"\n"+RenderCourse(nc, indent))
 	return nil
 }
