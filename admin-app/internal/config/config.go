@@ -27,12 +27,26 @@ func Load() (Config, error) {
 		SessionKey:   os.Getenv("SESSION_KEY"),
 		Environment:  envOr("ENVIRONMENT", "DEVELOPMENT"),
 	}
+	// Real GitHub OAuth credentials are long: client ids are 20 hex characters
+	// (classic) or ~22 starting "Ov23li" (current); secrets are 40 hex. A short
+	// value is always a placeholder, and letting one through is expensive — the
+	// app builds a valid-looking authorize URL, the user signs in, and GitHub
+	// answers 404 for the unknown client_id with nothing logged locally to say
+	// why. Failing here turns that into one readable line at startup.
+	const minCredentialLen = 16
+
 	var missing []string
-	if c.ClientID == "" {
+	switch {
+	case c.ClientID == "":
 		missing = append(missing, "GITHUB_CLIENT_ID")
+	case len(c.ClientID) < minCredentialLen:
+		missing = append(missing, fmt.Sprintf("GITHUB_CLIENT_ID (%q is too short to be real)", c.ClientID))
 	}
-	if c.ClientSecret == "" {
+	switch {
+	case c.ClientSecret == "":
 		missing = append(missing, "GITHUB_CLIENT_SECRET")
+	case len(c.ClientSecret) < minCredentialLen:
+		missing = append(missing, "GITHUB_CLIENT_SECRET (too short to be real)")
 	}
 	if len(c.SessionKey) < 32 {
 		missing = append(missing, "SESSION_KEY (needs >= 32 chars)")

@@ -8,3 +8,6 @@ _site
 *.code-workspace
 
 admin-app/.env
+
+# Throwaway credentials for local test runs; never the operator .env
+admin-app/.env.test
