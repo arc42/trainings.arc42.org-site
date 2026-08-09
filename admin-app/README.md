@@ -93,14 +93,10 @@ needs to be merged, it only needs to prove the round-trip works.
 
 ## Deployment
 
-The app is packaged for fly.io: [`Dockerfile`](Dockerfile) builds a
-from-scratch production image, [`fly.toml`](fly.toml) configures it (single
-process, no volumes, a `/healthz` check), and
-[`../.github/workflows/deploy-admin-app.yml`](/.github/workflows/deploy-admin-app.yml)
-tests and deploys on every push to `main` that touches `admin-app/`. As of
-this writing the fly.io app itself has not been created yet, so the app is
-not live anywhere — the workflow and config exist so that deploying is a
-one-time `fly launch` away rather than a new engineering task.
+The app runs on fly.io at [https://trainings-admin.arc42.org](https://trainings-admin.arc42.org).
+[`Dockerfile`](Dockerfile) builds a from-scratch production image, [`fly.toml`](fly.toml) configures it (single process, no volumes, a `/healthz` check), and [`../.github/workflows/deploy-admin-app.yml`](/.github/workflows/deploy-admin-app.yml) tests and deploys on every push to `main` that touches `admin-app/`.
+
+`PUBLIC_URL` in `fly.toml` (or Fly app secrets) and the GitHub OAuth app authorization callback URL (`https://trainings-admin.arc42.org/auth/callback`) are a matched pair and must always change together.
 
 ## See also
 

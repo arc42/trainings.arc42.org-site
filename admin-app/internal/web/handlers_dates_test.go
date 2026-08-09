@@ -469,3 +469,34 @@ func TestDeniedPageIsInformativeNotAnError(t *testing.T) {
 		}
 	}
 }
+
+// TestNavIsHiddenBeforeAuthentication: the masthead offered "Dates" and
+// "Courses" on the sign-in page. Both bounce straight back to sign-in, so they
+// are pure dead ends — and they advertise structure to someone who has not
+// established they may see any of it.
+func TestNavIsHiddenBeforeAuthentication(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	body := rec.Body.String()
+
+	if !strings.Contains(body, "Sign in with GitHub") {
+		t.Fatalf("expected the sign-in page:\n%s", body)
+	}
+	for _, dead := range []string{`href="/courses"`, `>Dates<`} {
+		if strings.Contains(body, dead) {
+			t.Errorf("sign-in page still shows nav item %s", dead)
+		}
+	}
+
+	// After signing in it must come back.
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/", nil))
+	body = rec.Body.String()
+	if !strings.Contains(body, `href="/courses"`) {
+		t.Error("nav is missing for an authenticated maintainer")
+	}
+}
