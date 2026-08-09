@@ -33,12 +33,10 @@ type Server struct {
 // into one *template.Template would let the last-parsed "content" block win
 // for every page. Each entry here is parsed from layout + draftbar + the page
 // file alone.
-//
-// courselist.gohtml and courseform.gohtml land in Task 10 and are added to
-// this list then.
 var pages = []string{
 	"list.gohtml", "dateform.gohtml", "login.gohtml", "denied.gohtml", "error.gohtml",
 	"propose.gohtml", "conflict.gohtml", "published.gohtml",
+	"courselist.gohtml", "courseform.gohtml",
 }
 
 func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
@@ -154,19 +152,4 @@ func templateFuncs() template.FuncMap {
 	return template.FuncMap{
 		"eqStr": func(a, b string) bool { return a == b },
 	}
-}
-
-// Placeholder handlers for the course screens. They land in Task 10;
-// Routes() already names them so the routing table is complete and stable,
-// but until that task lands there is nothing to serve.
-func (s *Server) handleCourseList(w http.ResponseWriter, r *http.Request, _ Session, _ *gh.Client) {
-	http.NotFound(w, r)
-}
-
-func (s *Server) handleCourseForm(w http.ResponseWriter, r *http.Request, _ Session, _ *gh.Client) {
-	http.NotFound(w, r)
-}
-
-func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, _ Session, _ *gh.Client) {
-	http.NotFound(w, r)
 }

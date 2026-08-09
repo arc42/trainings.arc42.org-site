@@ -1,0 +1,16 @@
+{{define "courseform.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+<h1>{{.Title}}</h1>
+<form method="post" action="/courses/{{.Course.ID}}" class="detail">
+<label>ID<input name="id" value="{{.Course.ID}}" required pattern="[a-z0-9-]+"></label>
+<label>Short title<input name="short_title" value="{{.Course.ShortTitle}}" required></label>
+<label>Title<input name="title" value="{{.Course.Title}}" required></label>
+<label>Blurb<textarea name="blurb" rows="4">{{.Course.Blurb}}</textarea></label>
+<label>Certification<input name="certification" value="{{.Course.Certification}}"></label>
+<label>Credits<input name="credits" value="{{.Course.Credits}}"></label>
+<label>URL<input name="url" value="{{.Course.URL}}" required></label>
+<label>Trainers <small>comma-separated</small>
+<input name="trainers" value="{{range $i, $t := .Course.Trainers}}{{if $i}}, {{end}}{{$t}}{{end}}" required></label>
+<div class="actions"><button type="submit">Save to draft</button> <a href="/courses">Cancel</a></div>
+</form>
+{{end}}

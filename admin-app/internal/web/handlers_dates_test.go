@@ -201,3 +201,29 @@ func TestDiscardClearsTheDraft(t *testing.T) {
 		t.Error("draft survived discard")
 	}
 }
+
+func TestCourseSaveLeavesDatesAlone(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	form := url.Values{
+		"id": {"msa"}, "short_title": {"MSA neu"},
+		"title": {"Mastering Software Architectures"},
+		"url":   {"https://example.org/msa"}, "trainers": {"Peter Hruschka, Gernot Starke"},
+	}
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/msa", form))
+
+	d, ok := s.drafts.Get("sid")
+	if !ok {
+		t.Fatal("no draft after course save")
+	}
+	out := string(d.Doc.Bytes())
+	if !strings.Contains(out, `short_title: "MSA neu"`) {
+		t.Errorf("course not updated:\n%s", out)
+	}
+	if !strings.Contains(out, "id: msa-a") || !strings.Contains(out, `code: "26-01 MSA"`) {
+		t.Errorf("a course-level edit disturbed the dates:\n%s", out)
+	}
+}
