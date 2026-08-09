@@ -114,6 +114,19 @@ func (s *Server) authed(next authedFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sess, ok := s.sessions.Get(r)
 		if !ok {
+			// A state-changing request from an expired session must not look
+			// like it worked. The draft was keyed by the old session id, so the
+			// edits are already gone — saying so is the honest answer, and a
+			// 200 here would let "Open pull request" appear to succeed while
+			// nothing was published.
+			if r.Method != http.MethodGet && r.Method != http.MethodHead {
+				w.WriteHeader(http.StatusUnauthorized)
+				s.render(w, "login.gohtml", map[string]any{
+					"Title":   "Session expired",
+					"Expired": true,
+				})
+				return
+			}
 			s.render(w, "login.gohtml", map[string]any{"Title": "Sign in"})
 			return
 		}

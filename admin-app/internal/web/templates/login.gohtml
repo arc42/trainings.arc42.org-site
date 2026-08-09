@@ -1,6 +1,15 @@
 {{define "login.gohtml"}}{{template "layout" .}}{{end}}
 {{define "content"}}
+{{if .Expired}}
+<h1>Session expired</h1>
+<p><strong>That change was not saved.</strong> Your session ended before it was
+submitted, and unpublished edits live only for the length of a session — so any
+draft you had is gone.</p>
+<p>Nothing was published and nothing in the repository changed. Sign in again
+and redo the edits.</p>
+{{else}}
 <h1>Sign in</h1>
 <p>Editing arc42 training dates requires push access to the trainings repository.</p>
+{{end}}
 <p><a class="button" href="/auth/github">Sign in with GitHub</a></p>
 {{end}}

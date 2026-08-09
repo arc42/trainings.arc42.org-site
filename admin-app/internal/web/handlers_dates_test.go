@@ -227,3 +227,34 @@ func TestCourseSaveLeavesDatesAlone(t *testing.T) {
 		t.Errorf("a course-level edit disturbed the dates:\n%s", out)
 	}
 }
+
+// TestUnauthenticatedWriteIsRejected pins the status code, not just the body.
+// A logged-out POST must not answer 200: the draft was keyed by the old
+// session id and is already gone, so a success status would let "Open pull
+// request" look like it worked while nothing was published.
+func TestUnauthenticatedWriteIsRejected(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	for _, target := range []string{"/propose", "/dates/msa-a", "/dates/msa-a/delete", "/courses/msa"} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, target, strings.NewReader(""))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		s.Routes().ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("POST %s without a session: status = %d, want 401", target, rec.Code)
+		}
+		if !strings.Contains(rec.Body.String(), "was not saved") {
+			t.Errorf("POST %s: response does not say the change was not saved", target)
+		}
+	}
+
+	// Reading anonymously stays an ordinary 200 sign-in page.
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Sign in with GitHub") {
+		t.Errorf("anonymous GET /: status = %d, want a 200 sign-in page", rec.Code)
+	}
+}
