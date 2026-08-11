@@ -39,7 +39,7 @@ origin**.
 | D2 | Entry point is **one quiet link in the existing footer**, not a masthead item or homepage button | The app has two users; every other visitor is not one. A prominent "Login" promises an account that cannot be obtained. The footer is where site-infrastructure links (Status, GitHub, Imprint) already live. |
 | D3 | The label is **"Maintainers"**, not "Login" | A label that names *who it is for* reads as "not me" to every visitor and "that's me" to the two maintainers. "Login" reads as an invitation and provokes "where do I sign up?". |
 | D4 | The app gets the custom hostname **`trainings-admin.arc42.org`** *(revised 2026-08-09; originally `admin.trainings.arc42.org`)* | The public footer of an arc42 site should not advertise a hosting provider. More importantly it decouples the published URL from fly.io: moving hosts later becomes a DNS change, not a dead bookmark plus a re-registered OAuth callback. |
-| D5 | The URL is **hardcoded to production** in the footer; no `jekyll.environment` branch | Neither dev loop clicks that link — site work does not care where it points, and app work reaches `localhost:8080` from the terminal. An env branch would be this repo's *first* dev/prod split (there is no `url:`, `baseurl:` or `jekyll.environment` anywhere today) and would sit inside an `include_cached` block. Not worth it for a link nobody clicks in dev. |
+| D5 | The URL is **hardcoded to production** in the footer; no `jekyll.environment` branch | There is only one admin app to point at, so there is nothing to branch on. An env branch would be this repo's *first* dev/prod split (there is no `url:`, `baseurl:` or `jekyll.environment` anywhere today) and would sit inside an `include_cached` block. |
 | D6 | The link is **public**, and that is accepted deliberately | Access is gated by GitHub OAuth, a live `permissions.push` check, and the PR-only boundary. Security rests on those, not on the URL being unguessable. Obscurity here would buy nothing real and cost daily usability. |
 | D4a | The hostname is a **single label**, not `admin.trainings` | The DNS panel for `arc42.org` accepts only one label in the host field, so a two-label name cannot be entered at all. It also sidesteps a real grey area: `trainings.arc42.org` is itself a CNAME, and RFC 1034 says a name carrying a CNAME should carry no other data. `trainings-admin` sorts beside `trainings` and reads as "the trainings admin". |
 | D7 | Design specs live in **this repository** under `docs/superpowers/specs/`, and `docs` is added to Jekyll's `exclude:` | Keeps the documentation next to the thing it documents. The exclusion is mandatory, not tidy-up: Jekyll copies every unexcluded directory into `_site/` verbatim, so without it the specs would be served at `https://trainings.arc42.org/docs/…`. |
@@ -133,9 +133,7 @@ moment the link is live:
   actual hostname, and record that `PUBLIC_URL` and the OAuth callback are a
   matched pair.
 
-## 7. Adjacent fixes (separate commits, same PR)
-
-### 7.1 `admin-app/` is published as static files
+## 7. Adjacent fix (separate commit, same PR): `admin-app/` is published as static files
 
 Jekyll's `exclude:` in `_config.yml` did not list `admin-app`, so the build
 copies the whole Go source tree into `_site/` — `main.go`, `internal/`,
@@ -145,8 +143,8 @@ would publish it. `Makefile` and `docker-compose.yml`, which *have* been on
 `origin` for a while, are already served — `https://trainings.arc42.org/Makefile`
 answers 200 — so this is a demonstrated behaviour, not a theoretical one.
 
-No credential is exposed (`admin-app/.env` is gitignored and has never been
-committed), and the source is public on GitHub anyway. The cost is a confusing
+No credential is exposed — the app's three secrets live in fly, never in the
+repository — and the source is public on GitHub anyway. The cost is a confusing
 second copy of the code on a documentation domain, crawlable and unversioned.
 
 Fixed together with the `docs` entry this design requires, since both are the
@@ -154,21 +152,6 @@ same one-line-per-entry change to the same list. **Still unexcluded and
 knowingly left alone:** `Makefile`, `Dockerfile`, `docker-compose.yml`,
 `scripts/`. They are already live, harmless, and removing them is a separate
 cleanup with its own (small) risk of breaking an inbound link.
-
-### 7.2 `make dev` starts the admin container
-
-`make dev` runs `docker compose up --build` with no service argument, so it
-starts the `admin` service too — which declares `env_file: admin-app/.env`.
-Anyone without that file gets a compose error on `make dev`, even when they only
-want to work on the site. Pre-existing and unrelated to this design, but it is a
-one-line fix in the same neighbourhood and it gets more likely to bite once the
-app is publicly advertised:
-
-```make
-docker compose up --build jekyll
-```
-
-Kept as its own commit so it can be dropped without touching the rest.
 
 ## 8. Verification
 

@@ -12,7 +12,8 @@ or build-time dependency. The app lives on `trainings-admin.arc42.org` (DNS
 CNAME → fly.io), so the published URL survives a change of hosting provider.
 
 **Tech Stack:** Jekyll 4 / Liquid (site, built by GitHub Pages), Go 1.x on
-fly.io (app), GitHub OAuth, Docker Compose + `make` for local work.
+fly.io (app), GitHub OAuth. The site builds locally with Docker Compose +
+`make`; the app has no local mode and runs only on fly.io.
 
 **Source spec:** [`docs/superpowers/specs/2026-08-09-admin-app-site-integration-design.md`](../specs/2026-08-09-admin-app-site-integration-design.md)
 
@@ -31,7 +32,7 @@ fly.io (app), GitHub OAuth, Docker Compose + `make` for local work.
 - **No new colours, fonts or CSS.** The link inherits `.footer-links` styling
   entirely. Introducing a styled button would require a measured contrast ratio
   per meta.arc42.org ADR-0002; inheriting existing styles avoids that.
-- **Task 5 (the footer link) commits LAST**, after Task 4's live sign-in check
+- **Task 4 (the footer link) commits LAST**, after Task 3's live sign-in check
   passes. `make check-links` runs html-proofer with `--disable-external` and
   therefore **cannot** catch a dead admin link.
 - **Do not stage files you did not change.** The working tree currently holds
@@ -43,7 +44,7 @@ fly.io (app), GitHub OAuth, Docker Compose + `make` for local work.
 
 Tasks **3 and 4** cannot be executed by an agent. They need fly.io
 credentials, DNS control over `arc42.org`, and the ability to create a GitHub
-OAuth app. An agent reaching Task 3 must stop and hand back to the operator.
+OAuth app. An agent reaching Task 2 must stop and hand back to the operator.
 
 ---
 
@@ -167,87 +168,7 @@ plan. Do not widen the other paths.
 
 ---
 
-## Task 2: Stop `make dev` from starting the admin container
-
-`make dev` runs `docker compose up --build` with no service argument, so Compose
-starts every service in `docker-compose.yml` — including `admin`, which declares
-`env_file: admin-app/.env`. A contributor who only wants the Jekyll site, and has
-no `.env`, gets a Compose error instead of a dev server. Independent of the rest
-of this plan; droppable without affecting any other task.
-
-**Files:**
-- Modify: `Makefile` (the `dev:` target, final line — around line 19)
-
-**Interfaces:**
-- Consumes: nothing.
-- Produces: nothing. No later task depends on this.
-
-- [ ] **Step 1: Reproduce the failure**
-
-Temporarily hide the env file and confirm `make dev` breaks:
-
-```bash
-mv admin-app/.env admin-app/.env.bak
-make dev
-```
-
-Expected: Compose fails with an error naming `admin-app/.env` (wording varies by
-Compose version, e.g. `env file … not found`). If it instead starts the Jekyll
-server cleanly, this bug does not reproduce on your Compose version — restore
-the file, skip to Step 5, and mark this task not applicable.
-
-Stop the run with `Ctrl-C` if it hangs.
-
-- [ ] **Step 2: Scope the target to the jekyll service**
-
-In `Makefile`, the last line of the `dev:` target:
-
-```make
-	docker compose up --build jekyll
-```
-
-(was: `docker compose up --build`)
-
-Do not touch the `app:` target — `docker compose up --build admin` is already
-correctly scoped.
-
-- [ ] **Step 3: Verify with the env file still hidden**
-
-```bash
-make dev
-```
-
-Expected: the Jekyll dev server starts and serves <http://localhost:4000>, with
-no mention of `admin-app/.env`. Confirm the site loads, then `Ctrl-C`.
-
-- [ ] **Step 4: Restore the env file and confirm `make app` still works**
-
-```bash
-mv admin-app/.env.bak admin-app/.env
-make app
-```
-
-Expected: the admin app starts on <http://localhost:8080>. This guards against
-the scoping change accidentally breaking the app's own target. `Ctrl-C` when
-confirmed.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add Makefile
-git commit -m "fix: make dev no longer starts the admin container
-
-docker compose up with no service argument starts every service,
-including admin, which requires admin-app/.env. Site-only contributors
-hit a Compose error instead of a dev server.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01D42RK2ztXWqEVrDFctBSJL"
-```
-
----
-
-## Task 3: Deploy the app on `trainings-admin.arc42.org` — **HUMAN ONLY**
+## Task 2: Deploy the app on `trainings-admin.arc42.org` — **HUMAN ONLY**
 
 **An agent must stop here.** This task needs fly.io credentials, DNS control
 over `arc42.org`, and permission to create a GitHub OAuth app. Nothing in it can
@@ -259,8 +180,8 @@ be verified from the repository.
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
 - Produces: a live HTTPS origin at `https://trainings-admin.arc42.org` whose
-  OAuth callback is `https://trainings-admin.arc42.org/auth/callback`. Task 4
-  verifies it; Task 5 links to it.
+  OAuth callback is `https://trainings-admin.arc42.org/auth/callback`. Task 3
+  verifies it; Task 4 links to it.
 
 - [ ] **Step 1: Create the fly app**
 
@@ -284,9 +205,8 @@ At <https://github.com/settings/developers> → **New OAuth App**:
 | Homepage URL | `https://trainings-admin.arc42.org` |
 | Authorization callback URL | `https://trainings-admin.arc42.org/auth/callback` |
 
-Keep the Client ID and generate a Client Secret. This is a **separate** OAuth
-app from any development one — a dev app's callback points at
-`http://localhost:8080/auth/callback` and cannot serve both.
+Keep the Client ID and generate a Client Secret. One OAuth app is all there is:
+a callback URL belongs to exactly one origin, and the app has exactly one.
 
 - [ ] **Step 3: Set the fly secrets**
 
@@ -377,16 +297,16 @@ Claude-Session: https://claude.ai/code/session_01D42RK2ztXWqEVrDFctBSJL"
 
 ---
 
-## Task 4: Verify sign-in end to end — **HUMAN ONLY**
+## Task 3: Verify sign-in end to end — **HUMAN ONLY**
 
-The gate that makes Task 5 safe. Two accounts are needed: one with push access
+The gate that makes Task 4 safe. Two accounts are needed: one with push access
 to `arc42/trainings.arc42.org-site`, and one without. Nothing is committed here.
 
 **Files:** none.
 
 **Interfaces:**
-- Consumes: the live origin from Task 3.
-- Produces: the go/no-go signal for Task 5.
+- Consumes: the live origin from Task 2.
+- Produces: the go/no-go signal for Task 4.
 
 - [ ] **Step 1: Sign in as a maintainer**
 
@@ -394,12 +314,12 @@ Open <https://trainings-admin.arc42.org> in a browser and sign in with GitHub.
 
 Expected: after the GitHub authorization round-trip you land on the dates list
 with real data from `_data/trainings.yml`. A `redirect_uri` error here means
-Task 3 Steps 2 and 4 disagree.
+Task 2 Steps 2 and 4 disagree.
 
 - [ ] **Step 2: Confirm the app reads the right repository**
 
 Check that the dates shown match `_data/trainings.yml` on `main`. `fly.toml`
-sets `GITHUB_REPO = "arc42/trainings.arc42.org-site"`; a fork's data appearing
+sets `GITHUB_REPO = "arc42/trainings.arc42.org-site"`; anything else appearing
 here means a stale secret or env value.
 
 - [ ] **Step 3: Confirm a non-maintainer is refused**
@@ -412,7 +332,7 @@ Expected: HTTP 403 and the "No access" page
 Expected **not**: a stack trace, a redirect loop, or any part of the dates list.
 
 This is the check that makes a publicly-linked admin app acceptable. **If it
-fails, stop — do not proceed to Task 5.**
+fails, stop — do not proceed to Task 4.**
 
 - [ ] **Step 4: Confirm the site is independent of the app**
 
@@ -429,9 +349,9 @@ This proves decision D1 — the static site has no dependency on the app.
 
 ---
 
-## Task 5: Add the footer link
+## Task 4: Add the footer link
 
-One line. Commits only after Task 4 passed.
+One line. Commits only after Task 3 passed.
 
 **Files:**
 - Modify: `_includes/footer.html` (the `.footer-links` list)
@@ -489,7 +409,7 @@ make check-links
 ```
 
 Expected: html-proofer passes. Note it runs with `--disable-external`, so this
-confirms the markup only — the target's reachability was established in Task 4
+confirms the markup only — the target's reachability was established in Task 3
 Step 1, not here.
 
 - [ ] **Step 5: Commit**
@@ -511,9 +431,9 @@ Claude-Session: https://claude.ai/code/session_01D42RK2ztXWqEVrDFctBSJL"
 
 ---
 
-## Task 6: Update the documentation that just went stale
+## Task 5: Update the documentation that just went stale
 
-Both READMEs state the app is not deployed. Both are wrong the moment Task 5
+Both READMEs state the app is not deployed. Both are wrong the moment Task 4
 lands.
 
 **Files:**
@@ -521,7 +441,7 @@ lands.
 - Modify: `admin-app/README.md` (§ *Deployment*)
 
 **Interfaces:**
-- Consumes: the live URL from Task 3.
+- Consumes: the live URL from Task 2.
 - Produces: nothing. Terminal.
 
 - [ ] **Step 1: Find the stale claims**
@@ -611,5 +531,4 @@ Claude-Session: https://claude.ai/code/session_01D42RK2ztXWqEVrDFctBSJL"
 - `make site` emits no `_site/docs` and no `_site/admin-app`, and still emits
   `/`, `/de/` and `/api/trainings.json`.
 - `make check-links` passes.
-- `make dev` works without `admin-app/.env`.
 - Neither README claims the app is undeployed.

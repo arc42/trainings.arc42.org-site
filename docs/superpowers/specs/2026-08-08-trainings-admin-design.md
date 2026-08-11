@@ -39,7 +39,7 @@ a quarter.
 | D4 | The overview list is **dates, flat across all courses** | ~12 dates are live at a time and dates are what actually change. Course metadata changes maybe twice a year and gets its own rarely-visited screen. |
 | D5 | Edits accumulate in a draft; **one editing session → one PR** | Keeps PR history meaningful and puts a diff preview between a typo and GitHub. |
 | D6 | The draft lives **in server memory**, with no persistence | No database, no fly volume, no schema, no migrations, no backup story. A session is minutes long and the source of truth is untouched in GitHub throughout, so the worst case is re-entering a few fields. |
-| D7 | The app is a **server-rendered Go web app**, not a desktop app | Wails builds a desktop binary and cannot be the fly.io production version; one codebase would become two. Go + `html/template` + htmx runs unchanged at `localhost:8080` and on fly.io, and matches the existing `status.arc42.org-site/go-app` precedent. |
+| D7 | The app is a **server-rendered Go web app**, not a desktop app | Wails builds a desktop binary and cannot be the fly.io production version; one codebase would become two. Go + `html/template` + htmx is one static binary deployed to fly.io, and matches the existing `status.arc42.org-site/go-app` precedent. |
 | D8 | Validation reuses the repo's own schema; it is not re-implemented | The app fetches `api/trainings.schema.json` live from the repo, so it cannot drift. Only the four cross-field rules JSON Schema cannot express are hand-written. |
 | D9 | YAML is edited **surgically**, node by node | A naive unmarshal→marshal round-trip destroys the comment header, reorders keys, drops deliberate quoting, and turns a one-line change into a 400-line diff — defeating the review gate D2 exists for. |
 
@@ -151,8 +151,9 @@ This is an internal tool, so the bar is "consistent and legible", not "designed"
 - **No allowlist anywhere.** Access is whatever GitHub says it is.
 - Session: encrypted cookie, `Secure`, `HttpOnly`, `SameSite=Lax`, 8h TTL,
   holding login + access token. Encrypted with `SESSION_KEY`.
-- Two OAuth apps registered — `-dev` (callback `http://localhost:8080/auth/callback`)
-  and `-prod` — so dev secrets are never prod secrets.
+- One OAuth app, `arc42-trainings-admin-prod`, whose callback is
+  `https://trainings-admin.arc42.org/auth/callback`. The app runs in one place,
+  so there is one credential pair.
 
 ## 8. Publish flow
 
@@ -185,43 +186,29 @@ decorative.
 | Unit | `model` — flatten, sort, course membership | — |
 | Integration | **`gh`** — against `httptest`, asserting the exact API call sequence and payloads | No network in tests; pins the publish flow's contract |
 | Handler | **`web`** — `httptest` + a fake `gh`: list → edit → propose, plus the conflict path and the 403 path | Covers the flows a user actually performs |
-| Manual | Sign in to the deployed app and publish, then close the PR unmerged | ~~Originally against a fork from a local instance~~ — see §10. Also where draft loss is deliberately exercised, by letting the machine idle out mid-session |
+| Manual | Sign in to the deployed app and publish, then close the PR unmerged | The one flow no test can stand in for: real GitHub, real OAuth, a real PR. Also where draft loss is deliberately exercised, by letting the machine idle out mid-session |
 
 No browser/e2e tests — four screens do not justify the maintenance.
 
-## 10. Local development — **superseded 2026-08-09: there is none**
+## 10. Deployment — the only environment
 
-As originally specified, the app ran locally through Docker (`make app`,
-`make app-test`, `make app-stop`, `make app-logs`, `make app-shell`), configured
-by a gitignored `admin-app/.env` copied from a committed template, with a second
-GitHub OAuth app registered against `http://localhost:8080/auth/callback` and
-`GITHUB_REPO` pointed at a fork so test runs opened harmless PRs.
-
-That was all removed once the app was live. The reason is the PR-only boundary
-(§2): the app proposes and never publishes, so working directly against
-production risks a closed pull request and nothing else. Against that, a local
-mode costs a second OAuth app, a second set of credentials on each maintainer's
-laptop, a `Dockerfile.dev`, a compose service, five Makefile targets, and a
-fork — a standing divergence between two environments, maintained for two people
-who use the app a few times a quarter.
-
-What remains: `go test ./...` runs the suite anywhere Go 1.23 is installed (the
-Ruby cross-check skips itself if Ruby is absent; CI always runs it), and pushing
-to `main` tests and deploys. Configuration is `fly.toml` plus three fly secrets
-(`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_KEY`) — see §11 and
-[`admin-app/README.md`](/admin-app/README.md).
-
-## 11. Deployment
+The app runs in exactly one place: fly.io, at
+<https://trainings-admin.arc42.org>. It is developed by pushing, not by being
+started somewhere else. `go test ./...` runs the suite anywhere Go 1.23 is
+installed; a push to `main` touching `admin-app/**` runs the same tests in CI
+and then deploys. There is no manual deploy step.
 
 Multi-stage Dockerfile → scratch. `fly.toml`: app `arc42-trainings-admin`,
 primary region `ams`, `internal_port = 8080`, `force_https`,
 `auto_stop_machines`/`auto_start_machines`, `min_machines_running = 0` — so it
 costs nothing between quarters.
 
-Secrets via `fly secrets set`: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`,
-`SESSION_KEY`. A GitHub Action deploys on push to `main` touching `admin-app/**`.
+Configuration is `fly.toml` for the non-secrets (`GITHUB_REPO`, `ENVIRONMENT`,
+`PUBLIC_URL`) plus three values set once with `fly secrets set`:
+`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_KEY`. `PUBLIC_URL` and the
+OAuth app's registered callback are a matched pair and change together.
 
-## 12. Backup
+## 11. Backup
 
 There is nothing to back up, by design.
 
@@ -233,7 +220,7 @@ files.
 The one exception is the OAuth client secret and `SESSION_KEY` — the only state
 a machine loss would destroy. They belong in 1Password.
 
-## 13. Failure modes
+## 12. Failure modes
 
 | Failure | Behaviour |
 |---|---|
@@ -244,14 +231,14 @@ a machine loss would destroy. They belong in 1Password.
 | App compromised | Attacker can open a PR. Merging still requires an authenticated arc42 maintainer (D2). |
 | GitHub OAuth outage | Nobody can sign in. Hand-editing still works. |
 
-## 14. Out of scope
+## 13. Out of scope
 
 - Editing the German/English site copy (lives in the Jekyll templates).
 - Registration/booking data (Formspark).
 - Any change to the feed contract, the consumers, or their refresh workflows.
 - Notifications, reminders, or calendar integration.
 
-## 15. Companion work item
+## 14. Companion work item
 
 `meta.arc42.org/training-dates.md` needs a freshness pass, independent of the
 app:
