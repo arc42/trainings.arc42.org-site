@@ -142,7 +142,7 @@ func TestSaveDateMarksDraftDirty(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"url": {"https://example.org/a"}, "status": {"full"},
+		"status": {"full"}, // no "url": the form derives it from the id
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -167,7 +167,7 @@ func TestSaveRejectsInvalidDate(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-05"}, "end": {"2026-01-02"}, // end before start
 		"city": {"München"}, "language": {"de"}, "format": {"public"},
-		"url": {"https://example.org/a"}, "status": {"open"},
+		"status": {"open"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -288,10 +288,12 @@ func TestNewDateFormRendersCompletely(t *testing.T) {
 	if !strings.Contains(body, `value="msa"`) {
 		t.Error("course dropdown has no options")
 	}
-	// Every required field must render, i.e. execution reached the end.
+	// Every required field must render, i.e. execution reached the end. The
+	// registration url is absent on purpose — it is derived from the id on
+	// save, which TestSaveDerivesTheRegistrationURL covers.
 	for _, field := range []string{
 		`name="id"`, `name="code"`, `name="start"`, `name="end"`,
-		`name="format"`, `name="language"`, `name="status"`, `name="url"`,
+		`name="format"`, `name="language"`, `name="status"`, `name="few_seats"`,
 	} {
 		if !strings.Contains(body, field) {
 			t.Errorf("form is missing %s — rendering stopped early", field)
@@ -410,7 +412,7 @@ func TestExistingTrainerNamesArePreserved(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"language": {"de"}, "format": {"public"}, "status": {"open"},
-		"url": {"https://example.org/a"}, "trainers_other": {"Peter Hruschka"},
+		"trainers_other": {"Peter Hruschka"},
 	})
 	s.Routes().ServeHTTP(httptest.NewRecorder(), req)
 
@@ -575,5 +577,97 @@ func TestMascotIsServedAndReferenced(t *testing.T) {
 		if rec.Body.Len() < 1000 {
 			t.Errorf("GET %s served only %d bytes", path, rec.Body.Len())
 		}
+	}
+}
+
+// Duplicating a date is the annual-repeat action, so everything that identifies
+// the individual run must be cleared — including the dates. Inheriting last
+// year's start/end silently produced a date in the wrong year whenever the
+// operator changed only one of the two.
+func TestDuplicateClearsIdentityAndDates(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new?from=msa-a", nil))
+	body := rec.Body.String()
+
+	for _, stale := range []string{`value="msa-a"`, `value="2026-01-01"`, `value="2026-01-02"`, "26-01 MSA"} {
+		if strings.Contains(body, stale) {
+			t.Errorf("duplicate carried over %s from the source date", stale)
+		}
+	}
+	// What is genuinely reusable must survive, or duplicating saves no typing.
+	if !strings.Contains(body, `value="München"`) {
+		t.Error("duplicate dropped the city, which is the point of duplicating")
+	}
+}
+
+// The registration link is the same anchored page for every date, so typing it
+// is ceremony and a typo breaks a live booking link.
+func TestSaveDerivesTheRegistrationURL(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	form := url.Values{
+		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
+		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
+		"country": {"DE"}, "language": {"de"}, "format": {"public"}, "status": {"open"},
+	} // note: no "url" key at all
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
+
+	d, ok := s.drafts.Get("sid")
+	if !ok {
+		t.Fatalf("no draft after save; status %d body:\n%s", rec.Code, rec.Body.String())
+	}
+	if want := `url: "https://www.arc42.de/termine#msa-a"`; !strings.Contains(string(d.Doc.Bytes()), want) {
+		t.Errorf("registration url was not derived, wanted %s in:\n%s", want, d.Doc.Bytes())
+	}
+}
+
+func TestDateFormAsksForNoRegistrationURL(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	if strings.Contains(rec.Body.String(), `name="url"`) {
+		t.Error("the date form still asks for a registration url by hand")
+	}
+}
+
+// The browser derives the booking code as the form is filled in, which needs
+// each course's abbreviation to travel with its option.
+func TestCourseOptionsCarryTheCodeToken(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	if !strings.Contains(rec.Body.String(), `data-code-token="MSA"`) {
+		t.Errorf("course options carry no code token:\n%s", rec.Body.String())
+	}
+}
+
+func TestDeriveScriptIsServedAndReferenced(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	if !strings.Contains(rec.Body.String(), "/static/derive.js") {
+		t.Error("the date form does not load derive.js")
+	}
+
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/derive.js", nil))
+	if rec.Code != http.StatusOK {
+		t.Errorf("GET /static/derive.js -> %d, want 200 (is it embedded?)", rec.Code)
 	}
 }

@@ -14,7 +14,7 @@
     <label>Course <span class="req" aria-hidden="true">*</span>
       <select name="course_id" required>
         {{$cid := .CourseID}}
-        {{range .Courses}}<option value="{{.ID}}" {{if eqStr .ID $cid}}selected{{end}}>{{.ShortTitle}} — {{.Title}}</option>{{end}}
+        {{range .Courses}}<option value="{{.ID}}" data-code-token="{{codeToken .ID}}" {{if eqStr .ID $cid}}selected{{end}}>{{.ShortTitle}} — {{.Title}}</option>{{end}}
       </select>
     </label>
     <label>Date ID <span class="req" aria-hidden="true">*</span>
@@ -24,10 +24,11 @@
         in the anchor link on arc42.de, so it never changes once published.</small>
     </label>
     <label>Booking code <span class="req" aria-hidden="true">*</span>
-      <input name="code" value="{{.Date.Code}}" required
+      <input name="code" id="f-code" value="{{.Date.Code}}" required
              aria-describedby="code-hint" placeholder="26-12 MSA">
-      <small id="code-hint" class="hint">The Formspark option value. Must be unique —
-        a duplicate silently misroutes a registration.</small>
+      <small id="code-hint" class="hint">Filled in for you from the course, the
+        start date and the language. Overwrite it if this run needs a different
+        code. Must be unique — a duplicate silently misroutes a registration.</small>
     </label>
   </fieldset>
 
@@ -35,10 +36,13 @@
     <legend>When</legend>
     <div class="row">
       <label>First day <span class="req" aria-hidden="true">*</span>
-        <input type="date" name="start" value="{{.Date.Start}}" required>
+        <input type="date" name="start" id="f-start" value="{{.Date.Start}}" required>
       </label>
       <label>Last day <span class="req" aria-hidden="true">*</span>
-        <input type="date" name="end" value="{{.Date.End}}" required>
+        <input type="date" name="end" id="f-end" value="{{.Date.End}}" required
+               aria-describedby="end-hint">
+        <small id="end-hint" class="hint">Defaults to the day after the first
+          day; change it for a longer course.</small>
       </label>
     </div>
   </fieldset>
@@ -70,7 +74,7 @@
     <legend>How it is offered</legend>
     <div class="row">
       <label>Language taught in <span class="req" aria-hidden="true">*</span>
-        <select name="language" required>
+        <select name="language" id="f-language" required>
           {{$l := .Date.Language}}
           {{range .Languages}}<option value="{{.}}" {{if eqStr . $l}}selected{{end}}>{{.}}</option>{{end}}
         </select>
@@ -82,10 +86,9 @@
         </select>
       </label>
     </div>
-    <label>Registration URL <span class="req" aria-hidden="true">*</span>
-      <input type="url" name="url" value="{{.Date.URL}}" required
-             placeholder="https://www.arc42.de/termine#msa-dez-2026">
-    </label>
+    {{/* No registration URL field: every published date links to the same
+         anchored page, so the date id already determines it. The server writes
+         https://www.arc42.de/termine#<id> on save. */}}
   </fieldset>
 
   {{template "trainers" dict "Selected" .Date.Trainers "Known" .KnownTrainers "Other" .OtherTrainers}}
@@ -107,4 +110,5 @@
     <a href="/">Cancel</a>
   </div>
 </form>
+<script src="/static/derive.js" defer></script>
 {{end}}

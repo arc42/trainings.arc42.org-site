@@ -70,10 +70,14 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 	}
 	// "Duplicate" is the common real action — next year's run of a course — so
 	// /dates/new?from=<id> pre-fills from an existing date with a cleared id.
+	// Start and end are cleared along with the identity: they are what changes
+	// between two runs, and inheriting them let a half-edited pair through with
+	// one date still in the source year.
 	if from := r.URL.Query().Get("from"); from != "" {
 		if row, ok := m.FindDate(from); ok {
 			src := row.Date
 			src.ID, src.Code, src.URL = "", "", ""
+			src.Start, src.End = "", ""
 			data["Date"] = src
 			data["CourseID"] = row.CourseID
 			data["OtherTrainers"] = otherTrainers(src.Trainers)
@@ -103,8 +107,11 @@ func parseDateForm(r *http.Request) (model.Date, string) {
 		City: get("city"), Country: strings.ToUpper(get("country")),
 		Language: get("language"), Format: get("format"),
 		Pricing: get("pricing"), FewSeats: get("few_seats"),
-		URL: get("url"), Status: get("status"),
+		Status: get("status"),
 	}
+	// The form no longer asks for the registration link. Every published date
+	// points at the same anchored page, so the id already determines it.
+	d.URL = model.RegistrationURL(d.ID)
 	d.Trainers = parseTrainers(r)
 	return d, get("course_id")
 }

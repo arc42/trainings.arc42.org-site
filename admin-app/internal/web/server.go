@@ -13,6 +13,7 @@ import (
 
 	"arc42-trainings-admin/internal/config"
 	"arc42-trainings-admin/internal/gh"
+	"arc42-trainings-admin/internal/model"
 )
 
 //go:embed templates/*.gohtml static/*
@@ -186,6 +187,9 @@ func templateFuncs() template.FuncMap {
 		// nil — and a strictly-typed helper turns that omission into a
 		// mid-render abort rather than an empty comparison.
 		"eqStr": func(a, b any) bool { return fmt.Sprint(a) == fmt.Sprint(b) },
+		// codeToken travels with each course option so the browser can derive
+		// the booking code without a round trip.
+		"codeToken": func(courseID any) string { return model.CodeToken(fmt.Sprint(courseID)) },
 		// has and join also take `any`: values reaching a shared partial go
 		// through dict, which erases []string to interface{}, and a nil slice
 		// is the normal case for a blank form.

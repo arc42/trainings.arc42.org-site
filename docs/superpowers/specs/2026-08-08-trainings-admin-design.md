@@ -121,13 +121,20 @@ Fields are exactly those in `api/trainings.schema.json`:
   (required); `city` (required unless `format: online`), `country`, `trainers[]`,
   `pricing`, `few_seats` (optional).
 
+`code` and `url` stay in the file — they serve different readers (`code` is the
+Formspark option value that reaches the back office verbatim; `url` is the
+`arc42.de/termine` anchor) — but the form no longer asks for either by hand.
+`url` is derived from `id` on save, and `code` is prefilled from course, start
+and language and remains editable, because a course starting 30 November can
+still be booked as `27-12 MSA`. See `internal/model/derive.go`.
+
 ## 6. Screens
 
 | Route | Purpose |
 |---|---|
 | `/` | Flat date list sorted by `start`. Upcoming first; past dates behind a "show past" toggle. Columns: code · course · dates · city/online · lang · status badge. Row actions: edit, duplicate, delete. |
 | `/dates/{id}` | Detail form. Course selector. `city` required-ness toggles live off `format`. Inline validation. |
-| `/dates/new` | Same form. **Duplicate** pre-fills from an existing date — the common real action (next year's MSA). |
+| `/dates/new` | Same form. **Duplicate** pre-fills from an existing date — the common real action (next year's MSA) — clearing `id`, `code`, `url`, `start` and `end`, which are what distinguish one run from the next. |
 | `/courses`, `/courses/{id}` | Rare. Course-level fields. |
 | `/propose` | Unified YAML diff, validation result, editable PR title/body, **Open PR**. |
 | `/auth/github`, `/auth/callback`, `/auth/logout` | OAuth. |
