@@ -82,6 +82,18 @@ courses:
         pricing: "Frühbucherpreis bei Anmeldung bis 30. Juli 2027: € 2690, Normalpreis: € 2890"
         url: "https://www.arc42.de/termine#msa-dez-2027"
         status: open
+
+      - id: msa-27-02-online
+        code: "27-02-MSA-online"
+        start: "2027-02-23"
+        end: "2027-02-25"
+        language: en
+        format: online
+        trainers: ["Wolfgang Reimesch"]
+        pricing: "€2200"
+        few_seats: "only few seats available"
+        url: "https://www.arc42.de/msa-27-02-online"
+        status: waitlist
   - id: improve
     short_title: "IMPROVE"
     title: "IMPROVE: Evolve and maintain systems"
