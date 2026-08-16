@@ -38,6 +38,7 @@ func FeedJSON(t model.Trainings) ([]byte, error) {
 		Certification *string    `json:"certification"`
 		Credits       *string    `json:"credits"`
 		URL           string     `json:"url"`
+		URLEn         string     `json:"url_en,omitempty"`
 		Trainers      []string   `json:"trainers"`
 		Dates         []jsonDate `json:"dates"`
 	}
@@ -49,7 +50,7 @@ func FeedJSON(t model.Trainings) ([]byte, error) {
 	for _, c := range t.Courses {
 		jc := jsonCourse{
 			ID: c.ID, ShortTitle: c.ShortTitle, Title: c.Title, Blurb: c.Blurb,
-			URL: c.URL, Trainers: c.Trainers,
+			URL: c.URL, URLEn: c.URLEn, Trainers: c.Trainers,
 		}
 		if c.Certification != "" {
 			v := c.Certification

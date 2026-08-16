@@ -158,6 +158,32 @@ func TestAgreesWithRubyValidator(t *testing.T) {
 	}
 }
 
+func TestFeedJSONCarriesURLEnAndSchemaAcceptsIt(t *testing.T) {
+	tr := ok()
+	tr.Courses[0].URLEn = "https://trainings.arc42.org/courses/msa/"
+	feed, err := FeedJSON(tr)
+	if err != nil {
+		t.Fatalf("FeedJSON: %v", err)
+	}
+	if !strings.Contains(string(feed), `"url_en":"https://trainings.arc42.org/courses/msa/"`) {
+		t.Errorf("feed lacks url_en:\n%s", feed)
+	}
+	problems, err := Schema(schemaBytes(t), feed)
+	if err != nil {
+		t.Fatalf("Schema: %v", err)
+	}
+	if len(problems) != 0 {
+		t.Errorf("schema rejected url_en: %v", problems)
+	}
+
+	// Without url_en the key must be absent, not "".
+	tr.Courses[0].URLEn = ""
+	feed, _ = FeedJSON(tr)
+	if strings.Contains(string(feed), "url_en") {
+		t.Errorf("empty url_en must be omitted:\n%s", feed)
+	}
+}
+
 func assertProblem(t *testing.T, problems []Problem, substr string) {
 	t.Helper()
 	for _, p := range problems {
