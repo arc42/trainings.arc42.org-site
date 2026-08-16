@@ -130,6 +130,11 @@ relevant change, CI validates the built feed against
 [`/api/trainings.schema.json`](/api/trainings.schema.json)
 (see [`validate-trainings.yml`](/.github/workflows/validate-trainings.yml)).
 
+Every course carries a German `url` (its detail page on arc42.de) and may
+carry an optional `url_en` — an English detail page on this site,
+`https://trainings.arc42.org/courses/<id>/`. English consumers render
+`course.url_en | default: course.url`; arc42.de ignores `url_en`.
+
 ### Consumers
 
 Four sites render the training dates at build time from this feed. Each pulls
@@ -189,5 +194,21 @@ source of truth). To change dates:
    `notify-consumers.yml` dispatches to all four repos (see
    [Consumers](#consumers) for the token requirement), or on demand via their
    `Refresh training dates` workflow_dispatch button.
+
+### Adding an English course page
+
+Course descriptions in German live on arc42.de (`/info-<id>/`). English
+descriptions live here, one page per course, and are maintained by hand —
+there is deliberately no DE↔EN sync. To add one (today only `msa` has one):
+
+1. Create `_pages/courses/<id>.md` (`<id>` = the course id in
+   `_data/trainings.yml`). Copy the front matter of `_pages/courses/msa.md`;
+   set `translation_url:` to the German page on arc42.de so the masthead
+   DE | EN switch and `hreflang` point there. Buttons use the site-wide
+   `btn btn--primary` / `btn btn--inverse` classes.
+2. Add `url_en: "https://trainings.arc42.org/courses/<id>/"` to that course in
+   `_data/trainings.yml`.
+
+The consumer sites already prefer `url_en`, so nothing else changes.
 
 ## Created with [OneFlow Jekyl Theme](https://oneflow-jekyll-theme.github.io/)
