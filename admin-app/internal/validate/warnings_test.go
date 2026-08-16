@@ -150,3 +150,22 @@ func TestPastStartIsOnlyWarnedForNewDates(t *testing.T) {
 		t.Errorf("an existing past date must not be nagged, got %q", got)
 	}
 }
+
+// url_en arrived after the warning rules were written, so it was the one URL
+// on either form that could be plain http without anyone saying so.
+func TestEnglishCourseURLIsHeldToTheSameRuleAsTheMainOne(t *testing.T) {
+	c := model.Course{
+		ID: "msa", ShortTitle: "Mastering SW Architectures",
+		Title: "Mastering Software Architectures", URL: "https://www.arc42.de/info-msa/",
+		Blurb: "Two expert trainers at all times, highly practical and pragmatic.",
+		URLEn: "http://trainings.arc42.org/courses/msa/",
+	}
+	if got := fields(CourseWarnings(c)); !strings.Contains(got, "url_en") {
+		t.Errorf("expected an http url_en warning, got %q", got)
+	}
+	// Empty is the normal case — most courses have no English page.
+	c.URLEn = ""
+	if got := fields(CourseWarnings(c)); strings.Contains(got, "url_en") {
+		t.Errorf("an absent English page must not warn, got %q", got)
+	}
+}

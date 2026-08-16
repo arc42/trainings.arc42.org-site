@@ -842,7 +842,7 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 			"status-hint", "pricing-hint", "few-seats-hint",
 		}},
 		{"/courses/new", []string{
-			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "blurb-hint",
+			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-hint",
 			"cert-hint", "credits-hint",
 		}},
 	} {

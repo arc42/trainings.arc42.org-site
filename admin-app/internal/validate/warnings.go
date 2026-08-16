@@ -2,6 +2,7 @@ package validate
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"arc42-trainings-admin/internal/model"
@@ -98,8 +99,13 @@ func CourseWarnings(c model.Course) []Warning {
 	if n := len([]rune(c.ShortTitle)); n > maxShortTitle {
 		add("short_title", "%d characters is long for the timeline card; %d or fewer fits", n, maxShortTitle)
 	}
-	if c.URL != "" && len(c.URL) >= 7 && c.URL[:7] == "http://" {
+	if isPlainHTTP(c.URL) {
 		add("url", "the feed schema requires https, and this is plain http")
+	}
+	// url_en is optional — most courses have no English page — but when it is
+	// given it is a published link like any other.
+	if isPlainHTTP(c.URLEn) {
+		add("url_en", "the English course page is plain http; use https")
 	}
 	if c.Blurb == "" {
 		add("blurb", "without a blurb the timeline card shows the course name alone")
@@ -122,4 +128,10 @@ func spanDays(start, end string) (int, bool) {
 		return 0, false
 	}
 	return int(e.Sub(s).Hours() / 24), true
+}
+
+// isPlainHTTP reports a URL that is given but not secure. An empty URL is not
+// a problem here — whether it is required at all is a blocking rule's job.
+func isPlainHTTP(u string) bool {
+	return strings.HasPrefix(u, "http://")
 }
