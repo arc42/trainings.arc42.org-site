@@ -190,6 +190,9 @@ func templateFuncs() template.FuncMap {
 		// codeToken travels with each course option so the browser can derive
 		// the booking code without a round trip.
 		"codeToken": func(courseID any) string { return model.CodeToken(fmt.Sprint(courseID)) },
+		// defaultsOf hands the template the values a new date for this course
+		// would repeat, so switching the dropdown re-applies them in the browser.
+		"defaultsOf": model.DefaultsFor,
 		// has and join also take `any`: values reaching a shared partial go
 		// through dict, which erases []string to interface{}, and a nil slice
 		// is the normal case for a blank form.

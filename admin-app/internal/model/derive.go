@@ -79,3 +79,35 @@ func RegistrationURL(dateID string) string {
 	}
 	return "https://www.arc42.de/termine#" + dateID
 }
+
+// Defaults are the values a new date for a course starts with. They come from
+// the course's most recent date, because a repeat run is overwhelmingly the
+// same city with the same pricing sentence — the two longest things to retype.
+// Nothing here is identity: id, code, url, start and end are what make the new
+// date new, and are never carried over.
+type Defaults struct {
+	City     string
+	Country  string
+	Pricing  string
+	Trainers []string
+}
+
+// DefaultsFor reads a course's most recent date by start, falling back to the
+// course's own trainer roster when no date names one.
+func DefaultsFor(c Course) Defaults {
+	var latest *Date
+	for i := range c.Dates {
+		if latest == nil || c.Dates[i].Start > latest.Start {
+			latest = &c.Dates[i]
+		}
+	}
+	d := Defaults{Trainers: c.Trainers}
+	if latest == nil {
+		return d
+	}
+	d.City, d.Country, d.Pricing = latest.City, latest.Country, latest.Pricing
+	if len(latest.Trainers) > 0 {
+		d.Trainers = latest.Trainers
+	}
+	return d
+}

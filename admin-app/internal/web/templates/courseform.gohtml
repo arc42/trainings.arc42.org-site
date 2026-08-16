@@ -14,7 +14,7 @@
   <fieldset class="group">
     <legend>Identity</legend>
     <label>Course ID <span class="req" aria-hidden="true">*</span>
-      <input name="id" value="{{.Course.ID}}" required pattern="[a-z0-9-]+"
+      <input name="id" id="c-id" value="{{.Course.ID}}" required pattern="[a-z0-9-]+"
              aria-describedby="cid-hint" placeholder="msa" {{if not .IsNew}}readonly{{end}}>
       <small id="cid-hint" class="hint">Lower-case letters, digits and hyphens.
         {{if .IsNew}}Every date links to its course by this value.
@@ -28,11 +28,19 @@
     </label>
     <label>Full title <span class="req" aria-hidden="true">*</span>
       <input name="title" value="{{.Course.Title}}" required
+             aria-describedby="ctitle-hint"
              placeholder="Mastering Software Architectures">
+      <small id="ctitle-hint" class="hint">The complete name, used where there is
+        room to spell it out.</small>
     </label>
     <label>Course URL <span class="req" aria-hidden="true">*</span>
-      <input type="url" name="url" value="{{.Course.URL}}" required
+      <input type="url" name="url" id="c-url" value="{{.Course.URL}}" required
+             aria-describedby="curl-hint"
              placeholder="https://www.arc42.de/info-msa/">
+      <small id="curl-hint" class="hint">The course description page people read
+        before booking. Filled in from the id as
+        https://www.arc42.de/info-&lt;id&gt;/ — change it if this course lives
+        elsewhere. Must be https.</small>
     </label>
   </fieldset>
 
@@ -49,7 +57,10 @@
     <div class="row">
       <label>Certification
         <input name="certification" value="{{.Course.Certification}}"
+               aria-describedby="cert-hint"
                placeholder="iSAQB CPSA-Foundation">
+        <small id="cert-hint" class="hint">The certificate this course prepares
+          for, if any. Leave empty when it prepares for none.</small>
       </label>
       <label>Credits
         <input name="credits" value="{{.Course.Credits}}" aria-describedby="credits-hint">
@@ -60,4 +71,5 @@
 
   {{template "actions" dict "Warnings" .Warnings "IsNew" .IsNew "Cancel" "/courses"}}
 </form>
+<script src="/static/form.js" defer></script>
 {{end}}

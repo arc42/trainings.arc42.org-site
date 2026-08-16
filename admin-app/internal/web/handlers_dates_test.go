@@ -661,21 +661,21 @@ func TestCourseOptionsCarryTheCodeToken(t *testing.T) {
 	}
 }
 
-func TestDeriveScriptIsServedAndReferenced(t *testing.T) {
+func TestFormScriptIsServedAndReferenced(t *testing.T) {
 	gh := fakeGitHub(t, nil)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
-	if !strings.Contains(rec.Body.String(), "/static/derive.js") {
-		t.Error("the date form does not load derive.js")
+	if !strings.Contains(rec.Body.String(), "/static/form.js") {
+		t.Error("the date form does not load form.js")
 	}
 
 	rec = httptest.NewRecorder()
-	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/derive.js", nil))
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/form.js", nil))
 	if rec.Code != http.StatusOK {
-		t.Errorf("GET /static/derive.js -> %d, want 200 (is it embedded?)", rec.Code)
+		t.Errorf("GET /static/form.js -> %d, want 200 (is it embedded?)", rec.Code)
 	}
 }
 
@@ -772,5 +772,96 @@ func TestCourseWarningsGateTheFirstSave(t *testing.T) {
 	d, ok := s.drafts.Get("sid")
 	if !ok || !d.Dirty() {
 		t.Fatalf("the acknowledged course save did not apply:\n%s", rec.Body.String())
+	}
+}
+
+// A new date for an existing course repeats most of the previous run: same
+// city, same pricing sentence, same trainers. Prefilling them is the whole
+// difference between adding a date and retyping one.
+func TestNewDateFormPrefillsFromTheCoursesLastDate(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	body := rec.Body.String()
+
+	if !strings.Contains(body, `value="München"`) {
+		t.Errorf("city was not prefilled from the course's last date:\n%s", body)
+	}
+	if !strings.Contains(body, `value="DE"`) {
+		t.Error("country was not prefilled")
+	}
+	// The course names Peter Hruschka, who is not on the canonical roster, so
+	// he must appear in the free-text field rather than as a ticked box.
+	if !strings.Contains(body, "Peter Hruschka") {
+		t.Error("trainers were not prefilled from the course")
+	}
+	// Identity is never prefilled — it is what makes the date a new one.
+	for _, stale := range []string{`value="msa-a"`, `value="26-01 MSA"`} {
+		if strings.Contains(body, stale) {
+			t.Errorf("new form carried over identity %s", stale)
+		}
+	}
+}
+
+// The prefills must travel with each course so switching the dropdown updates
+// them without a round trip.
+func TestCourseOptionsCarryTheirDefaults(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	body := rec.Body.String()
+	for _, attr := range []string{`data-city="München"`, `data-country="DE"`, `data-trainers=`} {
+		if !strings.Contains(body, attr) {
+			t.Errorf("course option is missing %s:\n%s", attr, body)
+		}
+	}
+}
+
+// Help is progressive enhancement: the hints are server-rendered and visible
+// without scripting, and form.js turns them into "?" toggles. So the server's
+// contract is that every field carrying a rule has a hint with an id for the
+// button to point at.
+func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	for _, c := range []struct {
+		path  string
+		hints []string
+	}{
+		{"/dates/new", []string{
+			"course-hint", "id-hint", "code-hint", "start-hint", "end-hint",
+			"format-hint", "city-hint", "country-hint", "language-hint",
+			"status-hint", "pricing-hint", "few-seats-hint",
+		}},
+		{"/courses/new", []string{
+			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "blurb-hint",
+			"cert-hint", "credits-hint",
+		}},
+	} {
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, c.path, nil))
+		body := rec.Body.String()
+		for _, h := range c.hints {
+			if !strings.Contains(body, `id="`+h+`"`) {
+				t.Errorf("%s is missing a hint with id %q", c.path, h)
+			}
+		}
+		if !strings.Contains(body, "/static/form.js") {
+			t.Errorf("%s does not load form.js", c.path)
+		}
+	}
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/form.js", nil))
+	if rec.Code != http.StatusOK {
+		t.Errorf("GET /static/form.js -> %d, want 200", rec.Code)
 	}
 }
