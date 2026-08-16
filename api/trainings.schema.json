@@ -20,6 +20,7 @@
           "certification": { "type": ["string", "null"] },
           "credits": { "type": ["string", "null"] },
           "url": { "type": "string", "pattern": "^https://" },
+          "url_en": { "type": "string", "pattern": "^https://" },
           "trainers": { "type": "array", "minItems": 1, "items": { "type": "string" } },
           "dates": {
             "type": "array",

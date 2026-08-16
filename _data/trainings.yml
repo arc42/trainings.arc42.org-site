@@ -5,6 +5,7 @@
 #   - arc42.de termine page + registration forms (pulled by its refresh workflow)
 # Keep start/end QUOTED "YYYY-MM-DD" strings. Quote country codes ("NO" is false!).
 # language (de|en) is REQUIRED on every date - no default, validation fails loudly.
+# url_en (optional, per course) = English detail page, https://trainings.arc42.org/courses/<id>/
 # ============================================================================
 courses:
   - id: msa
@@ -16,6 +17,7 @@ courses:
     certification: "iSAQB CPSA-Foundation"
     credits: null
     url: "https://www.arc42.de/info-msa/"
+    url_en: "https://trainings.arc42.org/courses/msa/"
     trainers: ["Peter Hruschka", "Gernot Starke"]
     dates:
       - id: msa-online-sep-2026

@@ -23,6 +23,11 @@ codes = Hash.new(0)
   %w[id short_title title url].each do |f|
     errors << "course #{cid}: missing/empty '#{f}'" unless c[f].is_a?(String) && !c[f].empty?
   end
+  # url_en is optional (English detail page on trainings.arc42.org); when
+  # present it must be a non-empty https URL, exactly like url.
+  if c.key?("url_en") && !(c["url_en"].is_a?(String) && c["url_en"].start_with?("https://"))
+    errors << "course #{cid}: 'url_en' must be an https URL when present (got #{c['url_en'].inspect})"
+  end
   errors << "course #{cid}: 'trainers' must be a non-empty array" unless c["trainers"].is_a?(Array) && !c["trainers"].empty?
   errors << "course #{cid}: missing 'dates' array" unless c["dates"].is_a?(Array)
 
