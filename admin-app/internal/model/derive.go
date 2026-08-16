@@ -49,6 +49,28 @@ func BookingCode(courseID, start, language string) string {
 	return code
 }
 
+// months indexes the three-letter forms used in date ids. English throughout:
+// the published ids are already mostly English ("oct", "mar", "sep") with
+// "dez" the lone German holdout, and an id never changes once published, so
+// only new ones are affected by settling on one language.
+var months = [...]string{
+	"jan", "feb", "mar", "apr", "may", "jun",
+	"jul", "aug", "sep", "oct", "nov", "dec",
+}
+
+// DateID derives the anchor id: "msa-feb-2027", from the course and the month
+// the course starts in.
+func DateID(courseID, start string) string {
+	if courseID == "" || len(start) != len("YYYY-MM-DD") {
+		return ""
+	}
+	m := (start[5]-'0')*10 + (start[6] - '0')
+	if m < 1 || m > 12 {
+		return ""
+	}
+	return courseID + "-" + months[m-1] + "-" + start[0:4]
+}
+
 // RegistrationURL derives the public link for a date. Every published date
 // points at the same anchored page, so this is the whole rule.
 func RegistrationURL(dateID string) string {

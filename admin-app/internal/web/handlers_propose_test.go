@@ -16,7 +16,8 @@ func dirtyServer(t *testing.T, apiBase string) *Server {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"url": {"https://example.org/a"}, "status": {"full"},
+		"status":           {"full"}, // status != open warns; this test is about the draft
+		"confirm_warnings": {"1"},
 	}
 	s.Routes().ServeHTTP(httptest.NewRecorder(),
 		signedIn(t, s, http.MethodPost, "/dates/msa-a", form))

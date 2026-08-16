@@ -133,15 +133,32 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 	// rejected edit leaves no trace.
 	probe := d.Doc.Model()
 	probe = applyToModel(probe, nd, courseID, isNew, r.PathValue("id"))
-	if problems := validate.Rules(probe); len(problems) > 0 {
+
+	reshow := func(title string, problems []validate.Problem, warnings []validate.Warning) {
 		m := d.Doc.Model()
 		s.render(w, "dateform.gohtml", map[string]any{
-			"Title": "Fix these first", "Courses": m.Courses, "Draft": d, "Login": sess.Login,
+			"Title": title, "Courses": m.Courses, "Draft": d, "Login": sess.Login,
 			"Formats": model.Formats, "Languages": model.Languages, "Statuses": model.Statuses,
-			"IsNew": isNew, "Date": nd, "CourseID": courseID, "Problems": problems,
+			"IsNew": isNew, "Date": nd, "CourseID": courseID,
+			"Problems": problems, "Warnings": warnings,
 			"KnownTrainers": model.KnownTrainers, "OtherTrainers": otherTrainers(nd.Trainers),
 		})
+	}
+
+	if problems := validate.Rules(probe); len(problems) > 0 {
+		reshow("Fix these first", problems, nil)
 		return
+	}
+
+	// Warnings gate the first submit but never the second. Errors above are
+	// checked first and independently, so acknowledging a warning can never
+	// carry a genuinely invalid date past the blocking rules.
+	if r.PostFormValue("confirm_warnings") != "1" {
+		today := time.Now().Format("2006-01-02")
+		if warnings := validate.DateWarnings(nd, courseID, today, isNew); len(warnings) > 0 {
+			reshow("Have a look at these", nil, warnings)
+			return
+		}
 	}
 
 	if isNew {

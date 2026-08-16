@@ -33,3 +33,26 @@
 </div>
 {{end}}
 {{end}}
+
+{{/* warnings expects the []validate.Warning slice directly. Advisory, so it is
+     status rather than alert: a screen reader announces it without the urgency
+     of an error, which is exactly the difference between the two. */}}
+{{define "warnings"}}
+{{if .}}
+<div class="warnings" role="status">
+  <h2>Have a look at these</h2>
+  <ul>{{range .}}<li><b>{{.Field}}</b> — {{.Message}}</li>{{end}}</ul>
+  <p>Nothing here blocks the save. If you meant it, use <b>Save anyway</b>.</p>
+</div>
+{{end}}
+{{end}}
+
+{{/* actions renders the submit row. When warnings are showing, the button
+     carries the acknowledgement that lets the next submit through. */}}
+{{define "actions"}}
+<div class="actions">
+  {{if .Warnings}}<input type="hidden" name="confirm_warnings" value="1">{{end}}
+  <button type="submit">{{if .Warnings}}Save anyway{{else if .IsNew}}Add to draft{{else}}Save to draft{{end}}</button>
+  <a href="{{.Cancel}}">Cancel</a>
+</div>
+{{end}}

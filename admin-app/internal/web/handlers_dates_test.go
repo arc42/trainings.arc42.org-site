@@ -142,7 +142,10 @@ func TestSaveDateMarksDraftDirty(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"status": {"full"}, // no "url": the form derives it from the id
+		// no "url": the form derives it from the id. status != open raises a
+		// warning, which this test acknowledges — it is about the draft, not
+		// the warning gate (TestWarningsGateTheFirstSaveThenLetItThrough).
+		"status": {"full"}, "confirm_warnings": {"1"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -216,6 +219,8 @@ func TestCourseSaveLeavesDatesAlone(t *testing.T) {
 		// posts trainers now.
 		"trainer":        {"Dr. Peter Hruschka", "Dr. Gernot Starke"},
 		"trainers_other": {"Jane Guest"},
+		// No blurb, which warns; this test is about the dates surviving.
+		"confirm_warnings": {"1"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/msa", form))
@@ -352,6 +357,8 @@ func TestNewCourseFormRendersAndCreates(t *testing.T) {
 	form := url.Values{
 		"id": {"flex"}, "short_title": {"FLEX"}, "title": {"Flexible Architectures"},
 		"url": {"https://example.org/flex"}, "trainer": {"Dr. Gernot Starke"},
+		// No blurb, which warns; this test is about creating the course.
+		"confirm_warnings": {"1"},
 	}
 	rec = httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", form))
@@ -669,5 +676,101 @@ func TestDeriveScriptIsServedAndReferenced(t *testing.T) {
 	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/derive.js", nil))
 	if rec.Code != http.StatusOK {
 		t.Errorf("GET /static/derive.js -> %d, want 200 (is it embedded?)", rec.Code)
+	}
+}
+
+// Warnings never block, but they are not allowed to slip past unseen either:
+// the first submit shows them and the button becomes "Save anyway".
+func TestWarningsGateTheFirstSaveThenLetItThrough(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	form := url.Values{
+		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
+		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
+		"country": {"DE"}, "language": {"de"}, "format": {"public"},
+		"status": {"waitlist"}, // hides the date from the registration form
+	}
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
+	body := rec.Body.String()
+
+	if !strings.Contains(body, "nobody can book it") {
+		t.Errorf("the status warning was not shown:\n%s", body)
+	}
+	if !strings.Contains(body, "Save anyway") {
+		t.Error("the submit button did not become 'Save anyway'")
+	}
+	if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {
+		t.Error("a warned save was applied on the first submit")
+	}
+
+	// Second submit, carrying the acknowledgement the form now renders.
+	form.Set("confirm_warnings", "1")
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
+
+	d, ok := s.drafts.Get("sid")
+	if !ok || !d.Dirty() {
+		t.Fatalf("the acknowledged save did not apply; status %d body:\n%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(string(d.Doc.Bytes()), "status: waitlist") {
+		t.Error("the acknowledged edit did not reach the document")
+	}
+}
+
+// A blocking error must still block, even with the acknowledgement set — the
+// two severities are not the same gate.
+func TestConfirmingWarningsDoesNotBypassErrors(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	form := url.Values{
+		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
+		"start": {"2026-01-05"}, "end": {"2026-01-02"}, // end before start
+		"city": {"München"}, "language": {"de"}, "format": {"public"},
+		"status": {"open"}, "confirm_warnings": {"1"},
+	}
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
+	if !strings.Contains(rec.Body.String(), "before start") {
+		t.Errorf("an error was bypassed by the warning acknowledgement:\n%s", rec.Body.String())
+	}
+	if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {
+		t.Error("an invalid date was applied")
+	}
+}
+
+func TestCourseWarningsGateTheFirstSave(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	form := url.Values{
+		"id": {"flex"}, "short_title": {"FLEX"},
+		"title":   {"FLEX: Flexible Architectures"},
+		"url":     {"http://example.org/flex"}, // plain http
+		"blurb":   {"A course about flexible architectures."},
+		"trainer": {"Dr. Gernot Starke"},
+	}
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", form))
+	body := rec.Body.String()
+
+	if !strings.Contains(body, "https") || !strings.Contains(body, "Save anyway") {
+		t.Errorf("the http url warning did not gate the save:\n%s", body)
+	}
+	if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {
+		t.Error("a warned course save was applied on the first submit")
+	}
+
+	form.Set("confirm_warnings", "1")
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", form))
+	d, ok := s.drafts.Get("sid")
+	if !ok || !d.Dirty() {
+		t.Fatalf("the acknowledged course save did not apply:\n%s", rec.Body.String())
 	}
 }

@@ -6,6 +6,7 @@
   and you review the whole diff before it becomes a pull request.</p>
 
 {{template "problems" .Problems}}
+{{template "warnings" .Warnings}}
 
 <form method="post" action="/dates/{{if .IsNew}}new{{else}}{{.Date.ID}}{{end}}" class="detail">
 
@@ -105,10 +106,7 @@
     </label>
   </fieldset>
 
-  <div class="actions">
-    <button type="submit">{{if .IsNew}}Add to draft{{else}}Save to draft{{end}}</button>
-    <a href="/">Cancel</a>
-  </div>
+  {{template "actions" dict "Warnings" .Warnings "IsNew" .IsNew "Cancel" "/"}}
 </form>
 <script src="/static/derive.js" defer></script>
 {{end}}
