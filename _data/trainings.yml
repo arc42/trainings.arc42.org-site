@@ -84,7 +84,7 @@ courses:
         status: open
 
       - id: msa-27-02-online
-        code: "27-02-MSA-online"
+        code: "27-02 MSA-EN"
         start: "2027-02-23"
         end: "2027-02-25"
         language: en
@@ -92,8 +92,8 @@ courses:
         trainers: ["Wolfgang Reimesch"]
         pricing: "€2200"
         few_seats: "only few seats available"
-        url: "https://www.arc42.de/msa-27-02-online"
-        status: waitlist
+        url: "https://www.arc42.de/termine#msa-27-02-online"
+        status: open
   - id: improve
     short_title: "IMPROVE"
     title: "IMPROVE: Evolve and maintain systems"
