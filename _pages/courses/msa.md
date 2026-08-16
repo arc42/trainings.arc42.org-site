@@ -3,12 +3,14 @@ title: "Mastering Software Architectures"
 layout: page
 permalink: /courses/msa/
 lang: en
-translation_url: https://www.arc42.de/info-msa/
+translation_url: https://arc42.de/info-msa/
 description: "Three-day iSAQB CPSA-F training by Peter Hruschka and Gernot Starke — content, target audience, certification."
+# Same compact solid --deep band as the home page (white on #743442, 9.08:1).
 header:
   overlay_color: "#743442"
 ---
 
+<!-- course-actions has no CSS of its own on purpose: the .btn classes carry the styling (spec D6). -->
 <p class="course-actions">
   <a class="btn btn--primary" href="/registration/">Register</a>
   <a class="btn btn--inverse" href="https://www.arc42.de/downloads/flyer-msa-EN.pdf" target="_blank" rel="noopener noreferrer nofollow">Course description (PDF)</a>
@@ -55,7 +57,7 @@ We have successfully prepared more than 3000 persons for the exam in the last co
 
 ### Introduction and Motivation
 
-* Tasks, role and responsibilities of software architectures
+* Tasks, role and responsibilities of software architects
 * Architecture in the development process
 * Clarifying Requirements & constraints
 * Deriving architectural or quality goals

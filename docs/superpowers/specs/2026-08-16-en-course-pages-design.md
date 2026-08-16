@@ -50,8 +50,8 @@ here and on arc42.de). IMPROVE, Req4Arc and ADOC have no English page.
 | D1 | English course pages live on **trainings.arc42.org**, at `/courses/<course-id>/` | This site is already bilingual (`lang`, `translation_url`, hreflang triple, DE\|EN masthead switch, `/registration/` vs `/anmeldung/`). Schedule → course details → registration becomes one origin, one repo. arc42.org has none of that plumbing and would need it ported; arc42.de would keep English readers on a German-chrome site. |
 | D2 | `<course-id>` is the feed's `courses[].id` (`msa`, `req4arc`, `improve`, `adoc`) | One identifier for the card type, the feed entry and the URL. A future DE twin would be `/de/courses/<id>/`, matching the site's `/` vs `/de/` convention. |
 | D3 | The feed gets an **optional** `courses[].url_en`; `url` stays required and German | Nothing that consumes `url` today breaks. English consumers switch to `url_en \| default: url`; arc42.de keeps `url`. Deriving the URL from the id inside consumers was rejected: the feed should stay the only place that knows where pages live. |
-| D4 | The English page's `translation_url` is the **absolute** arc42.de URL of the German page | `masthead.html` and `head.html` pass `translation_url` through `relative_url` / `absolute_url`, both of which leave absolute URLs untouched, so the DE\|EN switch and `hreflang="de"` point at the German original for free. Non-reciprocal hreflang is harmless. |
-| D5 | Content is the existing `info-msa-engl.md` text, ported 1:1, typos fixed | It is the approved English description; rewriting it is out of scope. Fixed: "archtects", "architeftures", "devolping", "organisize", "an architects". |
+| D4 | The English page's `translation_url` is the **absolute** arc42.de URL of the German page, on arc42.de's canonical host (no `www` — `https://arc42.de/info-msa/`) | `masthead.html` and `head.html` pass `translation_url` through `relative_url` / `absolute_url`, both of which leave absolute URLs untouched, so the DE\|EN switch and `hreflang="de"` point at the German original for free. Non-reciprocal hreflang is harmless. |
+| D5 | Content is the existing `info-msa-engl.md` text, ported 1:1, typos fixed | It is the approved English description; rewriting it is out of scope. Fixed: "archtects", "architeftures", "devolping", "organisize", "an architects", "software architectures" (in "Tasks, role and responsibilities of…") → "software architects". |
 | D6 | Action buttons reuse this site's `.btn` classes (`btn--primary`, `btn--inverse`); **no CSS ported** from arc42.de, no new SCSS | arc42.de's `course-actions` / `btn--arc42-*` are that site's design; this site's design comes from meta.arc42.org and its own `_sass/oneflow/`. |
 | D7 | The flyer PDF and the terms page stay on arc42.de and are **linked** | One flyer, one place. `/terms-en/` is what this site already links from the timeline cards. |
 | D8 | **No masthead nav entry** "Courses" | One page does not justify a menu item; the page is reached from timeline cards, the feed consumers and `/learn/` on arc42.org. Revisit when there are three. |
@@ -67,8 +67,10 @@ title: "Mastering Software Architectures"
 layout: page
 permalink: /courses/msa/
 lang: en
-translation_url: https://www.arc42.de/info-msa/
+translation_url: https://arc42.de/info-msa/
 description: "Three-day iSAQB CPSA-F training by Peter Hruschka and Gernot Starke — content, target audience, certification."
+header:
+  overlay_color: "#743442"
 ---
 ```
 
@@ -167,3 +169,4 @@ That is the whole recipe. The consumers already prefer `url_en`.
   `_data/trainings.json` that contains `url_en`; the MSA course link renders
   the new URL, other courses still render `arc42.de/info-*`.
 - arc42.de: build passes; `/info-msa-EN/` renders the redirect stub.
+- **Rollout order:** this repo merges and GitHub Pages publishes `/courses/msa/` FIRST; the consumer sites (arc42.org, docs, faq) any time after; arc42.de (whose `/info-msa-EN/` becomes a redirect to the new page) LAST — otherwise the redirect points at a page that does not exist yet.
