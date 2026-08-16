@@ -276,4 +276,3 @@ app:
 - Once §4 is executed, all fragment/Vercel references become historical.
 - A new section describing this app as the *supported editing path*, with the
   hand-edit route retained as the fallback.
-- Once `feat/admin-form-usability` lands: extend its plain-http warning (`validate/warnings.go`) and the id→URL derivation to the optional `url_en` field added by `2026-08-16-en-course-pages-design.md`; expect a textual conflict in `courseform.gohtml` around the "Course URL" label.

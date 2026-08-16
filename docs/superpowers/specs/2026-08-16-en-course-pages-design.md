@@ -114,9 +114,8 @@ Everything that describes or validates the feed learns the field, all as
   editable as an optional field on `courseform.gohtml` / `handlers_courses.go`.
   This matters because `Doc.UpdateCourse` re-renders a course head from the
   model: without the field, editing MSA in the admin app would silently drop
-  `url_en`. The https rule comes from the JSON schema; the branch
-  `feat/admin-form-usability` (unmerged, adds `validate/warnings.go`) should
-  extend its plain-http warning to `url_en` when it lands.
+  `url_en`. The https rule is enforced by the JSON schema and, as an advisory
+  warning, by `validate/warnings.go` — the same plain-http check `url` gets.
 - `api/trainings.json` is a Jekyll build product of the YAML — no hand edit.
 
 Consumers (three files, one-line change each, `course.url_en | default: course.url`):
