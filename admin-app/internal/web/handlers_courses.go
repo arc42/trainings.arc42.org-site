@@ -133,7 +133,7 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	c := model.Course{
 		ID: get("id"), ShortTitle: get("short_title"), Title: get("title"),
 		Blurb: get("blurb"), Certification: get("certification"),
-		Credits: get("credits"), URL: get("url"), Trainers: parseTrainers(r),
+		Credits: get("credits"), URL: get("url"), URLEn: get("url_en"), Trainers: parseTrainers(r),
 	}
 	isNew := r.PathValue("id") == ""
 
