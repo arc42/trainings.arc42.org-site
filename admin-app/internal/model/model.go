@@ -14,6 +14,7 @@ type Course struct {
 	Certification string
 	Credits       string
 	URL           string
+	URLEn         string // optional: English detail page, https://trainings.arc42.org/courses/<id>/
 	Trainers      []string
 	Dates         []Date
 }

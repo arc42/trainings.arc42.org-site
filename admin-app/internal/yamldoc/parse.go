@@ -61,6 +61,7 @@ func (d *Doc) Model() model.Trainings {
 			Certification: scalar(cn, "certification"),
 			Credits:       scalar(cn, "credits"),
 			URL:           scalar(cn, "url"),
+			URLEn:         scalar(cn, "url_en"),
 			Trainers:      stringList(cn, "trainers"),
 		}
 		if dn := mapValue(cn, "dates"); dn != nil {

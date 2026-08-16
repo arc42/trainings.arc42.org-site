@@ -268,3 +268,44 @@ func TestAddDateIntoFreshCourse(t *testing.T) {
 		t.Error("the empty flow sequence should have been replaced by a block sequence")
 	}
 }
+
+func TestCourseURLEnSurvivesUpdateCourse(t *testing.T) {
+	src := `courses:
+  - id: msa
+    short_title: "MSA"
+    title: "Mastering"
+    url: "https://www.arc42.de/info-msa/"
+    url_en: "https://trainings.arc42.org/courses/msa/"
+    trainers: ["Peter Hruschka"]
+    dates: []
+`
+	doc, err := Parse([]byte(src))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	c := doc.Model().Courses[0]
+	if c.URLEn != "https://trainings.arc42.org/courses/msa/" {
+		t.Fatalf("parsed URLEn = %q", c.URLEn)
+	}
+	// An unrelated edit must not drop url_en (UpdateCourse re-renders the head).
+	c.Title = "Mastering Software Architectures"
+	if err := doc.UpdateCourse("msa", c); err != nil {
+		t.Fatalf("UpdateCourse: %v", err)
+	}
+	out := string(doc.Bytes())
+	if !strings.Contains(out, `url_en: "https://trainings.arc42.org/courses/msa/"`) {
+		t.Errorf("url_en was dropped or unquoted:\n%s", out)
+	}
+	// url_en is written directly after url.
+	if !strings.Contains(out, "url: \"https://www.arc42.de/info-msa/\"\n    url_en: ") {
+		t.Errorf("url_en is not directly after url:\n%s", out)
+	}
+	// A course without url_en renders no url_en line at all.
+	c.URLEn = ""
+	if err := doc.UpdateCourse("msa", c); err != nil {
+		t.Fatalf("UpdateCourse (clear): %v", err)
+	}
+	if strings.Contains(string(doc.Bytes()), "url_en") {
+		t.Errorf("empty url_en must be omitted:\n%s", doc.Bytes())
+	}
+}

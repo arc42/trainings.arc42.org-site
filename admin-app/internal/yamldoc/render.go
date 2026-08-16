@@ -12,7 +12,7 @@ import (
 // characters that would otherwise need escaping anyway.
 var alwaysQuoted = map[string]bool{
 	"code": true, "start": true, "end": true, "city": true,
-	"country": true, "url": true, "pricing": true, "few_seats": true,
+	"country": true, "url": true, "url_en": true, "pricing": true, "few_seats": true,
 	"short_title": true, "title": true, "certification": true,
 }
 
@@ -85,6 +85,7 @@ func renderCourseScalars(c model.Course, indent string) string {
 		b.WriteString(indent + "  credits: " + fmtScalar("credits", c.Credits) + "\n")
 	}
 	put("url", c.URL)
+	put("url_en", c.URLEn)
 	if len(c.Trainers) > 0 {
 		b.WriteString(indent + "  trainers: " + fmtList(c.Trainers) + "\n")
 	}
