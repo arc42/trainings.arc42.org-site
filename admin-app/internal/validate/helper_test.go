@@ -17,15 +17,6 @@ import (
 // cross-field rules, so running only Rules() here would make any fixture with,
 // say, `language: fr` look like a validator disagreement when it is really just
 // the two sides being asked different questions.
-func schemaBytes(t *testing.T) []byte {
-	t.Helper()
-	b, err := os.ReadFile(filepath.Join("..", "..", "..", "api", "trainings.schema.json"))
-	if err != nil {
-		t.Fatalf("read schema: %v", err)
-	}
-	return b
-}
-
 func RulesFromYAML(t *testing.T, src []byte) []Problem {
 	t.Helper()
 	doc, err := yamldoc.Parse(src)
@@ -49,4 +40,14 @@ func RulesFromYAML(t *testing.T, src []byte) []Problem {
 		t.Fatalf("Schema: %v", err)
 	}
 	return append(problems, schemaProblems...)
+}
+
+// schemaBytes loads api/trainings.schema.json for tests that call Schema directly.
+func schemaBytes(t *testing.T) []byte {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("..", "..", "..", "api", "trainings.schema.json"))
+	if err != nil {
+		t.Fatalf("read schema: %v", err)
+	}
+	return b
 }

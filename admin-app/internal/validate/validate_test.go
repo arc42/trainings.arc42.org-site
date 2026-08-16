@@ -178,9 +178,26 @@ func TestFeedJSONCarriesURLEnAndSchemaAcceptsIt(t *testing.T) {
 
 	// Without url_en the key must be absent, not "".
 	tr.Courses[0].URLEn = ""
-	feed, _ = FeedJSON(tr)
+	feed, err = FeedJSON(tr)
+	if err != nil {
+		t.Fatalf("FeedJSON: %v", err)
+	}
 	if strings.Contains(string(feed), "url_en") {
 		t.Errorf("empty url_en must be omitted:\n%s", feed)
+	}
+
+	// A non-https url_en must be rejected by the schema, not silently accepted.
+	tr.Courses[0].URLEn = "http://example.org/msa-en"
+	feed, err = FeedJSON(tr)
+	if err != nil {
+		t.Fatalf("FeedJSON: %v", err)
+	}
+	problems, err = Schema(schemaBytes(t), feed)
+	if err != nil {
+		t.Fatalf("Schema: %v", err)
+	}
+	if len(problems) == 0 {
+		t.Error("schema accepted a non-https url_en")
 	}
 }
 
