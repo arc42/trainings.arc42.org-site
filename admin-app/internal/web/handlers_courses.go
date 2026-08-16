@@ -137,13 +137,25 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	}
 	isNew := r.PathValue("id") == ""
 
-	if problems := courseProblems(c, d.Doc.Model().Courses, isNew); len(problems) > 0 {
+	reshow := func(title string, problems []validate.Problem, warnings []validate.Warning) {
 		s.render(w, "courseform.gohtml", map[string]any{
-			"Title": "Fix these first", "Course": c, "Draft": d, "Login": sess.Login,
-			"IsNew": isNew, "Problems": problems,
+			"Title": title, "Course": c, "Draft": d, "Login": sess.Login,
+			"IsNew": isNew, "Problems": problems, "Warnings": warnings,
 			"KnownTrainers": model.KnownTrainers, "OtherTrainers": otherTrainers(c.Trainers),
 		})
+	}
+
+	if problems := courseProblems(c, d.Doc.Model().Courses, isNew); len(problems) > 0 {
+		reshow("Fix these first", problems, nil)
 		return
+	}
+
+	// Same two-stage gate as the date form: advisory first, then through.
+	if r.PostFormValue("confirm_warnings") != "1" {
+		if warnings := validate.CourseWarnings(c); len(warnings) > 0 {
+			reshow("Have a look at these", nil, warnings)
+			return
+		}
 	}
 
 	if isNew {

@@ -179,6 +179,44 @@ ul.problems {
 }
 ul.problems li::marker { color: var(--danger); }
 
+/* Warnings are advisory, so they read as a note, not an alarm: the amber
+   marker the site already uses for "few seats", never the danger red, which is
+   reserved for what actually blocks a save. --amber-ink on the wash is 7.24:1. */
+.warnings {
+  background: color-mix(in oklab, var(--amber) 22%, var(--paper));
+  border: 1px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  color: var(--ink);
+}
+.warnings h2 { margin: 0.25rem 0 0.5rem; font-size: 1rem; color: var(--amber-ink); }
+.warnings ul { margin: 0; padding-left: 1.2rem; }
+.warnings li { margin-bottom: 0.25rem; }
+.warnings li b { font-family: var(--mono, monospace); font-weight: 600; }
+.warnings p { margin: 0.6rem 0 0.25rem; color: var(--ink-muted); font-size: 0.9rem; }
+
+/* The "?" toggle sits at the end of the label text. 1.75rem keeps it a real
+   touch target without it competing with the field it explains. */
+button.help {
+  appearance: none;
+  margin-left: 0.4rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--surface-1);
+  color: var(--deep);                  /* 8.92:1 on paper */
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+button.help:hover { background: var(--surface-hover); border-color: var(--hairline-hover); }
+button.help[aria-expanded="true"] { background: var(--surface-2); border-color: var(--border); }
+button.help:focus-visible { outline: 2px solid var(--band); outline-offset: 2px; }
+
 /* ---- Tables ---------------------------------------------------------------- */
 table.dates { border-collapse: collapse; }
 table.dates th, table.dates td {

@@ -53,6 +53,19 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request, sess Session
 	})
 }
 
+// newDateDefaults is the starting point for a blank new-date form: the enum
+// defaults, plus what the first course in the dropdown would repeat. Switching
+// the dropdown re-applies the rest client-side, so the two stay in step.
+func newDateDefaults(courses []model.Course) model.Date {
+	d := model.Date{Status: "open", Format: "public", Language: "de"}
+	if len(courses) == 0 {
+		return d
+	}
+	def := model.DefaultsFor(courses[0])
+	d.City, d.Country, d.Pricing, d.Trainers = def.City, def.Country, def.Pricing, def.Trainers
+	return d
+}
+
 func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
 	d, err := s.loadDraft(r.Context(), sess, client)
 	if err != nil {
@@ -60,13 +73,15 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 		return
 	}
 	m := d.Doc.Model()
+	blank := newDateDefaults(m.Courses)
 	data := map[string]any{
 		"Title": "New date", "Courses": m.Courses, "Draft": d, "Login": sess.Login,
 		"Formats": model.Formats, "Languages": model.Languages, "Statuses": model.Statuses,
-		"IsNew": true, "Date": model.Date{Status: "open", Format: "public", Language: "de"},
+		"IsNew": true, "Date": blank,
 		// CourseID is set unconditionally: a key the template reads but the
 		// handler never wrote used to abort rendering halfway down the form.
-		"CourseID": "", "KnownTrainers": model.KnownTrainers, "OtherTrainers": []string{},
+		"CourseID": "", "KnownTrainers": model.KnownTrainers,
+		"OtherTrainers": otherTrainers(blank.Trainers),
 	}
 	// "Duplicate" is the common real action — next year's run of a course — so
 	// /dates/new?from=<id> pre-fills from an existing date with a cleared id.
@@ -133,15 +148,32 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 	// rejected edit leaves no trace.
 	probe := d.Doc.Model()
 	probe = applyToModel(probe, nd, courseID, isNew, r.PathValue("id"))
-	if problems := validate.Rules(probe); len(problems) > 0 {
+
+	reshow := func(title string, problems []validate.Problem, warnings []validate.Warning) {
 		m := d.Doc.Model()
 		s.render(w, "dateform.gohtml", map[string]any{
-			"Title": "Fix these first", "Courses": m.Courses, "Draft": d, "Login": sess.Login,
+			"Title": title, "Courses": m.Courses, "Draft": d, "Login": sess.Login,
 			"Formats": model.Formats, "Languages": model.Languages, "Statuses": model.Statuses,
-			"IsNew": isNew, "Date": nd, "CourseID": courseID, "Problems": problems,
+			"IsNew": isNew, "Date": nd, "CourseID": courseID,
+			"Problems": problems, "Warnings": warnings,
 			"KnownTrainers": model.KnownTrainers, "OtherTrainers": otherTrainers(nd.Trainers),
 		})
+	}
+
+	if problems := validate.Rules(probe); len(problems) > 0 {
+		reshow("Fix these first", problems, nil)
 		return
+	}
+
+	// Warnings gate the first submit but never the second. Errors above are
+	// checked first and independently, so acknowledging a warning can never
+	// carry a genuinely invalid date past the blocking rules.
+	if r.PostFormValue("confirm_warnings") != "1" {
+		today := time.Now().Format("2006-01-02")
+		if warnings := validate.DateWarnings(nd, courseID, today, isNew); len(warnings) > 0 {
+			reshow("Have a look at these", nil, warnings)
+			return
+		}
 	}
 
 	if isNew {

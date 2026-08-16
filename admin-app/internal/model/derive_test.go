@@ -45,3 +45,20 @@ func TestCodeTokenIsExposedForTheForm(t *testing.T) {
 		t.Errorf("CodeToken(improve) = %q, want IMPROVE", got)
 	}
 }
+
+func TestDateIDFollowsTheCourseMonthYearConvention(t *testing.T) {
+	cases := []struct{ name, courseID, start, want string }{
+		{"course, month and year", "msa", "2027-02-23", "msa-feb-2027"},
+		{"december is dec, not the german dez", "improve", "2027-12-01", "improve-dec-2027"},
+		{"a course spanning new year takes its start month", "adoc", "2027-11-30", "adoc-nov-2027"},
+		{"without a start there is nothing to derive", "msa", "", ""},
+		{"a malformed start derives nothing", "msa", "2027-2-3", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := DateID(c.courseID, c.start); got != c.want {
+				t.Errorf("DateID(%q, %q) = %q, want %q", c.courseID, c.start, got, c.want)
+			}
+		})
+	}
+}

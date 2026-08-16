@@ -49,6 +49,28 @@ func BookingCode(courseID, start, language string) string {
 	return code
 }
 
+// months indexes the three-letter forms used in date ids. English throughout:
+// the published ids are already mostly English ("oct", "mar", "sep") with
+// "dez" the lone German holdout, and an id never changes once published, so
+// only new ones are affected by settling on one language.
+var months = [...]string{
+	"jan", "feb", "mar", "apr", "may", "jun",
+	"jul", "aug", "sep", "oct", "nov", "dec",
+}
+
+// DateID derives the anchor id: "msa-feb-2027", from the course and the month
+// the course starts in.
+func DateID(courseID, start string) string {
+	if courseID == "" || len(start) != len("YYYY-MM-DD") {
+		return ""
+	}
+	m := (start[5]-'0')*10 + (start[6] - '0')
+	if m < 1 || m > 12 {
+		return ""
+	}
+	return courseID + "-" + months[m-1] + "-" + start[0:4]
+}
+
 // RegistrationURL derives the public link for a date. Every published date
 // points at the same anchored page, so this is the whole rule.
 func RegistrationURL(dateID string) string {
@@ -56,4 +78,36 @@ func RegistrationURL(dateID string) string {
 		return ""
 	}
 	return "https://www.arc42.de/termine#" + dateID
+}
+
+// Defaults are the values a new date for a course starts with. They come from
+// the course's most recent date, because a repeat run is overwhelmingly the
+// same city with the same pricing sentence — the two longest things to retype.
+// Nothing here is identity: id, code, url, start and end are what make the new
+// date new, and are never carried over.
+type Defaults struct {
+	City     string
+	Country  string
+	Pricing  string
+	Trainers []string
+}
+
+// DefaultsFor reads a course's most recent date by start, falling back to the
+// course's own trainer roster when no date names one.
+func DefaultsFor(c Course) Defaults {
+	var latest *Date
+	for i := range c.Dates {
+		if latest == nil || c.Dates[i].Start > latest.Start {
+			latest = &c.Dates[i]
+		}
+	}
+	d := Defaults{Trainers: c.Trainers}
+	if latest == nil {
+		return d
+	}
+	d.City, d.Country, d.Pricing = latest.City, latest.Country, latest.Pricing
+	if len(latest.Trainers) > 0 {
+		d.Trainers = latest.Trainers
+	}
+	return d
 }

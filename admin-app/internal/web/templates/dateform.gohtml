@@ -6,6 +6,7 @@
   and you review the whole diff before it becomes a pull request.</p>
 
 {{template "problems" .Problems}}
+{{template "warnings" .Warnings}}
 
 <form method="post" action="/dates/{{if .IsNew}}new{{else}}{{.Date.ID}}{{end}}" class="detail">
 
@@ -14,8 +15,15 @@
     <label>Course <span class="req" aria-hidden="true">*</span>
       <select name="course_id" required>
         {{$cid := .CourseID}}
-        {{range .Courses}}<option value="{{.ID}}" data-code-token="{{codeToken .ID}}" {{if eqStr .ID $cid}}selected{{end}}>{{.ShortTitle}} — {{.Title}}</option>{{end}}
+        {{range .Courses}}{{$d := defaultsOf .}}<option value="{{.ID}}"
+          data-code-token="{{codeToken .ID}}"
+          data-city="{{$d.City}}" data-country="{{$d.Country}}"
+          data-pricing="{{$d.Pricing}}" data-trainers="{{join $d.Trainers ", "}}"
+          {{if eqStr .ID $cid}}selected{{end}}>{{.ShortTitle}} — {{.Title}}</option>{{end}}
       </select>
+      <small id="course-hint" class="hint">Which course this run belongs to.
+        Changing it moves the date to another course and re-derives the booking
+        code.</small>
     </label>
     <label>Date ID <span class="req" aria-hidden="true">*</span>
       <input name="id" value="{{.Date.ID}}" required pattern="[a-z0-9-]+"
@@ -36,7 +44,10 @@
     <legend>When</legend>
     <div class="row">
       <label>First day <span class="req" aria-hidden="true">*</span>
-        <input type="date" name="start" id="f-start" value="{{.Date.Start}}" required>
+        <input type="date" name="start" id="f-start" value="{{.Date.Start}}" required
+               aria-describedby="start-hint">
+        <small id="start-hint" class="hint">The first teaching day. Setting it
+          fills in the last day, the booking code and the date id.</small>
       </label>
       <label>Last day <span class="req" aria-hidden="true">*</span>
         <input type="date" name="end" id="f-end" value="{{.Date.End}}" required
@@ -54,6 +65,9 @@
         {{$f := .Date.Format}}
         {{range .Formats}}<option value="{{.}}" {{if eqStr . $f}}selected{{end}}>{{.}}</option>{{end}}
       </select>
+      <small id="format-hint" class="hint"><b>public</b> is the open enrolment
+        course, <b>inhouse</b> is booked by one client, <b>online</b> is remote.
+        public and inhouse need a city; online does not.</small>
     </label>
     <div class="row">
       <label>City
@@ -78,12 +92,19 @@
           {{$l := .Date.Language}}
           {{range .Languages}}<option value="{{.}}" {{if eqStr . $l}}selected{{end}}>{{.}}</option>{{end}}
         </select>
+        <small id="language-hint" class="hint">The language the course is taught
+          in — not the language of the page it appears on. An English course
+          gets "-EN" in its booking code.</small>
       </label>
       <label>Booking status <span class="req" aria-hidden="true">*</span>
         <select name="status" required>
           {{$s := .Date.Status}}
           {{range .Statuses}}<option value="{{.}}" {{if eqStr . $s}}selected{{end}}>{{.}}</option>{{end}}
         </select>
+        <small id="status-hint" class="hint">Only <b>open</b> appears in the
+          registration form on arc42.de. <b>waitlist</b> and <b>full</b> still
+          show on the timeline, marked sold out; <b>cancelled</b> disappears
+          everywhere. Anything but open means nobody can book this date.</small>
       </label>
     </div>
     {{/* No registration URL field: every published date links to the same
@@ -101,14 +122,15 @@
         language of the date.</small>
     </label>
     <label>Few seats note
-      <input name="few_seats" value="{{.Date.FewSeats}}" placeholder="nur noch wenige Plätze">
+      <input name="few_seats" value="{{.Date.FewSeats}}" placeholder="nur noch wenige Plätze"
+             aria-describedby="few-seats-hint">
+      <small id="few-seats-hint" class="hint">A short nudge shown on the card,
+        in the language of the date. Leave empty unless seats really are
+        running out.</small>
     </label>
   </fieldset>
 
-  <div class="actions">
-    <button type="submit">{{if .IsNew}}Add to draft{{else}}Save to draft{{end}}</button>
-    <a href="/">Cancel</a>
-  </div>
+  {{template "actions" dict "Warnings" .Warnings "IsNew" .IsNew "Cancel" "/"}}
 </form>
-<script src="/static/derive.js" defer></script>
+<script src="/static/form.js" defer></script>
 {{end}}
