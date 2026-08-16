@@ -1,8 +1,14 @@
-name: Deploy admin app
+name: Admin app
 
+# Tests run on every pull request that touches the app, and again on main
+# before deploying. Without the pull_request trigger the Go suite only ran
+# after merge, so a broken change merged green and first failed on the way to
+# fly — the review saw no signal at all.
 on:
   push:
     branches: [main]
+    paths: ["admin-app/**", ".github/workflows/deploy-admin-app.yml"]
+  pull_request:
     paths: ["admin-app/**", ".github/workflows/deploy-admin-app.yml"]
   workflow_dispatch:
 
@@ -26,9 +32,21 @@ jobs:
       - name: Test
         working-directory: admin-app
         run: go test ./... -v
+      - name: Vet
+        working-directory: admin-app
+        run: go vet ./...
+      - name: Gofmt
+        working-directory: admin-app
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt would rewrite:"; echo "$unformatted"; exit 1
+          fi
 
   deploy:
     needs: test
+    # Never from a pull request: a PR builds and tests, it does not ship.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     concurrency:
       group: deploy-admin-app
