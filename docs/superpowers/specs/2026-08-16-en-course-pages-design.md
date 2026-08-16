@@ -52,7 +52,7 @@ here and on arc42.de). IMPROVE, Req4Arc and ADOC have no English page.
 | D3 | The feed gets an **optional** `courses[].url_en`; `url` stays required and German | Nothing that consumes `url` today breaks. English consumers switch to `url_en \| default: url`; arc42.de keeps `url`. Deriving the URL from the id inside consumers was rejected: the feed should stay the only place that knows where pages live. |
 | D4 | The English page's `translation_url` is the **absolute** arc42.de URL of the German page | `masthead.html` and `head.html` pass `translation_url` through `relative_url` / `absolute_url`, both of which leave absolute URLs untouched, so the DE\|EN switch and `hreflang="de"` point at the German original for free. Non-reciprocal hreflang is harmless. |
 | D5 | Content is the existing `info-msa-engl.md` text, ported 1:1, typos fixed | It is the approved English description; rewriting it is out of scope. Fixed: "archtects", "architeftures", "devolping", "organisize", "an architects". |
-| D6 | Action buttons reuse this site's `.button` styles; **no CSS ported** from arc42.de | arc42.de's `course-actions` / `btn--arc42-*` are that site's design; this site's design comes from meta.arc42.org and its own `_sass/oneflow/`. |
+| D6 | Action buttons reuse this site's `.btn` classes (`btn--primary`, `btn--inverse`); **no CSS ported** from arc42.de, no new SCSS | arc42.de's `course-actions` / `btn--arc42-*` are that site's design; this site's design comes from meta.arc42.org and its own `_sass/oneflow/`. |
 | D7 | The flyer PDF and the terms page stay on arc42.de and are **linked** | One flyer, one place. `/terms-en/` is what this site already links from the timeline cards. |
 | D8 | **No masthead nav entry** "Courses" | One page does not justify a menu item; the page is reached from timeline cards, the feed consumers and `/learn/` on arc42.org. Revisit when there are three. |
 | D9 | `arc42.de/info-msa-EN/` becomes a **redirect stub** to the new page | Old links and bookmarks keep working; arc42.de already has `layout: redirect` (used by `/more/`, `/articles/`, `/videos/`) — meta refresh + canonical. |
@@ -84,11 +84,11 @@ Body, in order:
 3. Action row (bottom): **Register** → `/registration/` · **All dates** →
    `/#training-dates`.
 
-The action row is a small `<p class="course-actions">` with this site's
-`.button` classes (`buttonMSA` for the primary, plain `.button` for the
-others). If `.button` outside `.timeline` needs a couple of lines of SCSS to
-look right, they go into `_sass/oneflow/` next to the existing button rules —
-that is the only styling work allowed.
+The action row is a plain `<p class="course-actions">` using this site's
+site-wide `.btn` classes (`btn btn--primary` for *Register*, `btn btn--inverse`
+for the others — the same pair `registration-form.html` uses). The
+`.button`/`buttonMSA` classes are scoped inside `.timeline` and are not used
+here. No SCSS is added.
 
 The `page` layout is used as-is (masthead with DE|EN switch, footer, hreflang).
 
@@ -106,9 +106,15 @@ Everything that describes or validates the feed learns the field, all as
 
 - `api/trainings.schema.json` — `courses[].url_en`, same constraints as `url`.
 - `scripts/validate_trainings.rb` — accept and, if present, require https.
-- `admin-app/internal/validate/schema.go`, `model.go`, `warnings.go` — carry
-  the field through, warn on plain http exactly like `url`. Existing tests
-  keep passing; one test covers a course with `url_en`.
+- `admin-app` — `model.Course.URLEn`, parsed by `yamldoc/parse.go`, rendered
+  by `yamldoc/render.go` (right after `url`, always quoted, omitted when
+  empty), emitted by `validate/schema.go`'s `FeedJSON` as `url_en` (omitempty),
+  editable as an optional field on `courseform.gohtml` / `handlers_courses.go`.
+  This matters because `Doc.UpdateCourse` re-renders a course head from the
+  model: without the field, editing MSA in the admin app would silently drop
+  `url_en`. The https rule comes from the JSON schema; the branch
+  `feat/admin-form-usability` (unmerged, adds `validate/warnings.go`) should
+  extend its plain-http warning to `url_en` when it lands.
 - `api/trainings.json` is a Jekyll build product of the YAML — no hand edit.
 
 Consumers (three files, one-line change each, `course.url_en | default: course.url`):
