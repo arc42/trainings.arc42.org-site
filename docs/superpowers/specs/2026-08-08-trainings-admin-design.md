@@ -139,6 +139,26 @@ still be booked as `27-12 MSA`. See `internal/model/derive.go`.
 | `/propose` | Unified YAML diff, validation result, editable PR title/body, **Open PR**. |
 | `/auth/github`, `/auth/callback`, `/auth/logout` | OAuth. |
 
+### Form assistance
+
+Both detail forms assist in three ways, none of which the operator has to
+accept:
+
+- **Help.** Every field carrying a rule has a server-rendered hint. `form.js`
+  collapses each behind a `?` at the end of its label, named for what it
+  explains. Without scripting the hints are simply visible.
+- **Defaults.** A new date starts from its course's most recent one — city,
+  country, pricing, trainers — and switching the course dropdown re-applies
+  them. `code`, `id` and `url` derive from course, start and language.
+  Derivation stops the moment the operator types in a field.
+- **Warnings.** `validate.Rules` returns only what must block. `DateWarnings`
+  and `CourseWarnings` return advisory findings — a past start, a nine-day
+  course, `online` with a city, a status that hides the date from booking.
+  The first submit shows them and relabels the button **Save anyway**; the
+  second goes through. Errors are checked first and separately, so an
+  acknowledgement can never carry an invalid entry past the blocking rules,
+  and no warning reaches the pull-request gate.
+
 A sticky bar appears whenever the draft is dirty:
 *"3 unpublished changes — Review & propose · Discard"*. That bar carries
 `hx-trigger="every 60s"` as a keepalive, so it pings fly's auto-stop only while
