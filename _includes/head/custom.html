@@ -1,7 +1,22 @@
 <!-- start custom head snippets -->
 
-<!-- insert favicons. use https://realfavicongenerator.net/ -->
+{%- comment -%}
+  Favicons: the arc42 "42" circle, filled with this site's signature dusty rose
+  #a04c5e instead of arc42.org's masthead navy #2b3a57 — same family mark, own
+  hue, exactly as BRAND.md asks. White on that fill measures 5.69:1.
 
+  It replaced a crop of the arc42 wordmark, which at 16px showed a fragment of
+  "arc" with the tail cut off at both edges and read as nothing at all.
+
+  favicon.ico (16/32/48) is deliberately not declared here: browsers request
+  /favicon.ico on their own, and the file is kept for the feed readers and
+  bookmark tools that never parse this <head>.
+
+  apple-touch-icon.png is the one file that is not simply arc42.org's recoloured:
+  it is flattened onto the manifest's background_color #fcfdff. iOS composites a
+  transparent home-screen icon onto black, so transparent corners would frame the
+  circle in a black square. The PNGs Android and the browser tab use keep theirs.
+{%- endcomment -%}
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">

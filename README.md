@@ -81,11 +81,17 @@ family design system, which lives in
   paper behind long prose; and the pinned-note shadow
   (`box-shadow: 3px 3px 0 0 #743442`, zero blur, annotation-style elements only).
 
-Two rules that bite in practice:
+Three rules that bite in practice:
 
 - `<meta name="theme-color">` in [`_includes/head/custom.html`](/_includes/head/custom.html)
   and `theme_color` in [`site.webmanifest`](/site.webmanifest) must both equal
   the masthead fill `#a04c5e`.
+- The favicons carry the same hue: they are arc42.org's round "42" mark with the
+  navy circle recoloured to `#a04c5e`, so the family mark stays recognisable and
+  the site still reads as its own. Regenerate all six files together
+  (`favicon.ico` 16/32/48, `favicon-16x16`, `favicon-32x32`, `apple-touch-icon`,
+  `android-chrome-192x192`, `android-chrome-512x512`) — a half-updated set shows
+  the old icon in whichever slot was missed.
 - Contrast is measured, never eyeballed
   ([ADR-0002](https://github.com/arc42/meta.arc42.org/blob/main/adr/0002-measured-accessibility.md)).
   Every new foreground/background pair gets its measured ratio stated before it
