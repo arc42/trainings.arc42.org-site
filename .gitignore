@@ -11,3 +11,6 @@ _site
 # Kept ignored so a leftover copy can never be committed: it holds real
 # GitHub OAuth credentials.
 admin-app/.env
+# `make app-build` compiles the admin app here as a fast compile check. The
+# deployed binary is built inside admin-app/Dockerfile, never from this one.
+admin-app/admin
