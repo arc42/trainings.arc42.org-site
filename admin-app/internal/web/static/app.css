@@ -147,13 +147,27 @@ form.detail {
   gap: 1rem;
   max-width: 60ch;
 }
+/* A label holds a caption, a required marker, the "?" button form.js injects,
+   the control and its hint. Block, not column-flex, is what keeps the first
+   three on one line: as flex items each of them became its own row, so a field
+   read as four stacked fragments — caption, then a lone "*", then a lone "?",
+   then finally the input. The control below is blocked explicitly instead. */
 label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: block;
   font-weight: 600;
   color: var(--ink);              /* 10.12:1 on paper */
 }
+label > input, label > select, label > textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+label > .hint { margin-top: 0.25rem; }
+/* :not([hidden]) is load-bearing. form.js collapses each hint by setting the
+   hidden attribute, and a plain "display: block" here would be an author rule
+   beating the UA's [hidden] { display: none } — every hint would stand open
+   and the "?" button would toggle nothing. */
+label > .hint:not([hidden]) { display: block; }
 label small { font-weight: 400; color: var(--ink-muted); /* 5.60:1 on paper */ }
 input, select, textarea {
   font: inherit;
@@ -202,6 +216,10 @@ button.help {
   margin-left: 0.4rem;
   width: 1.75rem;
   height: 1.75rem;
+  /* Without this the 44px floor shared by every button wins over the height
+     above and the circle renders as a 28x44 ellipse. button.link resets it
+     for the same reason. */
+  min-height: auto;
   padding: 0;
   border: 1px solid var(--hairline);
   border-radius: 50%;
@@ -314,6 +332,8 @@ label > .hint { margin-top: 0.1rem; }
 ul.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
 @media (min-width: 40rem) { ul.checks { grid-template-columns: 1fr 1fr; } }
 label.check {
+  display: flex;                       /* declared here, not inherited: the base
+                                          label rule is block (see above) */
   flex-direction: row;
   align-items: center;
   gap: 0.6rem;
