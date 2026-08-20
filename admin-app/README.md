@@ -75,12 +75,80 @@ way there as a PR. A draft that outlived a restart would be a second, hidden
 source of truth for training dates, which is exactly what this app exists to
 avoid.
 
-## Deployment
+## Deployment: why fly.io, and what we use it for
 
-The app runs on fly.io at [https://trainings-admin.arc42.org](https://trainings-admin.arc42.org).
-[`Dockerfile`](Dockerfile) builds a from-scratch production image, [`fly.toml`](fly.toml) configures it (single process, no volumes, a `/healthz` check), and [`../.github/workflows/deploy-admin-app.yml`](/.github/workflows/deploy-admin-app.yml) tests and deploys on every push to `main` that touches `admin-app/`.
+### Why there is a server at all
 
-`PUBLIC_URL` in `fly.toml` (or Fly app secrets) and the GitHub OAuth app authorization callback URL (`https://trainings-admin.arc42.org/auth/callback`) are a matched pair and must always change together.
+The site itself is static and served by GitHub Pages. This app cannot be,
+because three things it does need code running somewhere:
+
+- **The OAuth exchange.** Signing in with GitHub means trading a `code` for a
+  token using the OAuth app's *client secret*. A secret shipped to the browser
+  is not a secret, so the trade has to happen server-side.
+- **The session.** The user's GitHub token lives in an encrypted cookie that
+  only the server can read, and every write re-checks `permissions.push`
+  against the repository.
+- **The draft.** Edits accumulate in server memory until you publish, so the
+  whole session becomes one pull request with one minimal diff.
+
+So the choice was never "server or no server", only *where the smallest
+possible one runs*.
+
+### Why fly.io
+
+It fits the shape of this workload, which is unusual: two maintainers, a few
+times a quarter, and idle the rest of the year.
+
+- **Scale to zero.** `min_machines_running = 0` with `auto_stop_machines` and
+  `auto_start_machines`: the machine stops when nobody is editing and cold-starts
+  on the next request. We pay for minutes of use, not months of uptime.
+- **A container, not a runtime.** The [`Dockerfile`](Dockerfile) builds a
+  from-scratch image around one static Go binary. No buildpack guessing, no
+  language runtime to keep patched, nothing in the image but the app.
+- **Custom domain and TLS** for `trainings-admin.arc42.org` without a proxy in
+  front, and **secrets** that live in the platform rather than the repository.
+- **One region** (`ams`). Latency is irrelevant for a form used from Germany a
+  handful of times a quarter, and a single machine keeps the failure modes few.
+
+A serverless function would also have worked for the OAuth exchange, but not for
+the draft: drafts are per-session state held between requests, and that is
+exactly what a function does not have.
+
+### What we deliberately do *not* use it for
+
+- **No database, no volume.** [`fly.toml`](fly.toml) has no `[mounts]` section
+  and must never grow one. Drafts are in memory on purpose (see *Drafts are
+  in-memory, on purpose* above); the only thing allowed to persist is what is in
+  the repository or on its way there as a pull request.
+- **No serving of the public site.** trainings.arc42.org stays on GitHub Pages.
+  Fly hosts the editor, never the content.
+- **No production data.** The worst thing on that machine is an unmerged pull
+  request and a draft nobody minds losing.
+
+Scale-to-zero and disposable drafts are the same decision seen from two sides: a
+machine that stops when idle *will* lose your draft, and that is acceptable only
+because a lost draft costs a few re-typed fields.
+
+### How a change reaches production
+
+Push to `main` touching `admin-app/**`. That is the whole procedure — there is no
+manual `flyctl deploy`.
+
+[`../.github/workflows/deploy-admin-app.yml`](/.github/workflows/deploy-admin-app.yml)
+runs `go test`, `go vet` and a `gofmt` check, and only then runs `flyctl deploy`.
+Pull requests run the same tests but never deploy. The deploy job is serialised
+with a concurrency group, so two merges cannot ship over each other, and
+[`fly.toml`](fly.toml)'s `/healthz` check gates the new machine before it takes
+traffic.
+
+### The one configuration trap
+
+`PUBLIC_URL` in [`fly.toml`](fly.toml) and the `arc42-trainings-admin-prod`
+OAuth app's registered callback URL are a matched pair: the callback must be
+exactly `PUBLIC_URL` + `/auth/callback`. Change one without the other and GitHub
+rejects the `redirect_uri`, which surfaces as an error page that reads like an
+app bug rather than a configuration mismatch. `main.go` logs the callback it
+computed at startup for exactly this reason.
 
 ## See also
 

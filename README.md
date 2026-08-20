@@ -106,6 +106,17 @@ dead in-page anchors.
 
 Use the **trainings admin app** at [https://trainings-admin.arc42.org](https://trainings-admin.arc42.org) (also linked as **Maintainers** in the site footer): sign in with GitHub, edit courses or dates via forms, and publish — the app turns your editing session into a single pull request against `_data/trainings.yml` with a minimal diff.
 
+The two halves of this repository are hosted differently, which is worth knowing
+before you go looking for a server: **the site is static on GitHub Pages**, while
+**the admin app runs as a container on fly.io** — it needs somewhere to hold the
+GitHub OAuth client secret, the signed-in session and your unpublished draft,
+none of which a static site can do. The fly machine scales to zero between
+editing sessions, keeps no database and no volume, and never serves any page of
+trainings.arc42.org. It only ever opens pull requests.
+[`admin-app/README.md`](/admin-app/README.md#deployment-why-flyio-and-what-we-use-it-for)
+has the full reasoning, the config split between `fly.toml` and Fly secrets, and
+the deploy path.
+
 Manual editing remains the permanent fallback, as the app is never in the publishing path:
 
 1. Edit [`/_data/trainings.yml`](/_data/trainings.yml)
