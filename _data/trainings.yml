@@ -136,6 +136,17 @@ courses:
         format: public
         url: "https://www.arc42.de/termine#improve-nov-2027"
         status: open
+
+      - id: improve-apr-2027
+        code: "27-04 IMPROVE-EN"
+        start: "2027-04-13"
+        end: "2027-04-15"
+        language: en
+        format: online
+        trainers: ["Wolfgang Reimesch"]
+        pricing: "€2100"
+        url: "https://www.arc42.de/termine#improve-apr-2027"
+        status: open
   - id: req4arc
     short_title: "Req4Arc"
     title: "Req4Arc: Getting your Requirements right"
