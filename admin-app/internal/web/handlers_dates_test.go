@@ -865,3 +865,87 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 		t.Errorf("GET /static/form.js -> %d, want 200", rec.Code)
 	}
 }
+
+// Removing a date used to be a single click on a bare POST form in the table:
+// no confirmation, no undo except discarding the whole draft and losing every
+// unrelated edit with it. These four tests describe the interstitial that now
+// stands between the click and the removal.
+
+func TestDeleteConfirmShowsTheDateItIsAboutToRemove(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/msa-a/delete", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET confirm -> %d: %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	// The point of the page is recognising the row, so it has to carry the
+	// fields the operator identifies it by — not an id and not YAML.
+	for _, want := range []string{"26-01 MSA", "2026-01-01", "2026-01-02", "München", "MSA", "open"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("confirmation page does not show %q:\n%s", want, body)
+		}
+	}
+	if !strings.Contains(body, `action="/dates/msa-a/delete"`) {
+		t.Errorf("no form posting the removal:\n%s", body)
+	}
+	// It must say the removal is not published yet, or the page reads as final.
+	if !strings.Contains(body, "draft") {
+		t.Errorf("page does not say this only changes the draft:\n%s", body)
+	}
+}
+
+// The confirmation is a GET. If it mutated anything, merely following the link
+// — or a browser prefetching it — would delete the row.
+func TestDeleteConfirmDoesNotRemoveAnything(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	s.Routes().ServeHTTP(httptest.NewRecorder(),
+		signedIn(t, s, http.MethodGet, "/dates/msa-a/delete", nil))
+
+	d, ok := s.drafts.Get("sid")
+	if !ok {
+		t.Fatal("no draft after viewing the confirmation")
+	}
+	if d.Dirty() {
+		t.Error("viewing the confirmation marked the draft dirty")
+	}
+	if _, found := d.Doc.Model().FindDate("msa-a"); !found {
+		t.Error("viewing the confirmation removed the date")
+	}
+}
+
+func TestDeleteConfirmOnAnUnknownDateDoesNotError(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/nope/delete", nil))
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("unknown date -> %d, want a redirect back to the list", rec.Code)
+	}
+}
+
+// Guards the whole point of the change: the table must link to the
+// confirmation, never post the removal straight from the row.
+func TestDateListDoesNotDeleteInOneClick(t *testing.T) {
+	gh := fakeGitHub(t, nil)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/", nil))
+	body := rec.Body.String()
+	if strings.Contains(body, `<form method="post" action="/dates/msa-a/delete"`) {
+		t.Errorf("the list still posts the removal directly:\n%s", body)
+	}
+	if !strings.Contains(body, `href="/dates/msa-a/delete"`) {
+		t.Errorf("the list does not link to the confirmation:\n%s", body)
+	}
+}

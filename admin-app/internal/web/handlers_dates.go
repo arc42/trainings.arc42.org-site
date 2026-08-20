@@ -210,6 +210,32 @@ func applyToModel(m model.Trainings, nd model.Date, courseID string, isNew bool,
 	return out
 }
 
+// handleDateDeleteConfirm renders the row about to be removed and asks. The
+// table's Remove control links here instead of posting: removal is the one
+// action in the app with no per-change undo — the only way back is discarding
+// the entire draft, which takes every unrelated edit with it.
+//
+// It is a GET and therefore must not change anything, not even lazily: a
+// prefetching browser follows it without the operator ever clicking.
+func (s *Server) handleDateDeleteConfirm(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
+	d, err := s.loadDraft(r.Context(), sess, client)
+	if err != nil {
+		s.fail(w, "could not read the training dates from GitHub", err)
+		return
+	}
+	row, ok := d.Doc.Model().FindDate(r.PathValue("id"))
+	if !ok {
+		// Already gone — a second tab, or the back button after removing it.
+		// Nothing to confirm and nothing broken, so just show the list.
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	s.render(w, "confirmdelete.gohtml", map[string]any{
+		"Title": "Remove " + row.Date.Code + "?", "Draft": d, "Login": sess.Login,
+		"Row": row,
+	})
+}
+
 func (s *Server) handleDateDelete(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
 	d, err := s.loadDraft(r.Context(), sess, client)
 	if err != nil {

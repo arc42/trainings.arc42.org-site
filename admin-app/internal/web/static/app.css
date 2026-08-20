@@ -245,7 +245,9 @@ table.dates th, table.dates td {
 table.dates thead th { color: var(--ink-muted); font-weight: 600; } /* 5.60:1 on paper */
 table.dates tr.past { color: var(--ink-muted); } /* 5.60:1 on paper */
 table.dates .row-actions { display: flex; gap: 0.75rem; white-space: nowrap; }
-table.dates .row-actions form { display: inline; }
+/* Remove is a link to the confirmation page, not a submit — see list.gohtml. */
+table.dates .row-actions a.danger { color: var(--danger); } /* 5.53:1 on paper */
+table.dates .row-actions a.danger:hover { color: #ffffff; background: var(--danger); } /* 5.63:1 */
 
 /* ---- Status badges ---------------------------------------------------------
    Each is a wash + dark ink pair, never saturated fill behind text
@@ -262,6 +264,40 @@ table.dates .row-actions form { display: inline; }
 .status-waitlist    { background: var(--amber);      color: var(--amber-ink); } /* 7.24:1 */
 .status-full        { background: var(--grey-wash);  color: var(--grey-ink); }  /* 8.42:1 */
 .status-cancelled   { background: color-mix(in oklab, var(--danger) 12%, var(--paper)); color: var(--danger); } /* text-on-wash: >= 5.53:1 (the wash is lighter than --paper, so the ratio against --danger only improves; base pair measured on button.link.danger) */
+
+/* ---- Confirm before removing ------------------------------------------------
+   Removal is the only action with no per-change undo, so it goes through a page
+   that shows the row the way the operator recognises it — a rendered record, not
+   the YAML that the propose diff already covers. */
+dl.record {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.25rem;
+  max-width: 60ch;
+  border: 1px solid var(--hairline);   /* divider tier: decorative only */
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+dl.record dt { font-weight: 600; color: var(--ink-muted); } /* 5.02:1 on --surface-1 */
+dl.record dd { margin: 0; color: var(--ink); }              /* 9.08:1 on --surface-1 */
+/* Below the phone breakpoint the two columns squeeze the values; stack instead,
+   matching how .row collapses. */
+@media (max-width: 34rem) {
+  dl.record { grid-template-columns: 1fr; gap: 0; }
+  dl.record dd { margin-bottom: 0.6rem; }
+}
+
+.notice-inline { max-width: 60ch; color: var(--ink); } /* 10.12:1 on paper */
+
+/* The confirming button is filled, not a quiet link: it is the one control on
+   the page that actually removes something. */
+button.danger { background: var(--danger); border-color: var(--danger); color: #ffffff; } /* 5.63:1 on --danger */
+button.danger:hover {
+  background: color-mix(in oklab, var(--danger) 82%, #000000);
+  border-color: color-mix(in oklab, var(--danger) 82%, #000000);
+}
 
 /* ---- Draft bar -------------------------------------------------------------- */
 .draftbar {

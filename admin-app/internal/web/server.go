@@ -39,7 +39,7 @@ type Server struct {
 var pages = []string{
 	"list.gohtml", "dateform.gohtml", "login.gohtml", "denied.gohtml", "error.gohtml",
 	"propose.gohtml", "conflict.gohtml", "published.gohtml",
-	"courselist.gohtml", "courseform.gohtml",
+	"courselist.gohtml", "courseform.gohtml", "confirmdelete.gohtml",
 }
 
 func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
@@ -91,6 +91,7 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("GET /dates/new", s.authed(s.handleDateForm))
 	mux.Handle("GET /dates/{id}", s.authed(s.handleDateForm))
 	mux.Handle("POST /dates/{id}", s.authed(s.handleDateSave))
+	mux.Handle("GET /dates/{id}/delete", s.authed(s.handleDateDeleteConfirm))
 	mux.Handle("POST /dates/{id}/delete", s.authed(s.handleDateDelete))
 	mux.Handle("GET /courses", s.authed(s.handleCourseList))
 	mux.Handle("GET /courses/new", s.authed(s.handleCourseForm))

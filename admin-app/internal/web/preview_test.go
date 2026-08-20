@@ -23,6 +23,8 @@ func TestDumpPreview(t *testing.T) {
 		"date-edit.html":  "/dates/msa-a",
 		"course-new.html": "/courses/new",
 		"courses.html":    "/courses",
+		"confirm.html":    "/dates/msa-a/delete",
+		"list.html":       "/",
 	} {
 		rec := httptest.NewRecorder()
 		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, target, nil))
