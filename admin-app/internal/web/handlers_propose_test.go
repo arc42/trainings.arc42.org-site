@@ -1,10 +1,13 @@
 package web
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -115,6 +118,45 @@ func TestBranchNameIsSafe(t *testing.T) {
 	}
 }
 
+// TestBranchNamesAreUniquePerProposal reproduces a bug that cost a maintainer a
+// deletion: the branch name used to be a pure function of (day, first change),
+// so proposing twice on the same day about the same date produced the same ref
+// twice. Editing a row and later removing it is ordinary — it happened within
+// three hours on 2026-08-20 — and the second proposal died on
+// POST /git/refs -> 422 "Reference already exists", surfacing only as
+// "could not open the pull request".
+func TestBranchNamesAreUniquePerProposal(t *testing.T) {
+	now := time.Date(2026, 8, 20, 15, 29, 8, 0, time.UTC)
+	changes := []Change{{Kind: "removed", DateID: "msa-27-02-online"}}
+
+	first := branchName(now, changes)
+	second := branchName(now, changes)
+
+	if first == second {
+		t.Fatalf("two proposals about the same date on the same day share a branch name %q;\n"+
+			"the second one cannot be pushed (422 Reference already exists)", first)
+	}
+	for _, got := range []string{first, second} {
+		if !strings.HasPrefix(got, "trainings-admin/2026-08-20-msa-27-02-online-") {
+			t.Errorf("branchName = %q, want the readable date slug kept", got)
+		}
+		if strings.ContainsAny(got, " ~^:?*[\\") {
+			t.Errorf("branchName %q contains characters git refs forbid", got)
+		}
+	}
+}
+
+// A DateID of nothing but punctuation slugs down to "", which used to yield a
+// "--" run in the middle of the ref. Git accepts it, but the branch reads as
+// broken in the PR list.
+func TestBranchNameSurvivesAnUnslugifiableDateID(t *testing.T) {
+	got := branchName(time.Date(2026, 8, 20, 0, 0, 0, 0, time.UTC),
+		[]Change{{Kind: "removed", DateID: "///"}})
+	if strings.Contains(got, "--") || strings.HasSuffix(got, "-") {
+		t.Errorf("branchName = %q, want no empty slug segment", got)
+	}
+}
+
 // TestProposeEscapesUserContentInTheDiff guards a deliberate use of
 // template.HTML. The diff is built from the edited document, which contains
 // whatever the user typed into the form, so rendering it unescaped would turn
@@ -151,5 +193,80 @@ func TestProposeEscapesUserContentInTheDiff(t *testing.T) {
 	// mangles every added line. Escaping must not reintroduce that.
 	if strings.Contains(body, "&#43;") {
 		t.Error("diff contains &#43; — plus signs are being over-escaped again")
+	}
+}
+
+// refTrackingGitHub behaves like GitHub's ref API in the one way the plain fake
+// does not: it refuses to create a ref that already exists. The plain fake
+// accepts every POST /git/refs, which is exactly why the collision below
+// shipped unnoticed.
+func refTrackingGitHub(t *testing.T) *httptest.Server {
+	t.Helper()
+	seen := map[string]bool{}
+	var mu sync.Mutex
+	inner := fakeGitHub(t, nil)
+	t.Cleanup(inner.Close)
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/git/refs") {
+			var body struct {
+				Ref string `json:"ref"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			mu.Lock()
+			duplicate := seen[body.Ref]
+			seen[body.Ref] = true
+			mu.Unlock()
+			if duplicate {
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				_, _ = w.Write([]byte(`{"message":"Reference already exists"}`))
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{}`))
+			return
+		}
+		r.URL.Scheme, r.URL.Host = "http", strings.TrimPrefix(inner.URL, "http://")
+		proxied, err := http.NewRequest(r.Method, r.URL.String(), r.Body)
+		if err != nil {
+			t.Fatalf("proxy request: %v", err)
+		}
+		resp, err := inner.Client().Do(proxied)
+		if err != nil {
+			t.Fatalf("proxy: %v", err)
+		}
+		defer resp.Body.Close()
+		w.WriteHeader(resp.StatusCode)
+		_, _ = io.Copy(w, resp.Body)
+	}))
+}
+
+// TestTwoProposalsAboutOneDateOnOneDayBothSucceed is the regression test for the
+// reported failure: a maintainer edited msa-27-02-online, then tried to remove
+// it the same afternoon and got "could not open the pull request" with no clue
+// why. Both proposals must reach the /pulls call.
+func TestTwoProposalsAboutOneDateOnOneDayBothSucceed(t *testing.T) {
+	gh := refTrackingGitHub(t)
+	defer gh.Close()
+
+	propose := func(t *testing.T, s *Server) string {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/propose", url.Values{
+			"title": {"Training dates: 1 change"}, "body": {"b"},
+		}))
+		return rec.Body.String()
+	}
+
+	// Morning: edit the date.
+	if got := propose(t, dirtyServer(t, gh.URL)); !strings.Contains(got, "pull/7") {
+		t.Fatalf("first proposal failed:\n%s", got)
+	}
+
+	// Afternoon: remove the very same date, in a fresh session.
+	s := testServer(t, gh.URL)
+	s.Routes().ServeHTTP(httptest.NewRecorder(),
+		signedIn(t, s, http.MethodPost, "/dates/msa-a/delete", url.Values{}))
+	if got := propose(t, s); !strings.Contains(got, "pull/7") {
+		t.Fatalf("removing a date after editing it the same day failed:\n%s", got)
 	}
 }
