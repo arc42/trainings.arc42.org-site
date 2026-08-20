@@ -47,8 +47,13 @@ which registration form they point at (`/registration/` vs `/anmeldung/`).
 
 ## Local development
 
-Everything runs in Docker — no local Ruby/bundler needed. `make` (or `make help`)
-lists all targets; the ones you need day to day:
+This repository holds two programs with two lifecycles: **the site** (Jekyll,
+static, GitHub Pages) and **the admin app** (Go, a container on fly.io). `make`
+(or `make help`) lists every target; the ones you need day to day:
+
+### The site
+
+Everything runs in Docker — no local Ruby/bundler needed.
 
 | Target | What it does |
 | --- | --- |
@@ -56,11 +61,33 @@ lists all targets; the ones you need day to day:
 | `make site` | Build the static site into `_site/` |
 | `make check-links` | Run html-proofer over the built `_site` (internal links, images, HTML) |
 | `make stop` | Stop and remove the running dev container |
-| `make clean` | Remove `_site/`, Jekyll caches and the Docker volumes |
+| `make clean` | Remove `_site/`, Jekyll caches, the Docker volumes and the admin binary |
 | `make install` | Re-resolve gems after editing the `Gemfile` (rewrites `Gemfile.lock`) |
 
 `make dev` refuses to start if another container already holds port 4000 — that
 is usually a dev server from a sibling arc42 site repo; stop that one first.
+
+### The admin app
+
+Needs Go 1.23; `flyctl` only for the `fly-*` targets. The app has no local mode
+— [`admin-app/README.md`](/admin-app/README.md#how-it-works) explains how it
+works and why it runs in exactly one place.
+
+| Target | What it does |
+| --- | --- |
+| `make app-check` | Tests, `go vet` and `gofmt` — the same three checks CI gates the deploy on |
+| `make app-test` | Just the Go test suite |
+| `make app-build` | Compile to `admin-app/admin` as a fast compile check (never the deployed binary) |
+| `make fly-deploy` | Deploy your **current working tree** to fly.io — the manual path; it asks first |
+| `make fly-status` | The fly app, its machines and their health checks (`stopped` is normal: it scales to zero) |
+| `make fly-logs` | Tail production logs |
+| `make fly-releases` | What has actually been deployed, newest first |
+| `make fly-secrets` | The *names* of the fly secrets; values are never readable |
+
+Normally you never need `make fly-deploy`: pushing to `main` with changes under
+`admin-app/**` runs the same checks in CI and deploys. It is the escape hatch for
+when Actions is down, or for trying a branch on the real app — with the caveats
+in [How a change reaches production](/admin-app/README.md#how-a-change-reaches-production).
 
 ## Design
 

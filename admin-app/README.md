@@ -6,6 +6,95 @@ or remove a date or a course, and publish — the app turns one editing session
 into a single pull request against [`_data/trainings.yml`](/_data/trainings.yml)
 with a minimal, reviewable diff. It never commits to `main` itself.
 
+## How it works
+
+One Go binary, no database, no build step for the frontend. It renders HTML
+server-side with `html/template`, uses htmx in exactly one place (the draft
+bar's keepalive ping), and treats **the GitHub REST API as its only backend**:
+it has no storage of its own that could become a second source of truth about
+training dates.
+
+### The pieces
+
+| Package | What it does |
+| --- | --- |
+| [`internal/config`](internal/config/config.go) | Reads the environment at startup and refuses to boot on anything missing or obviously a placeholder |
+| [`internal/gh`](internal/gh) | Everything that talks to GitHub: OAuth exchange, permission check, read file, create branch, commit, open PR |
+| [`internal/model`](internal/model) | The `Trainings` → `Course` → `Date` structs, the flat date list the UI shows, and the values derived from others (booking `code`, registration `url`) |
+| [`internal/yamldoc`](internal/yamldoc) | Parses `_data/trainings.yml` into a node tree and edits **only the touched nodes**, so a generated PR is three changed lines and not a reformat |
+| [`internal/validate`](internal/validate) | The repository's own JSON schema plus the cross-field rules, run before anything can be published |
+| [`internal/web`](internal/web) | Routes, handlers, templates, the session cookie and the draft store |
+
+Only `internal/web` knows about HTTP; the rest are plain libraries whose tests
+need neither a network nor a configuration file.
+
+### What happens during one editing session
+
+1. **Sign in.** `GET /auth/github` sets a short-lived random `state` cookie and
+   redirects to GitHub. GitHub comes back to `/auth/callback`, where the app
+   checks the `state` (CSRF), trades the `code` for a token using the client
+   secret, and asks GitHub two questions: *who is this* (`GET /user`) and *may
+   they push to this repository* (`GET /repos/{owner}/{repo}` →
+   `permissions.push`). No push permission, no app — see
+   [`handlers_auth.go`](internal/web/handlers_auth.go). The scope requested is
+   `public_repo`, not `repo`, so the token cannot reach anybody's private work.
+
+2. **Load.** The first page after sign-in fetches `_data/trainings.yml` and the
+   current head of `main`, and keeps three things: the parsed document, the
+   file's **blob SHA** and the **head SHA**. Those two SHAs are what lets step 5
+   notice that somebody else changed the file meanwhile.
+
+3. **Edit.** Every form submit is validated first and only then applied — to the
+   in-memory draft, never to GitHub. Each change also appends a one-line summary
+   ("added", "updated", "removed"), and repeated edits of the same date collapse
+   into a single entry, which is what later becomes the PR body. The draft bar
+   polls `/keepalive` every 60 seconds while a draft is dirty, so fly's idle
+   timer cannot stop the machine out from under an editing session.
+
+4. **Review.** `GET /propose` re-reads the file from GitHub, renders a unified
+   diff of what you are about to propose, and validates the result against the
+   schema **fetched live from the repository** — so the app cannot drift from
+   what CI will enforce on the pull request.
+
+5. **Publish.** `POST /propose` re-reads the blob SHA and compares it with the
+   one from step 2. Different means somebody else edited the file: you get a
+   conflict screen and keep your draft, and nothing is written. Otherwise three
+   GitHub calls, in this order ([`gh/pr.go`](internal/gh/pr.go)):
+   `POST /git/refs` cuts a branch `trainings-admin/<date>-<slug>-<random>` from
+   the head SHA, `PUT /contents/_data/trainings.yml` commits the new content
+   onto it, and `POST /pulls` opens the pull request against `main`. Then the
+   draft is discarded and you get the PR link.
+
+### Where state lives
+
+| What | Where | Survives a restart? |
+| --- | --- | --- |
+| Who you are, and your GitHub token | An encrypted cookie in *your browser*, valid 8 hours — the server keeps no copy | Yes |
+| Your unpublished draft | Server memory, keyed by session id | **No**, by design |
+| Everything else | The Git repository | Yes — it is the only source of truth |
+
+The middle row is the one to remember; see *Drafts are in-memory, on purpose*
+below.
+
+### Routes
+
+| Route | Purpose |
+| --- | --- |
+| `GET /healthz` | Liveness probe for fly's health check |
+| `GET /auth/github`, `GET /auth/callback`, `POST /auth/logout` | Sign in and out |
+| `GET /` | The flat date list |
+| `GET /dates/new`, `GET /dates/{id}`, `POST /dates/{id}` | Add, duplicate (`?from=`) and edit a date |
+| `GET /dates/{id}/delete`, `POST /dates/{id}/delete` | The confirmation page, then the removal — the GET deliberately changes nothing |
+| `GET /courses`, `GET /courses/new`, `GET /courses/{id}`, `POST /courses/…` | The courses. There is no course delete: a course owns its dates, so removing one would silently take them along |
+| `GET /propose`, `POST /propose` | The diff-and-publish screen, and the publish itself |
+| `POST /discard` | Throw the draft away |
+| `GET /keepalive` | The draft bar's 60-second htmx ping |
+
+Everything except `/healthz`, `/static/*` and `/auth/*` goes through one wrapper that
+requires a valid session and builds a GitHub client **from the signed-in user's
+own token** — the app holds no credential of its own that can write to this
+repository.
+
 ## Why it opens a PR instead of committing
 
 The app can only *propose* a change, never publish one. Merging still requires
@@ -22,16 +111,37 @@ live `permissions.push` check against the repository on every request that
 needs it — access is granted and revoked entirely on GitHub's side, and the
 app has nothing locally that could go stale or leak.
 
-## There is no local mode
+## Working on the app: there is no local mode
 
 The app runs in exactly one place: <https://trainings-admin.arc42.org>. You
 change it by pushing, not by starting it on your laptop.
 
-1. Edit the code and run the tests from this directory: `go test ./...`
-   (Go 1.23, no Docker, no configuration, no network).
+1. Edit the code, then run `make app-check` from the repository root — the Go
+   suite, `go vet` and a `gofmt` check, which is exactly what CI runs before it
+   deploys (Go 1.23, no Docker, no configuration, no network).
 2. Push to `main`. [`deploy-admin-app.yml`](/.github/workflows/deploy-admin-app.yml)
-   runs the same tests and then deploys — there is no manual `flyctl deploy`.
+   runs the same three checks and then deploys.
 3. Try the change on the live app.
+
+Every target below is run from the **repository root**, not from this directory:
+
+| Target | What it does |
+| --- | --- |
+| `make app-check` | Tests, `go vet` and `gofmt` — the same three checks CI gates the deploy on |
+| `make app-test` | Just the Go test suite, for a tighter loop |
+| `make app-build` | Compile to `admin-app/admin`; a fast compile check, never the deployed binary |
+| `make fly-deploy` | Deploy **your current working tree** to fly — the manual path, see below |
+| `make fly-status` | The app, its machines and their health checks (`stopped` is the normal resting state) |
+| `make fly-logs` | Tail production logs |
+| `make fly-releases` | What has actually been deployed, newest first |
+| `make fly-secrets` | The *names* of the three fly secrets; values are never readable, by design |
+
+There is no `make app-run`: without real OAuth credentials the app cannot get
+past its first screen, and giving a laptop a working set of them is the thing
+this design avoids. If you want to see a change on the real thing before it is
+merged, `make fly-deploy` from your branch is that button — read *How a change
+reaches production* first, because it ships unreviewed code to the one and only
+environment.
 
 This trades a fast local loop for having one environment instead of two, and
 it is affordable only because of what the app can do: it opens pull requests
@@ -131,15 +241,35 @@ because a lost draft costs a few re-typed fields.
 
 ### How a change reaches production
 
-Push to `main` touching `admin-app/**`. That is the whole procedure — there is no
-manual `flyctl deploy`.
-
+**The normal way is a push to `main`** that touches `admin-app/**` — that is the
+whole procedure.
 [`../.github/workflows/deploy-admin-app.yml`](/.github/workflows/deploy-admin-app.yml)
 runs `go test`, `go vet` and a `gofmt` check, and only then runs `flyctl deploy`.
-Pull requests run the same tests but never deploy. The deploy job is serialised
+Pull requests run the same checks but never deploy. The deploy job is serialised
 with a concurrency group, so two merges cannot ship over each other, and
 [`fly.toml`](fly.toml)'s `/healthz` check gates the new machine before it takes
 traffic.
+
+**The manual way is `make fly-deploy`**, which runs the same three checks and
+then `flyctl deploy --remote-only` from your machine. It exists for the two
+cases CI cannot serve: GitHub Actions is unavailable, or you want to try a
+branch on the real thing — which, since there is no local mode, is the only way
+to exercise GitHub OAuth and a real pull request end to end. It needs `flyctl`
+installed, `flyctl auth login` done, and access to the `arc42-trainings-admin`
+app; the target checks all three before it does anything.
+
+Three consequences worth knowing before you use it, which is why the target
+names the branch it is about to ship and makes you type `deploy` to go ahead
+(`YES=1 make fly-deploy` skips the prompt, for when you already know):
+
+- **It builds from your working tree, not from `main`** — uncommitted changes
+  ship too. What runs in production is then something no reviewer has seen and
+  no commit records.
+- **The next push to `main` silently replaces it.** A manual deploy is never the
+  way to *keep* something in production, only to look at it.
+- **The deploy restarts the machine, so every open draft is discarded** —
+  including the one belonging to the other maintainer, if they are editing right
+  now. `make fly-status` shows whether a machine is currently awake.
 
 ### The one configuration trap
 
