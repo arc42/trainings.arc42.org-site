@@ -93,7 +93,6 @@ courses:
         format: online
         trainers: ["Wolfgang Reimesch"]
         pricing: "€2200"
-        few_seats: "only few seats available"
         url: "https://www.arc42.de/termine#msa-27-02-online"
         status: open
   - id: improve
