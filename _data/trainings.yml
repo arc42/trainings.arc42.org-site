@@ -96,6 +96,17 @@ courses:
         few_seats: "only few seats available"
         url: "https://www.arc42.de/termine#msa-27-02-online"
         status: open
+
+      - id: msa-feb-2027
+        code: "27-02 MSA"
+        start: "2027-02-23"
+        end: "2027-02-25"
+        language: en
+        format: online
+        trainers: ["Wolfgang Reimesch"]
+        pricing: "€2100"
+        url: "https://www.arc42.de/termine#msa-feb-2027"
+        status: open
   - id: improve
     short_title: "IMPROVE"
     title: "IMPROVE: Evolve and maintain systems"
