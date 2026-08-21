@@ -1,13 +1,10 @@
 package web
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -28,7 +25,7 @@ func dirtyServer(t *testing.T, apiBase string) *Server {
 }
 
 func TestProposeShowsTheDiff(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := dirtyServer(t, gh.URL)
 
@@ -44,8 +41,7 @@ func TestProposeShowsTheDiff(t *testing.T) {
 }
 
 func TestProposeSubmitOpensOnePR(t *testing.T) {
-	var calls []string
-	gh := fakeGitHub(t, &calls)
+	gh, fake := fakeGitHub(t)
 	defer gh.Close()
 	s := dirtyServer(t, gh.URL)
 
@@ -53,11 +49,11 @@ func TestProposeSubmitOpensOnePR(t *testing.T) {
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/propose", url.Values{
 		"title": {"Training dates: 1 change"}, "body": {"- updated 26-01 MSA"},
 	}))
-	if !strings.Contains(rec.Body.String(), "pull/7") {
+	if !strings.Contains(rec.Body.String(), "pull/1") {
 		t.Errorf("PR link not shown:\n%s", rec.Body.String())
 	}
 	var pulls int
-	for _, c := range calls {
+	for _, c := range fake.Calls() {
 		if strings.HasSuffix(c, "/pulls") {
 			pulls++
 		}
@@ -71,7 +67,7 @@ func TestProposeSubmitOpensOnePR(t *testing.T) {
 }
 
 func TestProposeDetectsConcurrentEdit(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := dirtyServer(t, gh.URL)
 
@@ -164,7 +160,7 @@ func TestBranchNameSurvivesAnUnslugifiableDateID(t *testing.T) {
 // first and only then marks the result trusted; this test is what keeps the
 // escaping from being dropped as "redundant" later.
 func TestProposeEscapesUserContentInTheDiff(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -196,56 +192,17 @@ func TestProposeEscapesUserContentInTheDiff(t *testing.T) {
 	}
 }
 
-// refTrackingGitHub behaves like GitHub's ref API in the one way the plain fake
-// does not: it refuses to create a ref that already exists. The plain fake
-// accepts every POST /git/refs, which is exactly why the collision below
-// shipped unnoticed.
-func refTrackingGitHub(t *testing.T) *httptest.Server {
-	t.Helper()
-	seen := map[string]bool{}
-	var mu sync.Mutex
-	inner := fakeGitHub(t, nil)
-	t.Cleanup(inner.Close)
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/git/refs") {
-			var body struct {
-				Ref string `json:"ref"`
-			}
-			_ = json.NewDecoder(r.Body).Decode(&body)
-			mu.Lock()
-			duplicate := seen[body.Ref]
-			seen[body.Ref] = true
-			mu.Unlock()
-			if duplicate {
-				w.WriteHeader(http.StatusUnprocessableEntity)
-				_, _ = w.Write([]byte(`{"message":"Reference already exists"}`))
-				return
-			}
-			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{}`))
-			return
-		}
-		r.URL.Scheme, r.URL.Host = "http", strings.TrimPrefix(inner.URL, "http://")
-		proxied, err := http.NewRequest(r.Method, r.URL.String(), r.Body)
-		if err != nil {
-			t.Fatalf("proxy request: %v", err)
-		}
-		resp, err := inner.Client().Do(proxied)
-		if err != nil {
-			t.Fatalf("proxy: %v", err)
-		}
-		defer resp.Body.Close()
-		w.WriteHeader(resp.StatusCode)
-		_, _ = io.Copy(w, resp.Body)
-	}))
-}
-
 // TestTwoProposalsAboutOneDateOnOneDayBothSucceed is the regression test for the
 // reported failure: a maintainer edited msa-27-02-online, then tried to remove
 // it the same afternoon and got "could not open the pull request" with no clue
-// why. Both proposals must reach the /pulls call.
+// why. Both proposals must reach the /pulls call — and land as two distinct
+// pull requests, which is what the two numbers below check.
+//
+// The double refuses a duplicate ref with 422 the way GitHub does, so this test
+// fails without the unique branch name. That refusal used to live in a special
+// fake set up here; it now belongs to ghfake, where every test gets it.
 func TestTwoProposalsAboutOneDateOnOneDayBothSucceed(t *testing.T) {
-	gh := refTrackingGitHub(t)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 
 	propose := func(t *testing.T, s *Server) string {
@@ -258,7 +215,7 @@ func TestTwoProposalsAboutOneDateOnOneDayBothSucceed(t *testing.T) {
 	}
 
 	// Morning: edit the date.
-	if got := propose(t, dirtyServer(t, gh.URL)); !strings.Contains(got, "pull/7") {
+	if got := propose(t, dirtyServer(t, gh.URL)); !strings.Contains(got, "/pull/1") {
 		t.Fatalf("first proposal failed:\n%s", got)
 	}
 
@@ -266,7 +223,7 @@ func TestTwoProposalsAboutOneDateOnOneDayBothSucceed(t *testing.T) {
 	s := testServer(t, gh.URL)
 	s.Routes().ServeHTTP(httptest.NewRecorder(),
 		signedIn(t, s, http.MethodPost, "/dates/msa-a/delete", url.Values{}))
-	if got := propose(t, s); !strings.Contains(got, "pull/7") {
+	if got := propose(t, s); !strings.Contains(got, "/pull/2") {
 		t.Fatalf("removing a date after editing it the same day failed:\n%s", got)
 	}
 }

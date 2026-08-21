@@ -1,8 +1,6 @@
 package web
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +9,7 @@ import (
 	"testing"
 
 	"arc42-trainings-admin/internal/config"
+	"arc42-trainings-admin/internal/ghfake"
 )
 
 const fixtureYAML = `courses:
@@ -32,44 +31,21 @@ const fixtureYAML = `courses:
         status: open
 `
 
-// fakeGitHub serves just enough of the API for handler tests: the file read,
-// the head ref, and the three publish calls.
-func fakeGitHub(t *testing.T, calls *[]string) *httptest.Server {
+// fakeGitHub returns a stand-in GitHub and the fake behind it, so a test can
+// also assert which calls were made. The fake lives in internal/ghfake because
+// the offline demo (cmd/demo) runs the real app against the very same double —
+// one place to keep honest about what GitHub accepts and what it refuses.
+func fakeGitHub(t *testing.T) (*httptest.Server, *ghfake.Fake) {
 	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if calls != nil {
-			*calls = append(*calls, r.Method+" "+r.URL.Path)
-		}
-		switch {
-		case r.URL.Path == "/user":
-			_ = json.NewEncoder(w).Encode(map[string]any{"login": "gernotstarke"})
-		case r.URL.Path == "/repos/arc42/site" && r.Method == "GET":
-			_ = json.NewEncoder(w).Encode(map[string]any{"permissions": map[string]any{"push": true}})
-		case strings.HasSuffix(r.URL.Path, "/contents/_data/trainings.yml") && r.Method == "GET":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"content":  base64.StdEncoding.EncodeToString([]byte(fixtureYAML)),
-				"encoding": "base64", "sha": "filesha",
-			})
-		case strings.HasSuffix(r.URL.Path, "/contents/api/trainings.schema.json") && r.Method == "GET":
-			schema := `{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"}`
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"content":  base64.StdEncoding.EncodeToString([]byte(schema)),
-				"encoding": "base64", "sha": "schemasha",
-			})
-		case strings.HasSuffix(r.URL.Path, "/git/ref/heads/main"):
-			_ = json.NewEncoder(w).Encode(map[string]any{"object": map[string]any{"sha": "headsha"}})
-		case r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/git/refs"):
-			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{}`))
-		case r.Method == "PUT" && strings.HasSuffix(r.URL.Path, "/contents/_data/trainings.yml"):
-			_, _ = w.Write([]byte(`{}`))
-		case r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/pulls"):
-			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{"html_url":"https://github.com/arc42/site/pull/7"}`))
-		default:
-			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
-		}
-	}))
+	f := ghfake.New(ghfake.Options{
+		Repo: "arc42/site", Login: "gernotstarke", CanPush: true,
+		Files: map[string][]byte{
+			"_data/trainings.yml":       []byte(fixtureYAML),
+			"api/trainings.schema.json": []byte(`{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"}`),
+		},
+		OnUnexpected: func(method, path string) { t.Errorf("unexpected %s %s", method, path) },
+	})
+	return httptest.NewServer(f.Handler()), f
 }
 
 func testServer(t *testing.T, apiBase string) *Server {
@@ -106,7 +82,7 @@ func signedIn(t *testing.T, s *Server, method, target string, form url.Values) *
 }
 
 func TestListRequiresSignIn(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -118,7 +94,7 @@ func TestListRequiresSignIn(t *testing.T) {
 }
 
 func TestListShowsDates(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -134,7 +110,7 @@ func TestListShowsDates(t *testing.T) {
 }
 
 func TestSaveDateMarksDraftDirty(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -162,7 +138,7 @@ func TestSaveDateMarksDraftDirty(t *testing.T) {
 }
 
 func TestSaveRejectsInvalidDate(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -180,7 +156,7 @@ func TestSaveRejectsInvalidDate(t *testing.T) {
 }
 
 func TestDeleteDateRecordsRemoval(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -193,7 +169,7 @@ func TestDeleteDateRecordsRemoval(t *testing.T) {
 }
 
 func TestDiscardClearsTheDraft(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -207,7 +183,7 @@ func TestDiscardClearsTheDraft(t *testing.T) {
 }
 
 func TestCourseSaveLeavesDatesAlone(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -243,7 +219,7 @@ func TestCourseSaveLeavesDatesAlone(t *testing.T) {
 // session id and is already gone, so a success status would let "Open pull
 // request" look like it worked while nothing was published.
 func TestUnauthenticatedWriteIsRejected(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -276,7 +252,7 @@ func TestUnauthenticatedWriteIsRejected(t *testing.T) {
 // Two bugs in one: the template blew up on a map key the handler never set,
 // and render() had no way to take the partial output back.
 func TestNewDateFormRendersCompletely(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -330,7 +306,7 @@ func TestRenderFailsLoudlyNotPartially(t *testing.T) {
 }
 
 func TestNewCourseFormRendersAndCreates(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -377,7 +353,7 @@ func TestNewCourseFormRendersAndCreates(t *testing.T) {
 }
 
 func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -406,7 +382,7 @@ func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
 // "Dr. Peter Hruschka". Opening and re-saving a date must not quietly rename a
 // trainer on the public website.
 func TestExistingTrainerNamesArePreserved(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -484,7 +460,7 @@ func TestDeniedPageIsInformativeNotAnError(t *testing.T) {
 // are pure dead ends — and they advertise structure to someone who has not
 // established they may see any of it.
 func TestNavIsHiddenBeforeAuthentication(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -511,7 +487,7 @@ func TestNavIsHiddenBeforeAuthentication(t *testing.T) {
 }
 
 func TestAuthCallbackHandlesCancelAndStaleState(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -549,7 +525,7 @@ func TestAuthCallbackHandlesCancelAndStaleState(t *testing.T) {
 }
 
 func TestMascotIsServedAndReferenced(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -592,7 +568,7 @@ func TestMascotIsServedAndReferenced(t *testing.T) {
 // year's start/end silently produced a date in the wrong year whenever the
 // operator changed only one of the two.
 func TestDuplicateClearsIdentityAndDates(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -614,7 +590,7 @@ func TestDuplicateClearsIdentityAndDates(t *testing.T) {
 // The registration link is the same anchored page for every date, so typing it
 // is ceremony and a typo breaks a live booking link.
 func TestSaveDerivesTheRegistrationURL(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -636,7 +612,7 @@ func TestSaveDerivesTheRegistrationURL(t *testing.T) {
 }
 
 func TestDateFormAsksForNoRegistrationURL(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -650,7 +626,7 @@ func TestDateFormAsksForNoRegistrationURL(t *testing.T) {
 // The browser derives the booking code as the form is filled in, which needs
 // each course's abbreviation to travel with its option.
 func TestCourseOptionsCarryTheCodeToken(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -662,7 +638,7 @@ func TestCourseOptionsCarryTheCodeToken(t *testing.T) {
 }
 
 func TestFormScriptIsServedAndReferenced(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -682,7 +658,7 @@ func TestFormScriptIsServedAndReferenced(t *testing.T) {
 // Warnings never block, but they are not allowed to slip past unseen either:
 // the first submit shows them and the button becomes "Save anyway".
 func TestWarningsGateTheFirstSaveThenLetItThrough(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -723,7 +699,7 @@ func TestWarningsGateTheFirstSaveThenLetItThrough(t *testing.T) {
 // A blocking error must still block, even with the acknowledgement set — the
 // two severities are not the same gate.
 func TestConfirmingWarningsDoesNotBypassErrors(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -744,7 +720,7 @@ func TestConfirmingWarningsDoesNotBypassErrors(t *testing.T) {
 }
 
 func TestCourseWarningsGateTheFirstSave(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -779,7 +755,7 @@ func TestCourseWarningsGateTheFirstSave(t *testing.T) {
 // city, same pricing sentence, same trainers. Prefilling them is the whole
 // difference between adding a date and retyping one.
 func TestNewDateFormPrefillsFromTheCoursesLastDate(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -809,7 +785,7 @@ func TestNewDateFormPrefillsFromTheCoursesLastDate(t *testing.T) {
 // The prefills must travel with each course so switching the dropdown updates
 // them without a round trip.
 func TestCourseOptionsCarryTheirDefaults(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -828,7 +804,7 @@ func TestCourseOptionsCarryTheirDefaults(t *testing.T) {
 // contract is that every field carrying a rule has a hint with an id for the
 // button to point at.
 func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -872,7 +848,7 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 // stands between the click and the removal.
 
 func TestDeleteConfirmShowsTheDateItIsAboutToRemove(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -901,7 +877,7 @@ func TestDeleteConfirmShowsTheDateItIsAboutToRemove(t *testing.T) {
 // The confirmation is a GET. If it mutated anything, merely following the link
 // — or a browser prefetching it — would delete the row.
 func TestDeleteConfirmDoesNotRemoveAnything(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -921,7 +897,7 @@ func TestDeleteConfirmDoesNotRemoveAnything(t *testing.T) {
 }
 
 func TestDeleteConfirmOnAnUnknownDateDoesNotError(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -935,7 +911,7 @@ func TestDeleteConfirmOnAnUnknownDateDoesNotError(t *testing.T) {
 // Guards the whole point of the change: the table must link to the
 // confirmation, never post the removal straight from the row.
 func TestDateListDoesNotDeleteInOneClick(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -947,5 +923,62 @@ func TestDateListDoesNotDeleteInOneClick(t *testing.T) {
 	}
 	if !strings.Contains(body, `href="/dates/msa-a/delete"`) {
 		t.Errorf("the list does not link to the confirmation:\n%s", body)
+	}
+}
+
+// TestSignInRunsTheRealOAuthExchange covers the flow the offline demo depends
+// on and that nothing else tested: authorize URL → callback → code traded for a
+// token → session. Both halves of the sign-in have to follow the API base, or
+// the demo would send a browser to github.com for an app id that exists nowhere.
+func TestSignInRunsTheRealOAuthExchange(t *testing.T) {
+	gh, fake := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/auth/github", nil))
+	if rec.Code != http.StatusFound {
+		t.Fatalf("/auth/github: status = %d, want 302", rec.Code)
+	}
+	authorize, err := url.Parse(rec.Header().Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(authorize.String(), gh.URL) {
+		t.Fatalf("sign-in was sent to %s, not to the configured API host %s", authorize, gh.URL)
+	}
+	state := authorize.Query().Get("state")
+	if state == "" {
+		t.Fatal("no state in the authorize URL — the CSRF check has nothing to compare")
+	}
+
+	back := httptest.NewRequest(http.MethodGet, "/auth/callback?state="+state+"&code=any-code", nil)
+	for _, c := range rec.Result().Cookies() {
+		back.AddCookie(c)
+	}
+	rec2 := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec2, back)
+	if rec2.Code != http.StatusFound || rec2.Header().Get("Location") != "/" {
+		t.Fatalf("callback: status = %d, location = %q; want a redirect to /\n%s",
+			rec2.Code, rec2.Header().Get("Location"), rec2.Body.String())
+	}
+	var session bool
+	for _, c := range rec2.Result().Cookies() {
+		if c.Name == sessionCookieName && c.Value != "" {
+			session = true
+		}
+	}
+	if !session {
+		t.Error("no session cookie was set, so the exchange did not complete")
+	}
+
+	var traded bool
+	for _, c := range fake.Calls() {
+		if strings.HasSuffix(c, "/login/oauth/access_token") {
+			traded = true
+		}
+	}
+	if !traded {
+		t.Error("the code was never traded for a token against the configured host")
 	}
 }

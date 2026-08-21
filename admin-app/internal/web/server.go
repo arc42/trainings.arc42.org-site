@@ -69,6 +69,9 @@ func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
 			ClientID:     cfg.ClientID,
 			ClientSecret: cfg.ClientSecret,
 			Redirect:     publicURL + "/auth/callback",
+			// Pairs the sign-in host with the API host, so pointing the app at
+			// a stand-in API points sign-in there too rather than at github.com.
+			Endpoint: gh.EndpointFor(apiBase),
 		},
 		apiBase: apiBase,
 		set:     set,

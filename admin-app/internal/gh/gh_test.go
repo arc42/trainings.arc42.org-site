@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -139,5 +140,29 @@ func TestOpenPRCallSequence(t *testing.T) {
 	}
 	if putBody["sha"] != "filesha" {
 		t.Errorf("PUT sha = %v, want the file's blob sha", putBody["sha"])
+	}
+}
+
+// TestEndpointForPairsSignInWithTheAPIHost pins the rule that lets the offline
+// demo run the real sign-in flow: whoever answers the REST API also answers the
+// OAuth endpoints. Production must keep pointing at github.com, and anything
+// else must point at itself — never at github.com, which would send a demo
+// user's browser to a real sign-in screen for an app id that does not exist.
+func TestEndpointForPairsSignInWithTheAPIHost(t *testing.T) {
+	prod := EndpointFor("https://api.github.com")
+	if !strings.HasPrefix(prod.AuthURL, "https://github.com/") ||
+		!strings.HasPrefix(prod.TokenURL, "https://github.com/") {
+		t.Errorf("production sign-in does not go to github.com: %+v", prod)
+	}
+	if def := EndpointFor(""); def != prod {
+		t.Errorf("an unset API base must mean production, got %+v", def)
+	}
+
+	standIn := EndpointFor("http://127.0.0.1:9999")
+	if standIn.AuthURL != "http://127.0.0.1:9999/login/oauth/authorize" {
+		t.Errorf("AuthURL = %q", standIn.AuthURL)
+	}
+	if standIn.TokenURL != "http://127.0.0.1:9999/login/oauth/access_token" {
+		t.Errorf("TokenURL = %q", standIn.TokenURL)
 	}
 }

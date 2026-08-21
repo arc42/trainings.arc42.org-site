@@ -14,7 +14,7 @@ func TestDumpPreview(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PREVIEW_DIR to dump rendered pages")
 	}
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
