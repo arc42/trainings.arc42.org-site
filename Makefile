@@ -1,11 +1,12 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help dev build stop site check-links clean install update shell logs \
-        app-test app-check app-build check-go check-flyctl \
+        app-test app-check app-build app-demo app-preview check-go check-flyctl \
         fly-deploy fly-status fly-logs fly-secrets fly-releases
 
-APP_DIR := admin-app
-FLY_APP := arc42-trainings-admin
+APP_DIR     := admin-app
+FLY_APP     := arc42-trainings-admin
+PREVIEW_DIR := preview-out
 
 help: ## Show this help
 	@printf "\ntrainings.arc42.org — two halves, hosted in two places:\n"
@@ -39,9 +40,10 @@ site: build ## Generate the static site into _site/
 check-links: site ## Validate internal links, images, and HTML in the built _site (html-proofer)
 	docker compose run --rm jekyll bundle exec htmlproofer ./_site --disable-external --allow-hash-href
 
-clean: ## Remove generated _site, the Docker cache volumes and the admin binary
+clean: ## Remove generated _site, Docker volumes, the admin binary and demo/preview output
 	rm -rf _site .sass-cache .jekyll-cache .jekyll-metadata
 	rm -f $(APP_DIR)/admin
+	rm -rf demo-out $(PREVIEW_DIR)
 	-docker compose down -v --remove-orphans
 
 install: build ## Install/refresh gems into the dev image after editing the Gemfile
@@ -74,6 +76,16 @@ app-check: check-go ## Run exactly what CI runs before it deploys: tests, vet, g
 		printf "==> gofmt would rewrite:\n%s\n" "$$unformatted"; exit 1; \
 	fi
 	@printf "==> tests, vet and gofmt are clean — this is what CI checks\n"
+
+app-demo: check-go ## Run the admin app offline on :8080 against a fake GitHub (nothing is published)
+	@printf "==> The demo reads _data/trainings.yml and never writes it.\n"
+	@printf "==> Publishing writes the proposed file to demo-out/ and opens nothing.\n"
+	cd $(APP_DIR) && go run ./cmd/demo -repo ..
+
+app-preview: check-go ## Render every page to preview-out/ as HTML files, without a server
+	@mkdir -p $(PREVIEW_DIR)/static
+	cd $(APP_DIR) && PREVIEW_DIR=$$(cd .. && pwd)/$(PREVIEW_DIR) go test ./internal/web -run TestDumpPreview -count=1
+	@printf "==> open %s/list.html\n" "$(PREVIEW_DIR)"
 
 app-build: check-go ## Compile the admin app to admin-app/admin (a local build check only)
 	@# fly builds its own image from admin-app/Dockerfile; this binary is never

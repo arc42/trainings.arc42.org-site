@@ -14,3 +14,8 @@ admin-app/.env
 # `make app-build` compiles the admin app here as a fast compile check. The
 # deployed binary is built inside admin-app/Dockerfile, never from this one.
 admin-app/admin
+
+# `make app-demo` writes what an editing session would have proposed here, and
+# `make app-preview` dumps the rendered pages. Both are throwaway local output.
+demo-out/
+preview-out/
