@@ -69,20 +69,29 @@ is usually a dev server from a sibling arc42 site repo; stop that one first.
 
 ### The admin app
 
-Needs Go 1.23; `flyctl` only for the `fly-*` targets. The app has no local mode
-— [`admin-app/README.md`](/admin-app/README.md#how-it-works) explains how it
-works and why it runs in exactly one place.
+Needs Go 1.23; `flyctl` only for the `fly-*` targets.
+[`admin-app/README.md`](/admin-app/README.md#how-it-works) explains how the app
+works and why it is deployed in exactly one place.
 
 | Target | What it does |
 | --- | --- |
+| `make app-demo` | Run the real app offline on <http://localhost:8080> against a fake GitHub — nothing is published |
 | `make app-check` | Tests, `go vet` and `gofmt` — the same three checks CI gates the deploy on |
 | `make app-test` | Just the Go test suite |
+| `make app-preview` | Render every page to `preview-out/` as static HTML, no server |
 | `make app-build` | Compile to `admin-app/admin` as a fast compile check (never the deployed binary) |
 | `make fly-deploy` | Deploy your **current working tree** to fly.io — the manual path; it asks first |
 | `make fly-status` | The fly app, its machines and their health checks (`stopped` is normal: it scales to zero) |
 | `make fly-logs` | Tail production logs |
 | `make fly-releases` | What has actually been deployed, newest first |
 | `make fly-secrets` | The *names* of the fly secrets; values are never readable |
+
+`make app-demo` is how you try a change, or show the app to somebody, without a
+GitHub account or a network: it reads this checkout's `_data/trainings.yml`,
+never writes it, and "publishing" writes the proposed file to `demo-out/` and
+opens no pull request. See
+[The offline demo](/admin-app/README.md#the-offline-demo) for what it does and
+does not prove.
 
 Normally you never need `make fly-deploy`: pushing to `main` with changes under
 `admin-app/**` runs the same checks in CI and deploys. It is the escape hatch for

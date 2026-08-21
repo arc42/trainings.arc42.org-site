@@ -24,6 +24,7 @@ training dates.
 | [`internal/yamldoc`](internal/yamldoc) | Parses `_data/trainings.yml` into a node tree and edits **only the touched nodes**, so a generated PR is three changed lines and not a reformat |
 | [`internal/validate`](internal/validate) | The repository's own JSON schema plus the cross-field rules, run before anything can be published |
 | [`internal/web`](internal/web) | Routes, handlers, templates, the session cookie and the draft store |
+| [`internal/ghfake`](internal/ghfake) | A stand-in for the GitHub API — used by the tests, and by the offline demo. Never part of the deployed binary |
 
 Only `internal/web` knows about HTTP; the rest are plain libraries whose tests
 need neither a network nor a configuration file.
@@ -111,10 +112,12 @@ live `permissions.push` check against the repository on every request that
 needs it — access is granted and revoked entirely on GitHub's side, and the
 app has nothing locally that could go stale or leak.
 
-## Working on the app: there is no local mode
+## Working on the app
 
-The app runs in exactly one place: <https://trainings-admin.arc42.org>. You
-change it by pushing, not by starting it on your laptop.
+The app is deployed in exactly one place: <https://trainings-admin.arc42.org>.
+You change it by pushing, not by starting it on your laptop — but you can run
+the whole thing offline against a stand-in GitHub, which is what the demo below
+is for.
 
 1. Edit the code, then run `make app-check` from the repository root — the Go
    suite, `go vet` and a `gofmt` check, which is exactly what CI runs before it
@@ -130,31 +133,70 @@ Every target below is run from the **repository root**, not from this directory:
 | `make app-check` | Tests, `go vet` and `gofmt` — the same three checks CI gates the deploy on |
 | `make app-test` | Just the Go test suite, for a tighter loop |
 | `make app-build` | Compile to `admin-app/admin`; a fast compile check, never the deployed binary |
+| `make app-demo` | The offline demo: the real app on <http://localhost:8080> against a fake GitHub — see below |
+| `make app-preview` | Render every page to `preview-out/` as plain HTML files, no server involved |
 | `make fly-deploy` | Deploy **your current working tree** to fly — the manual path, see below |
 | `make fly-status` | The app, its machines and their health checks (`stopped` is the normal resting state) |
 | `make fly-logs` | Tail production logs |
 | `make fly-releases` | What has actually been deployed, newest first |
 | `make fly-secrets` | The *names* of the three fly secrets; values are never readable, by design |
 
-There is no `make app-run`: without real OAuth credentials the app cannot get
-past its first screen, and giving a laptop a working set of them is the thing
-this design avoids. If you want to see a change on the real thing before it is
-merged, `make fly-deploy` from your branch is that button — read *How a change
-reaches production* first, because it ships unreviewed code to the one and only
-environment.
+### The offline demo
 
-This trades a fast local loop for having one environment instead of two, and
-it is affordable only because of what the app can do: it opens pull requests
-and nothing else. A change that turns out wrong costs a closed PR and another
-push. There is no data to corrupt and, with two users who touch this a few
-times a quarter, nobody to interrupt.
+`make app-demo` runs **the real app** on <http://localhost:8080>. Only GitHub is
+different: instead of api.github.com it talks to
+[`internal/ghfake`](internal/ghfake), a stand-in running in the same process.
 
-A caveat that follows from it: pressing **Publish** while trying something out
-opens a real pull request against this repository. That is harmless — close it
-unmerged and delete its branch — but do not leave it sitting in the queue,
-where the next person reads it as a proposal.
+- **Sign in is one click** and involves no GitHub account. The app still runs
+  its real OAuth flow — state cookie, code, token exchange, permission check —
+  the fake just answers the other end. There is no "skip sign-in" branch in the
+  app, because there does not need to be.
+- **It reads your checkout's `_data/trainings.yml`** and the real schema, so the
+  courses and dates on screen are the actual ones. Neither file is ever written.
+- **Publishing opens nothing.** No branch, no commit, no pull request. The
+  proposed file is written to `demo-out/<branch>.yml` for you to diff, the
+  terminal prints the `diff -u` command, and the "Pull request opened" link
+  leads to a page showing exactly what would have been sent.
+- **It cannot exist in production.** [`cmd/demo`](cmd/demo) and the fake are a
+  separate package that the deployed binary never links — `Dockerfile` builds
+  the root package alone, and `main_test.go` fails the build if that ever stops
+  being true. A demo mode that could be switched on in a real deployment is
+  precisely the thing worth not having.
 
-**Configuration** lives in two places, both in production. Non-secrets
+Use it to click through a change, to check a form, or to show somebody what the
+app does with no network at all.
+
+**What it cannot tell you:** whether GitHub accepts the commit, whether the
+OAuth app's callback still matches `PUBLIC_URL`, whether fly's health check
+passes. The fake is written to refuse what GitHub refuses — a duplicate branch
+ref, a commit over a moved file — and every one of those refusals is a test, but
+a stand-in only ever models what somebody thought to model. Sign-in against the
+real GitHub, and a real pull request, are still only exercised in production.
+That is what `make fly-deploy` from a branch is for; read *How a change reaches
+production* before using it, because it ships unreviewed code.
+
+For looking at a page rather than using it, `make app-preview` dumps every
+screen to `preview-out/` as static HTML — the same rendering the tests use, no
+server, no browser session.
+
+### There is still no second environment
+
+This trades a fast local loop against real GitHub for having one environment
+instead of two, and it is affordable only because of what the app can do: it
+opens pull requests and nothing else. A change that turns out wrong costs a
+closed PR and another push. There is no data to corrupt and, with two users who
+touch this a few times a quarter, nobody to interrupt.
+
+A caveat that follows from it: pressing **Publish** *on the deployed app* while
+trying something out opens a real pull request against this repository. That is
+harmless — close it unmerged and delete its branch — but do not leave it sitting
+in the queue, where the next person reads it as a proposal. In the demo, the
+same button costs nothing.
+
+### Configuration
+
+Configuration lives in two places, both in production (the demo supplies its own
+obviously-fake values and needs none of this). Non-secrets
 (`GITHUB_REPO`, `ENVIRONMENT`, `PUBLIC_URL`) are in [`fly.toml`](fly.toml) and
 are reviewable. The three secrets are set once with `flyctl secrets set … -a
 arc42-trainings-admin` and never appear in the repository:
@@ -163,6 +205,8 @@ arc42-trainings-admin` and never appear in the repository:
 | --- | --- |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | The `arc42-trainings-admin-prod` GitHub OAuth app, which signs users in |
 | `SESSION_KEY` | 32+ random bytes encrypting the session cookie. Nobody issues this — generate it with `openssl rand -hex 32`. Replacing it signs everyone out; that is its only effect |
+
+### The Ruby cross-check
 
 The test suite includes an anti-drift check that shells out to
 [`scripts/validate_trainings.rb`](/scripts/validate_trainings.rb) and requires

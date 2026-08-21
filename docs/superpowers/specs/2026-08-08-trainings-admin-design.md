@@ -86,6 +86,7 @@ single static binary.
 | `internal/validate` | Schema check + cross-field rules | `model` |
 | `internal/gh` | OAuth flow; permission check; read file; create branch, commit, PR | — |
 | `internal/web` | Handlers, templates, session, draft store | all of the above |
+| `internal/ghfake` | Stand-in for the GitHub API: sign-in, permission check, file read, branch/commit/PR. Used by the handler tests and by `cmd/demo` | — |
 
 Each package is independently testable and has no knowledge of `web`.
 
@@ -216,6 +217,22 @@ decorative.
 | Manual | Sign in to the deployed app and publish, then close the PR unmerged | The one flow no test can stand in for: real GitHub, real OAuth, a real PR. Also where draft loss is deliberately exercised, by letting the machine idle out mid-session |
 
 No browser/e2e tests — four screens do not justify the maintenance.
+
+**One double, shared.** The stand-in GitHub lives in `internal/ghfake`, and both
+the handler tests and the offline demo (`cmd/demo`, `make app-demo`) run against
+it. Its rule is that it must refuse what GitHub refuses — a duplicate ref is
+422, a commit over a moved blob is 409 — each refusal covered by its own test.
+A double more permissive than the real API is worse than none: the suite then
+certifies a flow that cannot work, which is exactly how the duplicate-branch
+failure of 2026-08-20 reached production unseen.
+
+**The demo is not an environment.** It runs the real handlers, the real
+templates and the real sign-in flow against that double, reading the working
+copy's `_data/trainings.yml` and writing nothing; publishing saves the proposed
+file to `demo-out/` and opens nothing. `cmd/demo` and `internal/ghfake` are
+unreachable from the deployed binary — the Dockerfile builds the root package
+alone, and a test in `main_test.go` fails if that stops being true — so no
+configuration can turn a real deployment into one that fakes its own sign-in.
 
 ## 10. Deployment — the only environment
 
