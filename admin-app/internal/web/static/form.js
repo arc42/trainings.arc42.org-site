@@ -57,6 +57,14 @@
     return state;
   }
 
+  // Placeholders say "e.g." so that no example can be read as a stored value.
+  // An empty suggestion clears the placeholder rather than showing a bare
+  // "e.g.": for a course with no dates yet there is nothing to suggest.
+  function example(el, value) {
+    if (!el) return;
+    el.placeholder = value ? "e.g. " + value : "";
+  }
+
   function addDays(iso, n) {
     // UTC arithmetic: a local-time Date shifts the day across a DST boundary,
     // which is exactly where a course week tends to sit.
@@ -100,6 +108,20 @@
       return course.value + "-" + MONTHS[m - 1] + "-" + start.value.slice(0, 4);
     };
 
+    // Mirrors model.IDMask / model.CodeMask. The server renders these for the
+    // first paint; here they follow the dropdown, because a date id reading
+    // "msa-..." while the selected course is Req4Arc is worse than no hint at
+    // all. Masks, not examples: both fields fill themselves in the moment a
+    // first day is set, so what is useful in the gap before that is the shape.
+    var refreshMasks = function () {
+      idField.placeholder = (course.value || "course") + "-mmm-yyyy";
+      code.placeholder = "YY-MM " + (attr("data-code-token") || "CODE");
+      // The city and country defaults are already per-course; the placeholders
+      // had been frozen at Munich and DE.
+      example(city, attr("data-city"));
+      example(country, attr("data-country"));
+    };
+
     var codeState = claim(code, derivedCode);
     // The id is only ever derived while creating: a published id is the anchor
     // people have bookmarked, so on an edit form it is left strictly alone.
@@ -133,7 +155,13 @@
       cityState.apply();
       countryState.apply();
       pricingState.apply();
+      refreshMasks();
     });
+
+    // On a blank new-date form the server has no course to render masks for,
+    // while the browser has already selected the first option. Run once so the
+    // two agree before anything is touched.
+    refreshMasks();
 
     if (start.value) end.min = start.value;
   }

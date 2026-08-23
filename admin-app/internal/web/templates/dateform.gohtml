@@ -27,13 +27,13 @@
     </label>
     <label>Date ID <span class="req" aria-hidden="true">*</span>
       <input name="id" value="{{.Date.ID}}" required pattern="[a-z0-9-]+"
-             aria-describedby="id-hint" placeholder="msa-dez-2026">
+             aria-describedby="id-hint" placeholder="{{idMask .CourseID}}">
       <small id="id-hint" class="hint">Lower-case letters, digits and hyphens. Used
         in the anchor link on arc42.de, so it never changes once published.</small>
     </label>
     <label>Booking code <span class="req" aria-hidden="true">*</span>
       <input name="code" id="f-code" value="{{.Date.Code}}" required
-             aria-describedby="code-hint" placeholder="26-12 MSA">
+             aria-describedby="code-hint" placeholder="{{codeMask .CourseID}}">
       <small id="code-hint" class="hint">Filled in for you from the course, the
         start date and the language. Overwrite it if this run needs a different
         code. Must be unique — a duplicate silently misroutes a registration.</small>
@@ -72,13 +72,13 @@
     <div class="row">
       <label>City
         <input name="city" value="{{.Date.City}}" aria-describedby="city-hint"
-               placeholder="München">
+               placeholder="e.g. München">
         <small id="city-hint" class="hint">Required for public and inhouse; leave
           empty for online.</small>
       </label>
       <label>Country
         <input name="country" value="{{.Date.Country}}" maxlength="2"
-               pattern="[A-Za-z]{2}" placeholder="DE" aria-describedby="country-hint">
+               pattern="[A-Za-z]{2}" placeholder="e.g. DE" aria-describedby="country-hint">
         <small id="country-hint" class="hint">Two-letter code, optional.</small>
       </label>
     </div>
@@ -122,7 +122,7 @@
         language of the date.</small>
     </label>
     <label>Few seats note
-      <input name="few_seats" value="{{.Date.FewSeats}}" placeholder="nur noch wenige Plätze"
+      <input name="few_seats" value="{{.Date.FewSeats}}" placeholder="e.g. nur noch wenige Plätze"
              aria-describedby="few-seats-hint">
       <small id="few-seats-hint" class="hint">A short nudge shown on the card,
         in the language of the date. Leave empty unless seats really are

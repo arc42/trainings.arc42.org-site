@@ -194,6 +194,11 @@ func templateFuncs() template.FuncMap {
 		// codeToken travels with each course option so the browser can derive
 		// the booking code without a round trip.
 		"codeToken": func(courseID any) string { return model.CodeToken(fmt.Sprint(courseID)) },
+		// idMask and codeMask render the *shape* of the two derived
+		// identifiers for the selected course. form.js re-renders them when
+		// the course changes; these cover the first paint and scripting-off.
+		"idMask":   func(courseID any) string { return model.IDMask(fmt.Sprint(courseID)) },
+		"codeMask": func(courseID any) string { return model.CodeMask(fmt.Sprint(courseID)) },
 		// defaultsOf hands the template the values a new date for this course
 		// would repeat, so switching the dropdown re-applies them in the browser.
 		"defaultsOf": model.DefaultsFor,

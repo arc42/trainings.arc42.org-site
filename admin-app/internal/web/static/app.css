@@ -24,6 +24,7 @@
      ink-muted: #646769 — 5.60:1 on --paper, 5.02:1 on --surface-1 */
   --ink: #3d4144;
   --ink-muted: #646769;
+  --ink-placeholder: #6a6d6f; /* 5.12:1 on --paper, 4.59:1 on --surface-1 */
 
   /* ---- Hairlines, two tiers ---------------------------------------------
      divider tier is decorative only, never the sole carrier of meaning;
@@ -393,7 +394,15 @@ input[readonly] {
   background: var(--surface-1);        /* ink 9.08:1 on this */
   border-color: var(--hairline);
 }
-input::placeholder, textarea::placeholder { color: var(--ink-muted); } /* 5.60:1 — placeholders are text and hold the same floor */
+/* A placeholder has to stay legible and still never be mistaken for a stored
+   value — an operator once spent a while deleting an empty Certification
+   field. Italic carries that distinction; the tone only has to stay above the
+   floor, so it lightens by one step rather than doing the work alone.
+   #6a6d6f: 5.12:1 on --paper, 4.59:1 on --surface-1. */
+input::placeholder, textarea::placeholder {
+  color: var(--ink-placeholder);
+  font-style: italic;
+}
 
 /* Validation summary. role="alert" moves focus-order attention here; the
    heading names the job rather than the failure count. */

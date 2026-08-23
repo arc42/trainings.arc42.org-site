@@ -982,3 +982,42 @@ func TestSignInRunsTheRealOAuthExchange(t *testing.T) {
 		t.Error("the code was never traded for a token against the configured host")
 	}
 }
+
+// The date id and booking code placeholders used to be frozen at "msa-dez-2026"
+// and "26-12 MSA", which were wrong for every other course. They are masks now,
+// rendered per course. That the mask actually varies by course is
+// TestTheDerivedMasksAreMasks; what matters here is that the templates go
+// through the functions at all, and that a form with no course chosen yet says
+// something course-neutral rather than naming one.
+func TestTheIdAndCodePlaceholdersFollowTheCourse(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	for _, tc := range []struct {
+		name, target string
+		want         []string
+	}{
+		{"editing a date names its course", "/dates/msa-a",
+			[]string{`placeholder="msa-mmm-yyyy"`, `placeholder="YY-MM MSA"`}},
+		{"a blank form names no course", "/dates/new",
+			[]string{`placeholder="course-mmm-yyyy"`, `placeholder="YY-MM CODE"`}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, tc.target, nil))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d", rec.Code)
+			}
+			body := rec.Body.String()
+			for _, want := range tc.want {
+				if !strings.Contains(body, want) {
+					t.Errorf("missing %s", want)
+				}
+			}
+			if strings.Contains(body, "msa-dez-2026") || strings.Contains(body, "26-12 MSA") {
+				t.Error("a hardcoded MSA example is back in the form")
+			}
+		})
+	}
+}

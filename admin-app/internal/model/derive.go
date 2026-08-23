@@ -111,3 +111,29 @@ func DefaultsFor(c Course) Defaults {
 	}
 	return d
 }
+
+// IDMask and CodeMask describe the *shape* of the two derived identifiers for
+// a given course. They exist because the placeholders used to be frozen MSA
+// examples, which were wrong for every other course and, worse, looked enough
+// like stored values that an operator could try to delete one.
+//
+// A mask rather than an example: these two fields fill themselves in as soon
+// as the first day is set, so a placeholder is only ever seen in the gap
+// before that, where the useful thing to show is the format, not a plausible
+// date that is not this one.
+
+// IDMask is the date id shape: "req4arc-mmm-yyyy".
+func IDMask(courseID string) string {
+	if courseID == "" {
+		return "course-mmm-yyyy"
+	}
+	return courseID + "-mmm-yyyy"
+}
+
+// CodeMask is the booking code shape: "YY-MM Req4Arc".
+func CodeMask(courseID string) string {
+	if courseID == "" {
+		return "YY-MM CODE"
+	}
+	return "YY-MM " + CodeToken(courseID)
+}
