@@ -222,18 +222,33 @@ button.help {
      for the same reason. */
   min-height: auto;
   padding: 0;
+  /* Centring the glyph, not leaving it to inline text layout: a "?" has no
+     descender and a short x-height, so in a 1.75rem box the default baseline
+     lands it low and left of the circle's middle. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--hairline);
   border-radius: 50%;
   background: var(--surface-1);
   color: var(--deep);                  /* 8.92:1 on paper */
-  font: inherit;
+  /* Not `font: inherit`: that took the size and weight of whichever label the
+     button sits in, so the same control rendered at different sizes down one
+     form. */
+  font-family: inherit;
+  font-size: 0.95rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
   vertical-align: middle;
 }
-button.help:hover { background: var(--surface-hover); border-color: var(--hairline-hover); }
-button.help[aria-expanded="true"] { background: var(--surface-2); border-color: var(--border); }
+/* Hover moves one step on the wash ladder, not three. --surface-hover next to
+   --surface-1 was a big enough jump that a hovered "?" beside a resting one
+   read as two different controls rather than one in two states. The stronger
+   fill and the hue border are kept for expanded, which is the state that
+   actually means something. */
+button.help:hover { background: var(--surface-2); border-color: var(--hairline-hover); }
+button.help[aria-expanded="true"] { background: var(--surface-hover); border-color: var(--border); }
 button.help:focus-visible { outline: 2px solid var(--band); outline-offset: 2px; }
 
 /* ---- Tables ---------------------------------------------------------------- */
