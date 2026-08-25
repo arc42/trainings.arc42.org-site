@@ -32,6 +32,19 @@ which registration form they point at (`/registration/` vs `/anmeldung/`).
 - The masthead nav is per language: [`_data/navigation.yml`](/_data/navigation.yml)
   holds `main` (English) and `main_de` (German); `page.lang == "de"` selects the
   latter.
+- **The registration form posts to a different Formspark form per language**, and
+  that is what decides the language of the confirmation email the registrant
+  gets. Formspark allows exactly one autoresponder template per form and no
+  hidden field overrides it per submission, so the form id *is* the language
+  choice: `AIKiYyJP` (German) and `Tq1M7LqmX` / "registration-EN" (English), both
+  declared at the top of
+  [`_includes/registration-form.html`](/_includes/registration-form.html). The
+  two autoresponder templates live in the Formspark dashboard, not in this repo —
+  editing the confirmation wording is dashboard work, and it has to be done
+  twice. Each form also carries its own Botpoison project (public key next to the
+  id here, secret key in that form's Formspark spam-protection settings). Adding
+  a language means adding a Formspark form, its autoresponder and its Botpoison
+  secret before touching this file.
 - [`_includes/head.html`](/_includes/head.html) emits the `hreflang` triple
   (`en`, `de`, `x-default`) from the same front matter. (Not
   `_includes/head/custom.html` — that one holds favicons, `theme-color` and
