@@ -32,6 +32,19 @@ which registration form they point at (`/registration/` vs `/anmeldung/`).
 - The masthead nav is per language: [`_data/navigation.yml`](/_data/navigation.yml)
   holds `main` (English) and `main_de` (German); `page.lang == "de"` selects the
   latter.
+- **The registration form posts to a different Formspark form per language**, and
+  that is what decides the language of the confirmation email the registrant
+  gets. Formspark allows exactly one autoresponder template per form and no
+  hidden field overrides it per submission, so the form id *is* the language
+  choice: `AIKiYyJP` (German) and `Tq1M7LqmX` / "registration-EN" (English), both
+  declared at the top of
+  [`_includes/registration-form.html`](/_includes/registration-form.html). The
+  two autoresponder templates live in the Formspark dashboard, not in this repo —
+  editing the confirmation wording is dashboard work, and it has to be done
+  twice. Each form also carries its own Botpoison project (public key next to the
+  id here, secret key in that form's Formspark spam-protection settings). Adding
+  a language means adding a Formspark form, its autoresponder and its Botpoison
+  secret before touching this file.
 - [`_includes/head.html`](/_includes/head.html) emits the `hreflang` triple
   (`en`, `de`, `x-default`) from the same front matter. (Not
   `_includes/head/custom.html` — that one holds favicons, `theme-color` and
@@ -47,8 +60,13 @@ which registration form they point at (`/registration/` vs `/anmeldung/`).
 
 ## Local development
 
-Everything runs in Docker — no local Ruby/bundler needed. `make` (or `make help`)
-lists all targets; the ones you need day to day:
+This repository holds two programs with two lifecycles: **the site** (Jekyll,
+static, GitHub Pages) and **the admin app** (Go, a container on fly.io). `make`
+(or `make help`) lists every target; the ones you need day to day:
+
+### The site
+
+Everything runs in Docker — no local Ruby/bundler needed.
 
 | Target | What it does |
 | --- | --- |
@@ -56,11 +74,42 @@ lists all targets; the ones you need day to day:
 | `make site` | Build the static site into `_site/` |
 | `make check-links` | Run html-proofer over the built `_site` (internal links, images, HTML) |
 | `make stop` | Stop and remove the running dev container |
-| `make clean` | Remove `_site/`, Jekyll caches and the Docker volumes |
+| `make clean` | Remove `_site/`, Jekyll caches, the Docker volumes and the admin binary |
 | `make install` | Re-resolve gems after editing the `Gemfile` (rewrites `Gemfile.lock`) |
 
 `make dev` refuses to start if another container already holds port 4000 — that
 is usually a dev server from a sibling arc42 site repo; stop that one first.
+
+### The admin app
+
+Needs Go 1.23; `flyctl` only for the `fly-*` targets.
+[`admin-app/README.md`](/admin-app/README.md#how-it-works) explains how the app
+works and why it is deployed in exactly one place.
+
+| Target | What it does |
+| --- | --- |
+| `make app-demo` | Run the real app offline on <http://localhost:8080> against a fake GitHub — nothing is published |
+| `make app-check` | Tests, `go vet` and `gofmt` — the same three checks CI gates the deploy on |
+| `make app-test` | Just the Go test suite |
+| `make app-preview` | Render every page to `preview-out/` as static HTML, no server |
+| `make app-build` | Compile to `admin-app/admin` as a fast compile check (never the deployed binary) |
+| `make fly-deploy` | Deploy your **current working tree** to fly.io — the manual path; it asks first |
+| `make fly-status` | The fly app, its machines and their health checks (`stopped` is normal: it scales to zero) |
+| `make fly-logs` | Tail production logs |
+| `make fly-releases` | What has actually been deployed, newest first |
+| `make fly-secrets` | The *names* of the fly secrets; values are never readable |
+
+`make app-demo` is how you try a change, or show the app to somebody, without a
+GitHub account or a network: it reads this checkout's `_data/trainings.yml`,
+never writes it, and "publishing" writes the proposed file to `demo-out/` and
+opens no pull request. See
+[The offline demo](/admin-app/README.md#the-offline-demo) for what it does and
+does not prove.
+
+Normally you never need `make fly-deploy`: pushing to `main` with changes under
+`admin-app/**` runs the same checks in CI and deploys. It is the escape hatch for
+when Actions is down, or for trying a branch on the real app — with the caveats
+in [How a change reaches production](/admin-app/README.md#how-a-change-reaches-production).
 
 ## Design
 
@@ -105,6 +154,17 @@ dead in-page anchors.
 ## Updating Training Dates (requires write access)
 
 Use the **trainings admin app** at [https://trainings-admin.arc42.org](https://trainings-admin.arc42.org) (also linked as **Maintainers** in the site footer): sign in with GitHub, edit courses or dates via forms, and publish — the app turns your editing session into a single pull request against `_data/trainings.yml` with a minimal diff.
+
+The two halves of this repository are hosted differently, which is worth knowing
+before you go looking for a server: **the site is static on GitHub Pages**, while
+**the admin app runs as a container on fly.io** — it needs somewhere to hold the
+GitHub OAuth client secret, the signed-in session and your unpublished draft,
+none of which a static site can do. The fly machine scales to zero between
+editing sessions, keeps no database and no volume, and never serves any page of
+trainings.arc42.org. It only ever opens pull requests.
+[`admin-app/README.md`](/admin-app/README.md#deployment-why-flyio-and-what-we-use-it-for)
+has the full reasoning, the config split between `fly.toml` and Fly secrets, and
+the deploy path.
 
 Manual editing remains the permanent fallback, as the app is never in the publishing path:
 

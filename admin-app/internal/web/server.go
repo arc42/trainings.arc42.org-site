@@ -39,7 +39,7 @@ type Server struct {
 var pages = []string{
 	"list.gohtml", "dateform.gohtml", "login.gohtml", "denied.gohtml", "error.gohtml",
 	"propose.gohtml", "conflict.gohtml", "published.gohtml",
-	"courselist.gohtml", "courseform.gohtml",
+	"courselist.gohtml", "courseform.gohtml", "confirmdelete.gohtml",
 }
 
 func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
@@ -69,6 +69,9 @@ func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
 			ClientID:     cfg.ClientID,
 			ClientSecret: cfg.ClientSecret,
 			Redirect:     publicURL + "/auth/callback",
+			// Pairs the sign-in host with the API host, so pointing the app at
+			// a stand-in API points sign-in there too rather than at github.com.
+			Endpoint: gh.EndpointFor(apiBase),
 		},
 		apiBase: apiBase,
 		set:     set,
@@ -91,6 +94,7 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("GET /dates/new", s.authed(s.handleDateForm))
 	mux.Handle("GET /dates/{id}", s.authed(s.handleDateForm))
 	mux.Handle("POST /dates/{id}", s.authed(s.handleDateSave))
+	mux.Handle("GET /dates/{id}/delete", s.authed(s.handleDateDeleteConfirm))
 	mux.Handle("POST /dates/{id}/delete", s.authed(s.handleDateDelete))
 	mux.Handle("GET /courses", s.authed(s.handleCourseList))
 	mux.Handle("GET /courses/new", s.authed(s.handleCourseForm))
@@ -190,6 +194,11 @@ func templateFuncs() template.FuncMap {
 		// codeToken travels with each course option so the browser can derive
 		// the booking code without a round trip.
 		"codeToken": func(courseID any) string { return model.CodeToken(fmt.Sprint(courseID)) },
+		// idMask and codeMask render the *shape* of the two derived
+		// identifiers for the selected course. form.js re-renders them when
+		// the course changes; these cover the first paint and scripting-off.
+		"idMask":   func(courseID any) string { return model.IDMask(fmt.Sprint(courseID)) },
+		"codeMask": func(courseID any) string { return model.CodeMask(fmt.Sprint(courseID)) },
 		// defaultsOf hands the template the values a new date for this course
 		// would repeat, so switching the dropdown re-applies them in the browser.
 		"defaultsOf": model.DefaultsFor,

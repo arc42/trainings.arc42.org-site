@@ -54,6 +54,17 @@ func prBody(changes []Change, login string) string {
 
 var unsafeRef = regexp.MustCompile(`[^a-z0-9-]+`)
 
+// branchName builds the ref a proposal is pushed to. The date and the slug are
+// there to make the PR list readable; the random tail is there to make the name
+// unique.
+//
+// Uniqueness is not cosmetic. GitHub answers POST /git/refs for an existing ref
+// with 422 "Reference already exists", which aborts the whole proposal before
+// the commit and the PR — so without the tail, the *second* proposal of the day
+// about the same date is simply impossible. That is not an exotic sequence: fix
+// a typo on a date in the morning, remove the date in the afternoon, and the
+// removal is refused. Deriving the tail from the clock instead only narrows the
+// window; two maintainers can still submit within the same second.
 func branchName(now time.Time, changes []Change) string {
 	slug := "edit"
 	if len(changes) > 0 {
@@ -61,9 +72,14 @@ func branchName(now time.Time, changes []Change) string {
 		slug = strings.Trim(slug, "-")
 	}
 	if len(slug) > 40 {
-		slug = slug[:40]
+		slug = strings.Trim(slug[:40], "-")
 	}
-	return fmt.Sprintf("trainings-admin/%s-%s", now.Format("2006-01-02"), slug)
+	// A DateID that slugs down to nothing (all punctuation) would otherwise
+	// leave an empty segment and a "--" run in the middle of the ref.
+	if slug == "" {
+		slug = "edit"
+	}
+	return fmt.Sprintf("trainings-admin/%s-%s-%s", now.Format("2006-01-02"), slug, newID()[:6])
 }
 
 func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {

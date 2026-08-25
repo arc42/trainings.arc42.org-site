@@ -14,7 +14,9 @@
 <td><span class="status status-{{.Date.Status}}">{{.Date.Status}}</span></td>
 <td class="row-actions">
   <a href="/dates/new?from={{.Date.ID}}">Duplicate</a>
-  <form method="post" action="/dates/{{.Date.ID}}/delete"><button class="link danger">Remove</button></form>
+  {{/* A link, not a submit: removal goes through the confirmation page, which
+       is the only chance to catch a misclick — there is no per-change undo. */}}
+  <a class="danger" href="/dates/{{.Date.ID}}/delete">Remove</a>
 </td></tr>{{else}}
 <tr><td colspan="7">No dates yet.</td></tr>
 {{end}}

@@ -25,7 +25,7 @@ func dirtyServer(t *testing.T, apiBase string) *Server {
 }
 
 func TestProposeShowsTheDiff(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := dirtyServer(t, gh.URL)
 
@@ -41,8 +41,7 @@ func TestProposeShowsTheDiff(t *testing.T) {
 }
 
 func TestProposeSubmitOpensOnePR(t *testing.T) {
-	var calls []string
-	gh := fakeGitHub(t, &calls)
+	gh, fake := fakeGitHub(t)
 	defer gh.Close()
 	s := dirtyServer(t, gh.URL)
 
@@ -50,11 +49,11 @@ func TestProposeSubmitOpensOnePR(t *testing.T) {
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/propose", url.Values{
 		"title": {"Training dates: 1 change"}, "body": {"- updated 26-01 MSA"},
 	}))
-	if !strings.Contains(rec.Body.String(), "pull/7") {
+	if !strings.Contains(rec.Body.String(), "pull/1") {
 		t.Errorf("PR link not shown:\n%s", rec.Body.String())
 	}
 	var pulls int
-	for _, c := range calls {
+	for _, c := range fake.Calls() {
 		if strings.HasSuffix(c, "/pulls") {
 			pulls++
 		}
@@ -68,7 +67,7 @@ func TestProposeSubmitOpensOnePR(t *testing.T) {
 }
 
 func TestProposeDetectsConcurrentEdit(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := dirtyServer(t, gh.URL)
 
@@ -115,6 +114,45 @@ func TestBranchNameIsSafe(t *testing.T) {
 	}
 }
 
+// TestBranchNamesAreUniquePerProposal reproduces a bug that cost a maintainer a
+// deletion: the branch name used to be a pure function of (day, first change),
+// so proposing twice on the same day about the same date produced the same ref
+// twice. Editing a row and later removing it is ordinary — it happened within
+// three hours on 2026-08-20 — and the second proposal died on
+// POST /git/refs -> 422 "Reference already exists", surfacing only as
+// "could not open the pull request".
+func TestBranchNamesAreUniquePerProposal(t *testing.T) {
+	now := time.Date(2026, 8, 20, 15, 29, 8, 0, time.UTC)
+	changes := []Change{{Kind: "removed", DateID: "msa-27-02-online"}}
+
+	first := branchName(now, changes)
+	second := branchName(now, changes)
+
+	if first == second {
+		t.Fatalf("two proposals about the same date on the same day share a branch name %q;\n"+
+			"the second one cannot be pushed (422 Reference already exists)", first)
+	}
+	for _, got := range []string{first, second} {
+		if !strings.HasPrefix(got, "trainings-admin/2026-08-20-msa-27-02-online-") {
+			t.Errorf("branchName = %q, want the readable date slug kept", got)
+		}
+		if strings.ContainsAny(got, " ~^:?*[\\") {
+			t.Errorf("branchName %q contains characters git refs forbid", got)
+		}
+	}
+}
+
+// A DateID of nothing but punctuation slugs down to "", which used to yield a
+// "--" run in the middle of the ref. Git accepts it, but the branch reads as
+// broken in the PR list.
+func TestBranchNameSurvivesAnUnslugifiableDateID(t *testing.T) {
+	got := branchName(time.Date(2026, 8, 20, 0, 0, 0, 0, time.UTC),
+		[]Change{{Kind: "removed", DateID: "///"}})
+	if strings.Contains(got, "--") || strings.HasSuffix(got, "-") {
+		t.Errorf("branchName = %q, want no empty slug segment", got)
+	}
+}
+
 // TestProposeEscapesUserContentInTheDiff guards a deliberate use of
 // template.HTML. The diff is built from the edited document, which contains
 // whatever the user typed into the form, so rendering it unescaped would turn
@@ -122,7 +160,7 @@ func TestBranchNameIsSafe(t *testing.T) {
 // first and only then marks the result trusted; this test is what keeps the
 // escaping from being dropped as "redundant" later.
 func TestProposeEscapesUserContentInTheDiff(t *testing.T) {
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -151,5 +189,41 @@ func TestProposeEscapesUserContentInTheDiff(t *testing.T) {
 	// mangles every added line. Escaping must not reintroduce that.
 	if strings.Contains(body, "&#43;") {
 		t.Error("diff contains &#43; — plus signs are being over-escaped again")
+	}
+}
+
+// TestTwoProposalsAboutOneDateOnOneDayBothSucceed is the regression test for the
+// reported failure: a maintainer edited msa-27-02-online, then tried to remove
+// it the same afternoon and got "could not open the pull request" with no clue
+// why. Both proposals must reach the /pulls call — and land as two distinct
+// pull requests, which is what the two numbers below check.
+//
+// The double refuses a duplicate ref with 422 the way GitHub does, so this test
+// fails without the unique branch name. That refusal used to live in a special
+// fake set up here; it now belongs to ghfake, where every test gets it.
+func TestTwoProposalsAboutOneDateOnOneDayBothSucceed(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+
+	propose := func(t *testing.T, s *Server) string {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/propose", url.Values{
+			"title": {"Training dates: 1 change"}, "body": {"b"},
+		}))
+		return rec.Body.String()
+	}
+
+	// Morning: edit the date.
+	if got := propose(t, dirtyServer(t, gh.URL)); !strings.Contains(got, "/pull/1") {
+		t.Fatalf("first proposal failed:\n%s", got)
+	}
+
+	// Afternoon: remove the very same date, in a fresh session.
+	s := testServer(t, gh.URL)
+	s.Routes().ServeHTTP(httptest.NewRecorder(),
+		signedIn(t, s, http.MethodPost, "/dates/msa-a/delete", url.Values{}))
+	if got := propose(t, s); !strings.Contains(got, "/pull/2") {
+		t.Fatalf("removing a date after editing it the same day failed:\n%s", got)
 	}
 }

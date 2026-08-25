@@ -1,0 +1,29 @@
+{{define "confirmdelete.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+{{$d := .Row.Date}}
+<h1>Remove this date?</h1>
+
+<dl class="record">
+  <dt>Booking code</dt><dd>{{$d.Code}}</dd>
+  <dt>Course</dt><dd>{{.Row.CourseShortTitle}}</dd>
+  <dt>When</dt><dd>{{$d.Start}} → {{$d.End}}</dd>
+  <dt>Where</dt><dd>{{if eqStr $d.Format "online"}}online{{else}}{{$d.City}}{{if $d.Country}}, {{$d.Country}}{{end}}{{end}}</dd>
+  <dt>Language</dt><dd>{{$d.Language}}</dd>
+  <dt>Format</dt><dd>{{$d.Format}}</dd>
+  {{if $d.Trainers}}<dt>Trainers</dt><dd>{{join $d.Trainers ", "}}</dd>{{end}}
+  {{if $d.Pricing}}<dt>Pricing</dt><dd>{{$d.Pricing}}</dd>{{end}}
+  <dt>Status</dt><dd><span class="status status-{{$d.Status}}">{{$d.Status}}</span></dd>
+  <dt>Date ID</dt><dd><code>{{$d.ID}}</code></dd>
+</dl>
+
+<p class="notice-inline">This removes the date from <strong>your draft</strong>.
+  Nothing is published until you review the diff and open the pull request — and
+  nothing reaches the live site until a maintainer merges it.</p>
+
+<div class="actions">
+  <form method="post" action="/dates/{{$d.ID}}/delete">
+    <button class="danger">Yes, remove {{$d.Code}}</button>
+  </form>
+  <a href="/">Cancel</a>
+</div>
+{{end}}

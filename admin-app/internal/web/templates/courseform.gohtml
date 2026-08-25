@@ -15,28 +15,28 @@
     <legend>Identity</legend>
     <label>Course ID <span class="req" aria-hidden="true">*</span>
       <input name="id" id="c-id" value="{{.Course.ID}}" required pattern="[a-z0-9-]+"
-             aria-describedby="cid-hint" placeholder="msa" {{if not .IsNew}}readonly{{end}}>
+             aria-describedby="cid-hint" placeholder="e.g. msa" {{if not .IsNew}}readonly{{end}}>
       <small id="cid-hint" class="hint">Lower-case letters, digits and hyphens.
         {{if .IsNew}}Every date links to its course by this value.
         {{else}}Not editable — the dates below reference it.{{end}}</small>
     </label>
     <label>Short title <span class="req" aria-hidden="true">*</span>
       <input name="short_title" value="{{.Course.ShortTitle}}" required
-             aria-describedby="st-hint" placeholder="Mastering SW Architectures">
+             aria-describedby="st-hint" placeholder="e.g. Mastering SW Architectures">
       <small id="st-hint" class="hint">Used where space is tight: the dates table
         and the timeline cards.</small>
     </label>
     <label>Full title <span class="req" aria-hidden="true">*</span>
       <input name="title" value="{{.Course.Title}}" required
              aria-describedby="ctitle-hint"
-             placeholder="Mastering Software Architectures">
+             placeholder="e.g. Mastering Software Architectures">
       <small id="ctitle-hint" class="hint">The complete name, used where there is
         room to spell it out.</small>
     </label>
     <label>Course URL <span class="req" aria-hidden="true">*</span>
       <input type="url" name="url" id="c-url" value="{{.Course.URL}}" required
              aria-describedby="curl-hint"
-             placeholder="https://www.arc42.de/info-msa/">
+             placeholder="e.g. https://www.arc42.de/info-msa/">
       <small id="curl-hint" class="hint">The course description page people read
         before booking. Filled in from the id as
         https://www.arc42.de/info-&lt;id&gt;/ — change it if this course lives
@@ -44,7 +44,7 @@
     </label>
     <label>English course page (optional)
       <input type="url" name="url_en" value="{{.Course.URLEn}}"
-             placeholder="https://trainings.arc42.org/courses/msa/" aria-describedby="url-en-hint">
+             placeholder="e.g. https://trainings.arc42.org/courses/msa/" aria-describedby="url-en-hint">
       <small id="url-en-hint" class="hint">Shown instead of the course URL on the English
         arc42 sites. Leave empty if there is no English page.</small>
     </label>
@@ -56,7 +56,7 @@
     <legend>Description</legend>
     <label>Blurb
       <textarea name="blurb" rows="4" aria-describedby="blurb-hint"
-                placeholder="Two expert trainers at all times, highly practical and pragmatic.">{{.Course.Blurb}}</textarea>
+                placeholder="e.g. Two expert trainers at all times, highly practical and pragmatic.">{{.Course.Blurb}}</textarea>
       <small id="blurb-hint" class="hint">Two or three sentences. Appears on the
         timeline card under the course name.</small>
     </label>
@@ -64,7 +64,7 @@
       <label>Certification
         <input name="certification" value="{{.Course.Certification}}"
                aria-describedby="cert-hint"
-               placeholder="iSAQB CPSA-Foundation">
+               placeholder="e.g. iSAQB CPSA-Foundation">
         <small id="cert-hint" class="hint">The certificate this course prepares
           for, if any. Leave empty when it prepares for none.</small>
       </label>

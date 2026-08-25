@@ -60,6 +60,11 @@ exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"
   - admin-app
+  # Local output of `make app-demo` and `make app-preview`. Gitignored, but
+  # Jekyll would still copy whatever is lying there into _site — where
+  # html-proofer then checks the admin app's pages as if they were site pages.
+  - demo-out
+  - preview-out
   - docs
   - vendor
   - .asset-cache
@@ -83,7 +88,7 @@ exclude:
   - Rakefile
   - README
   - tmp
-  - CRUSH.md
+  - CLAUDE.md
 keep_files:
   - .git
   - .svn

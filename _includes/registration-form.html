@@ -5,6 +5,28 @@
   hand-maintained (that was the drift problem this task fixes).
 {%- endcomment -%}
 
+{%- comment -%}
+  ONE FORMSPARK FORM PER LANGUAGE — the duplication below is load-bearing.
+  The confirmation mail a registrant receives is Formspark's *autoresponder*,
+  and Formspark allows exactly ONE autoresponder template per form, with no
+  hidden field that overrides it per submission (the _email.* fields further
+  down shape only the notification that comes to us). So the form a submission
+  lands in IS the choice of confirmation language: AIKiYyJP carries the German
+  template, Tq1M7LqmX ("registration-EN") the English one. Point both languages
+  at one id and half the registrants get a confirmation they cannot read.
+  Each form has its own Botpoison project, so the public key travels with the
+  id; the matching secret (sk_...) lives in that form's Formspark
+  spam-protection settings — a form without it accepts unverified submissions.
+  A third language means a third Formspark form, not another branch here.
+{%- endcomment -%}
+{%- if include.lang == "de" -%}
+  {%- assign formspark_id = "AIKiYyJP" -%}
+  {%- assign botpoison_key = "pk_8e195655-38ed-4eec-a445-a1e0d68a488d" -%}
+{%- else -%}
+  {%- assign formspark_id = "Tq1M7LqmX" -%}
+  {%- assign botpoison_key = "pk_4ae4fe64-afbe-448d-979f-f73475d89a08" -%}
+{%- endif -%}
+
 {% if include.lang == "de" %}
 <noscript>
      <h1>Zur Anmeldung muss Ihr Browser JavaScript erlauben!</h1>
@@ -28,8 +50,8 @@ activate JavaScript and reload this page.
 
 <div id="main_body" style="display: none;">
 
-<form action="https://submit-form.com/AIKiYyJP"
-      data-botpoison-public-key="pk_8e195655-38ed-4eec-a445-a1e0d68a488d"
+<form action="https://submit-form.com/{{ formspark_id }}"
+      data-botpoison-public-key="{{ botpoison_key }}"
       class="registration-form"
       id="arc42anmeldung">
 
@@ -149,9 +171,16 @@ In case you register more than one person, please state their names in the comme
 <input type="hidden" name="_redirect" value="{% if include.lang == "de" %}{{ '/anmeldung-erfolg/' | absolute_url }}{% else %}{{ '/registration-success/' | absolute_url }}{% endif %}" />
 <input type="hidden" name="_error" value="{% if include.lang == "de" %}{{ '/anmeldung-fail/' | absolute_url }}{% else %}{{ '/registration-fail/' | absolute_url }}{% endif %}" />
 <input type="hidden" name="_append" value="false" />
-<input type="hidden" name="_email.subject" value="[trainings.arc42.org] ANMELDUNG" />
+{%- comment -%}
+  Submitted as data, not just implied by the form id: the language the
+  registrant actually read and answered in. Deliberately the SAME field name in
+  both forms (the visible fields are named per language) so exports and any
+  later automation can read it without knowing which form it came from.
+{%- endcomment -%}
+<input type="hidden" name="language" value="{% if include.lang == "de" %}de{% else %}en{% endif %}" />
+<input type="hidden" name="_email.subject" value="[trainings.arc42.org] {% if include.lang == "de" %}ANMELDUNG{% else %}REGISTRATION{% endif %}" />
 <input type="hidden" name="_email.from" value="trainings.arc42.org Website (via formspark.io)" />
-<input type="hidden" name="_email.template.title" value="Anmeldung (via trainings.arc42.org)" />
+<input type="hidden" name="_email.template.title" value="{% if include.lang == "de" %}Anmeldung{% else %}Registration{% endif %} (via trainings.arc42.org)" />
 
 </form>
 

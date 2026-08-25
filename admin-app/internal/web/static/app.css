@@ -24,6 +24,7 @@
      ink-muted: #646769 — 5.60:1 on --paper, 5.02:1 on --surface-1 */
   --ink: #3d4144;
   --ink-muted: #646769;
+  --ink-placeholder: #6a6d6f; /* 5.12:1 on --paper, 4.59:1 on --surface-1 */
 
   /* ---- Hairlines, two tiers ---------------------------------------------
      divider tier is decorative only, never the sole carrier of meaning;
@@ -147,13 +148,27 @@ form.detail {
   gap: 1rem;
   max-width: 60ch;
 }
+/* A label holds a caption, a required marker, the "?" button form.js injects,
+   the control and its hint. Block, not column-flex, is what keeps the first
+   three on one line: as flex items each of them became its own row, so a field
+   read as four stacked fragments — caption, then a lone "*", then a lone "?",
+   then finally the input. The control below is blocked explicitly instead. */
 label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: block;
   font-weight: 600;
   color: var(--ink);              /* 10.12:1 on paper */
 }
+label > input, label > select, label > textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+label > .hint { margin-top: 0.25rem; }
+/* :not([hidden]) is load-bearing. form.js collapses each hint by setting the
+   hidden attribute, and a plain "display: block" here would be an author rule
+   beating the UA's [hidden] { display: none } — every hint would stand open
+   and the "?" button would toggle nothing. */
+label > .hint:not([hidden]) { display: block; }
 label small { font-weight: 400; color: var(--ink-muted); /* 5.60:1 on paper */ }
 input, select, textarea {
   font: inherit;
@@ -202,19 +217,38 @@ button.help {
   margin-left: 0.4rem;
   width: 1.75rem;
   height: 1.75rem;
+  /* Without this the 44px floor shared by every button wins over the height
+     above and the circle renders as a 28x44 ellipse. button.link resets it
+     for the same reason. */
+  min-height: auto;
   padding: 0;
+  /* Centring the glyph, not leaving it to inline text layout: a "?" has no
+     descender and a short x-height, so in a 1.75rem box the default baseline
+     lands it low and left of the circle's middle. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--hairline);
   border-radius: 50%;
   background: var(--surface-1);
   color: var(--deep);                  /* 8.92:1 on paper */
-  font: inherit;
+  /* Not `font: inherit`: that took the size and weight of whichever label the
+     button sits in, so the same control rendered at different sizes down one
+     form. */
+  font-family: inherit;
+  font-size: 0.95rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
   vertical-align: middle;
 }
-button.help:hover { background: var(--surface-hover); border-color: var(--hairline-hover); }
-button.help[aria-expanded="true"] { background: var(--surface-2); border-color: var(--border); }
+/* Hover moves one step on the wash ladder, not three. --surface-hover next to
+   --surface-1 was a big enough jump that a hovered "?" beside a resting one
+   read as two different controls rather than one in two states. The stronger
+   fill and the hue border are kept for expanded, which is the state that
+   actually means something. */
+button.help:hover { background: var(--surface-2); border-color: var(--hairline-hover); }
+button.help[aria-expanded="true"] { background: var(--surface-hover); border-color: var(--border); }
 button.help:focus-visible { outline: 2px solid var(--band); outline-offset: 2px; }
 
 /* ---- Tables ---------------------------------------------------------------- */
@@ -227,7 +261,9 @@ table.dates th, table.dates td {
 table.dates thead th { color: var(--ink-muted); font-weight: 600; } /* 5.60:1 on paper */
 table.dates tr.past { color: var(--ink-muted); } /* 5.60:1 on paper */
 table.dates .row-actions { display: flex; gap: 0.75rem; white-space: nowrap; }
-table.dates .row-actions form { display: inline; }
+/* Remove is a link to the confirmation page, not a submit — see list.gohtml. */
+table.dates .row-actions a.danger { color: var(--danger); } /* 5.53:1 on paper */
+table.dates .row-actions a.danger:hover { color: #ffffff; background: var(--danger); } /* 5.63:1 */
 
 /* ---- Status badges ---------------------------------------------------------
    Each is a wash + dark ink pair, never saturated fill behind text
@@ -244,6 +280,40 @@ table.dates .row-actions form { display: inline; }
 .status-waitlist    { background: var(--amber);      color: var(--amber-ink); } /* 7.24:1 */
 .status-full        { background: var(--grey-wash);  color: var(--grey-ink); }  /* 8.42:1 */
 .status-cancelled   { background: color-mix(in oklab, var(--danger) 12%, var(--paper)); color: var(--danger); } /* text-on-wash: >= 5.53:1 (the wash is lighter than --paper, so the ratio against --danger only improves; base pair measured on button.link.danger) */
+
+/* ---- Confirm before removing ------------------------------------------------
+   Removal is the only action with no per-change undo, so it goes through a page
+   that shows the row the way the operator recognises it — a rendered record, not
+   the YAML that the propose diff already covers. */
+dl.record {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.25rem;
+  max-width: 60ch;
+  border: 1px solid var(--hairline);   /* divider tier: decorative only */
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+dl.record dt { font-weight: 600; color: var(--ink-muted); } /* 5.02:1 on --surface-1 */
+dl.record dd { margin: 0; color: var(--ink); }              /* 9.08:1 on --surface-1 */
+/* Below the phone breakpoint the two columns squeeze the values; stack instead,
+   matching how .row collapses. */
+@media (max-width: 34rem) {
+  dl.record { grid-template-columns: 1fr; gap: 0; }
+  dl.record dd { margin-bottom: 0.6rem; }
+}
+
+.notice-inline { max-width: 60ch; color: var(--ink); } /* 10.12:1 on paper */
+
+/* The confirming button is filled, not a quiet link: it is the one control on
+   the page that actually removes something. */
+button.danger { background: var(--danger); border-color: var(--danger); color: #ffffff; } /* 5.63:1 on --danger */
+button.danger:hover {
+  background: color-mix(in oklab, var(--danger) 82%, #000000);
+  border-color: color-mix(in oklab, var(--danger) 82%, #000000);
+}
 
 /* ---- Draft bar -------------------------------------------------------------- */
 .draftbar {
@@ -314,6 +384,8 @@ label > .hint { margin-top: 0.1rem; }
 ul.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
 @media (min-width: 40rem) { ul.checks { grid-template-columns: 1fr 1fr; } }
 label.check {
+  display: flex;                       /* declared here, not inherited: the base
+                                          label rule is block (see above) */
   flex-direction: row;
   align-items: center;
   gap: 0.6rem;
@@ -337,7 +409,15 @@ input[readonly] {
   background: var(--surface-1);        /* ink 9.08:1 on this */
   border-color: var(--hairline);
 }
-input::placeholder, textarea::placeholder { color: var(--ink-muted); } /* 5.60:1 — placeholders are text and hold the same floor */
+/* A placeholder has to stay legible and still never be mistaken for a stored
+   value — an operator once spent a while deleting an empty Certification
+   field. Italic carries that distinction; the tone only has to stay above the
+   floor, so it lightens by one step rather than doing the work alone.
+   #6a6d6f: 5.12:1 on --paper, 4.59:1 on --surface-1. */
+input::placeholder, textarea::placeholder {
+  color: var(--ink-placeholder);
+  font-style: italic;
+}
 
 /* Validation summary. role="alert" moves focus-order attention here; the
    heading names the job rather than the failure count. */

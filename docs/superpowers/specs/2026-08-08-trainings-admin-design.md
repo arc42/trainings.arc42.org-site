@@ -86,6 +86,7 @@ single static binary.
 | `internal/validate` | Schema check + cross-field rules | `model` |
 | `internal/gh` | OAuth flow; permission check; read file; create branch, commit, PR | — |
 | `internal/web` | Handlers, templates, session, draft store | all of the above |
+| `internal/ghfake` | Stand-in for the GitHub API: sign-in, permission check, file read, branch/commit/PR. Used by the handler tests and by `cmd/demo` | — |
 
 Each package is independently testable and has no knowledge of `web`.
 
@@ -217,13 +218,38 @@ decorative.
 
 No browser/e2e tests — four screens do not justify the maintenance.
 
+**One double, shared.** The stand-in GitHub lives in `internal/ghfake`, and both
+the handler tests and the offline demo (`cmd/demo`, `make app-demo`) run against
+it. Its rule is that it must refuse what GitHub refuses — a duplicate ref is
+422, a commit over a moved blob is 409 — each refusal covered by its own test.
+A double more permissive than the real API is worse than none: the suite then
+certifies a flow that cannot work, which is exactly how the duplicate-branch
+failure of 2026-08-20 reached production unseen.
+
+**The demo is not an environment.** It runs the real handlers, the real
+templates and the real sign-in flow against that double, reading the working
+copy's `_data/trainings.yml` and writing nothing; publishing saves the proposed
+file to `demo-out/` and opens nothing. `cmd/demo` and `internal/ghfake` are
+unreachable from the deployed binary — the Dockerfile builds the root package
+alone, and a test in `main_test.go` fails if that stops being true — so no
+configuration can turn a real deployment into one that fakes its own sign-in.
+
 ## 10. Deployment — the only environment
 
 The app runs in exactly one place: fly.io, at
 <https://trainings-admin.arc42.org>. It is developed by pushing, not by being
 started somewhere else. `go test ./...` runs the suite anywhere Go 1.23 is
 installed; a push to `main` touching `admin-app/**` runs the same tests in CI
-and then deploys. There is no manual deploy step.
+and then deploys.
+
+Deployment is CI's job, but not CI's alone: `make fly-deploy` (root `Makefile`)
+runs the same checks and then `flyctl deploy --remote-only` from a maintainer's
+machine, for when Actions is unavailable or a branch needs trying on the real
+app — the only way to exercise GitHub OAuth and a real PR, since there is no
+local mode. It builds from the working tree, so it ships unreviewed code and the
+next push to `main` replaces it; the target says so and asks before proceeding.
+`make fly-status`, `fly-logs`, `fly-releases` and `fly-secrets` cover the
+read-only side. See `admin-app/README.md`.
 
 Multi-stage Dockerfile → scratch. `fly.toml`: app `arc42-trainings-admin`,
 primary region `ams`, `internal_port = 8080`, `force_https`,

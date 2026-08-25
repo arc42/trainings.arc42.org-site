@@ -14,7 +14,7 @@ func TestDumpPreview(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PREVIEW_DIR to dump rendered pages")
 	}
-	gh := fakeGitHub(t, nil)
+	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
@@ -23,6 +23,8 @@ func TestDumpPreview(t *testing.T) {
 		"date-edit.html":  "/dates/msa-a",
 		"course-new.html": "/courses/new",
 		"courses.html":    "/courses",
+		"confirm.html":    "/dates/msa-a/delete",
+		"list.html":       "/",
 	} {
 		rec := httptest.NewRecorder()
 		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, target, nil))
