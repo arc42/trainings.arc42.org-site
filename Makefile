@@ -1,8 +1,8 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help dev build stop site check-links clean install update shell logs \
-        app-test app-check app-build app-demo app-preview check-go check-flyctl \
-        fly-deploy fly-status fly-logs fly-secrets fly-releases
+        app-test app-check app-build app-demo app-stop app-preview check-go \
+        check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases
 
 APP_DIR     := admin-app
 FLY_APP     := arc42-trainings-admin
@@ -31,7 +31,7 @@ dev: ## Start the local Jekyll dev server with live reload (http://localhost:400
 build: ## Build the Docker dev image from the Gemfile-pinned gems
 	docker compose build
 
-stop: ## Stop and remove the running dev container
+stop: ## Stop and remove the Jekyll dev container (the demo is not a container — see app-stop)
 	docker compose down
 
 site: build ## Generate the static site into _site/
@@ -81,6 +81,24 @@ app-demo: check-go ## Run the admin app offline on :8080 against a fake GitHub (
 	@printf "==> The demo reads _data/trainings.yml and never writes it.\n"
 	@printf "==> Publishing writes the proposed file to demo-out/ and opens nothing.\n"
 	cd $(APP_DIR) && go run ./cmd/demo -repo ..
+
+# `make stop` is docker compose down, and the demo is not a container: it is a
+# plain Go process. Ctrl-C ends it in the foreground, which is the normal case.
+# This target is for the other one — started in the background, or the `go run`
+# wrapper killed on its own, which leaves the compiled child still holding :8080.
+#
+# Matching on "-repo", not on the path: `go run` execs the binary it built from a
+# directory it names itself, sometimes the build cache and sometimes a temp dir,
+# so the only stable part of that child's command line is the name it was given
+# and the flag it was passed. The "[o]" keeps the pattern from matching the shell
+# running this recipe, whose command line contains it too — BSD pgrep skips the
+# caller's ancestors, GNU pgrep does not, and this way it does not matter which
+# one is installed.
+app-stop: ## Stop a demo left running in the background (Ctrl-C is enough in the foreground)
+	@pids=$$(pgrep -f '/dem[o] -repo' 2>/dev/null || true); \
+	if [ -z "$$pids" ]; then printf "==> No demo is running.\n"; exit 0; fi; \
+	kill $$pids 2>/dev/null || true; \
+	printf "==> stopped the demo (pid%s)\n" "$$(echo $$pids | sed 's/^/ /')"
 
 app-preview: check-go ## Render every page to preview-out/ as HTML files, without a server
 	@mkdir -p $(PREVIEW_DIR)/static
