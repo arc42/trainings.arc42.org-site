@@ -27,6 +27,7 @@ courses:
         language: en
         format: online
         trainers: ["Wolfgang Reimesch"]
+        pricing: "€2100"
         url: "https://www.arc42.de/termine#msa-online-sep-2026"
         status: open
       - id: msa-dez-2026
@@ -92,7 +93,7 @@ courses:
         language: en
         format: online
         trainers: ["Wolfgang Reimesch"]
-        pricing: "€2200"
+        pricing: "€2100"
         few_seats: "only few seats available"
         url: "https://www.arc42.de/termine#msa-27-02-online"
         status: open
