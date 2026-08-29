@@ -4,6 +4,11 @@
         app-test app-check app-build app-demo app-stop app-preview check-go \
         check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases
 
+# This site's fixed local dev port. Every arc42 site has its own so their dev
+# servers can run side by side; see raw/port-assignment.md in meta.arc42.org.
+# Changing it here is not enough: docker-compose.yml maps it and the Dockerfile
+# CMD passes it to Jekyll so its startup banner names the real port.
+SITE_PORT   := 4040
 APP_DIR     := admin-app
 FLY_APP     := arc42-trainings-admin
 PREVIEW_DIR := preview-out
@@ -16,12 +21,12 @@ help: ## Show this help
 	@printf "\n  Both halves normally ship from CI on push to main. 'make fly-deploy' is the\n"
 	@printf "  manual escape hatch for the admin app — see admin-app/README.md.\n\n"
 
-dev: ## Start the local Jekyll dev server with live reload (http://localhost:4000)
-	@echo "==> Open http://localhost:4000  (NOT http://0.0.0.0:4000 — Firefox refuses to connect to 0.0.0.0)"
+dev: ## Start the local Jekyll dev server with live reload (http://localhost:4040)
+	@echo "==> Open http://localhost:$(SITE_PORT)  (NOT http://0.0.0.0:$(SITE_PORT) — Firefox refuses to connect to 0.0.0.0)"
 	@docker compose down --remove-orphans >/dev/null 2>&1 || true
-	@holder=$$(docker ps --filter "publish=4000" --format '{{.Names}}'); \
+	@holder=$$(docker ps --filter "publish=$(SITE_PORT)" --format '{{.Names}}'); \
 	if [ -n "$$holder" ]; then \
-		echo "==> Port 4000 is already in use by another container: $$holder"; \
+		echo "==> Port $(SITE_PORT) is already in use by another container: $$holder"; \
 		echo "==> That's likely a dev server from a sibling arc42 site repo. Stop it first, e.g.:"; \
 		echo "==>   docker stop $$holder"; \
 		exit 1; \

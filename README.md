@@ -70,15 +70,22 @@ Everything runs in Docker — no local Ruby/bundler needed.
 
 | Target | What it does |
 | --- | --- |
-| `make dev` | Start the dev server with live reload at <http://localhost:4000> (not `0.0.0.0:4000`) |
+| `make dev` | Start the dev server with live reload at <http://localhost:4040> (not `0.0.0.0:4040`) |
 | `make site` | Build the static site into `_site/` |
 | `make check-links` | Run html-proofer over the built `_site` (internal links, images, HTML) |
 | `make stop` | Stop and remove the Jekyll dev container — it does not touch the admin app demo, which is not a container (see `make app-stop`) |
 | `make clean` | Remove `_site/`, Jekyll caches, the Docker volumes and the admin binary |
 | `make install` | Re-resolve gems after editing the `Gemfile` (rewrites `Gemfile.lock`) |
 
-`make dev` refuses to start if another container already holds port 4000 — that
-is usually a dev server from a sibling arc42 site repo; stop that one first.
+`make dev` serves on port **4040**, this repo's fixed slot in the port
+assignment across arc42 sites, so it does not collide with the sibling site
+repos — see `raw/port-assignment.md` in meta.arc42.org for the full list.
+Jekyll binds 4040 inside the container as well as on the host, so the
+"Server address:" banner it prints on startup names the real port. The number
+lives in three places that must stay in step: `SITE_PORT` in the `Makefile`,
+the mapping in `docker-compose.yml`, and `EXPOSE`/`CMD` in the `Dockerfile`.
+`make dev` still refuses to start if another container already holds 4040;
+stop that one first.
 
 ### The admin app
 

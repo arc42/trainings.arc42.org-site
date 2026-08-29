@@ -17,5 +17,5 @@ RUN gem install bundler:2.5.4
 COPY Gemfile Gemfile.lock ./
 RUN bundle install --jobs 4 --retry 3
 
-EXPOSE 4000
-CMD ["bundle", "exec", "jekyll", "serve", "--host", "0.0.0.0", "--force_polling"]
+EXPOSE 4040
+CMD ["bundle", "exec", "jekyll", "serve", "--host", "0.0.0.0", "--port", "4040", "--force_polling"]

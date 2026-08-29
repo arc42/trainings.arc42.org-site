@@ -19,3 +19,5 @@ admin-app/admin
 # `make app-preview` dumps the rendered pages. Both are throwaway local output.
 demo-out/
 preview-out/
+.agents
+skills-lock.json

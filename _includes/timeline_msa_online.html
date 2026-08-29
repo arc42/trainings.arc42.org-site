@@ -36,6 +36,15 @@
         {% else %}
           {% if include.delivery_lang == "de" %}<p class="training-language-note">held in German</p>{% else %}<p class="training-language-note">held in English</p>{% endif %}
         {% endif %}
+        {%- comment -%}
+          Trainers deliver every English online course from Germany, so this
+          is a hardcoded fact about the business, not per-date data. Shown
+          regardless of page_lang: foreign participants also register via
+          arc42.de's German pages.
+        {%- endcomment -%}
+        {% if include.delivery_lang == "en" %}
+          {% if include.page_lang == "de" %}<p class="training-language-note">Zeitzone: MEZ/MESZ (Berlin)</p>{% else %}<p class="training-language-note">Time zone: CET/CEST (Berlin)</p>{% endif %}
+        {% endif %}
         <h2 class="course-title">Mastering Software Architectures<br>
         (iSAQB CPSA-Foundation)<br></h2>
         {{ terms_line }}

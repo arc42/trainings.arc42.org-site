@@ -15,7 +15,7 @@ Two programs, two lifecycles: **the site** (Jekyll, static, GitHub Pages) and
 
 Everything runs in Docker — no local Ruby needed. `make help` lists every
 target; [README §Local development](/README.md#local-development) explains them.
-The four that matter: `make dev` (server on :4000), `make site`, `make
+The four that matter: `make dev` (server on :4040), `make site`, `make
 check-links` (html-proofer), `make app-check` (the Go tests, vet and gofmt that
 CI gates the deploy on).
 

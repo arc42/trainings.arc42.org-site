@@ -6,5 +6,11 @@ services:
     build: .
     volumes:
       - .:/srv/jekyll
+    # 4040 is this repo's fixed dev port (see raw/port-assignment.md in
+    # meta.arc42.org), so its dev server does not collide with the sibling
+    # arc42 site repos. Jekyll binds 4040 inside the container too (--port in
+    # the Dockerfile CMD), not just on the host side: its "Server address:"
+    # startup banner reports the port it was told to bind, so the former
+    # 4040:4000 mapping left the banner announcing 4000.
     ports:
-      - '4000:4000'
+      - '4040:4040'
