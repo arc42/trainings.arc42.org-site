@@ -397,6 +397,12 @@ $timeline-border-rest: $border-wash-rest !default;
   margin-left: auto;
   margin-right: auto;
   color: var(--ink);
+
+  /* This paragraph carries #training-dates (the masthead nav and six in-site
+     buttons target it) since the duplicate <h1> above it was removed. Headings
+     get this from _base.scss; without it the anchor lands under the sticky
+     band. Same token, same reason. */
+  scroll-margin-top: calc(var(--bar-h) + 1rem);
 }
 
 @media (prefers-reduced-motion: reduce) {

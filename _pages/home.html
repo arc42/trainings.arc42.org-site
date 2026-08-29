@@ -10,15 +10,20 @@ header:
   overlay_color: "#743442"
 
 excerpt: >-
-  Hands-on software architecture trainings — by the people behind arc42.
+  Hands-on software architecture trainings. By the people behind arc42.
 ---
 
-<h1 id="training-dates">Training dates</h1>
-
-<p class="timeline-lead">
-  Every upcoming arc42 training in one chronological list — sign up via
-  <a href="/registration/">Registration</a>. Each card states the language the
-  training is held in.
+{%- comment -%}
+  No <h1> here: the hero band (_includes/page__hero.html, rendered because this
+  page sets header.overlay_color) already emits page.title as the page's only
+  h1. A second one repeated it on screen and gave the page two h1 elements.
+  The #training-dates anchor moved onto the lead paragraph — the masthead nav
+  and six in-site buttons point at it — so .timeline-lead carries the
+  scroll-margin that headings get from _base.scss.
+{%- endcomment -%}
+<p class="timeline-lead" id="training-dates">
+  Every upcoming arc42 training in one chronological list. Each card states the
+  language the training is held in.
 </p>
 
 <div class="timeline">
