@@ -114,8 +114,10 @@ activate JavaScript and reload this page.
         value = the Formspark booking code, byte-for-byte. Never decorate it.
         The delivery hint is label-only, and only when the delivery language
         differs from the form's language.
+        data-id is the date's id from trainings.yml, used ONLY by the
+        preselect script below to match ?kurs=. It never reaches Formspark.
       {%- endcomment -%}
-  <option value="{{ d.code }}">{{ course.short_title }}, {% include training-date-label.html date=d lang=include.lang style="short" %}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{% if include.lang == "en" and d.language == "de" %} (held in German){% elsif include.lang == "de" and d.language == "en" %} (auf Englisch){% endif %}</option>
+  <option value="{{ d.code }}" data-id="{{ d.id }}">{{ course.short_title }}, {% include training-date-label.html date=d lang=include.lang style="short" %}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{% if include.lang == "en" and d.language == "de" %} (held in German){% elsif include.lang == "de" and d.language == "en" %} (auf Englisch){% endif %}</option>
     {%- endfor -%}
   {%- endfor -%}
   <option value="sonstige">{% if include.lang == "de" %}Sonstige{% else %}other{% endif %}</option>
@@ -214,4 +216,47 @@ In case you register more than one person, please state their names in the comme
 
 <script type="text/javascript">
 document.getElementById("main_body").style.display="block";
+
+/* Preselect the course from ?kurs=<date-id>.
+
+   The timeline cards on both home pages link here as
+   /anmeldung/?kurs=msa-online-sep-2026, passing the date's id (the same value
+   the card already uses as its anchor). Without this, someone who has just
+   weighed up course, date, city, trainer and price arrives at a dropdown of
+   near-identical strings and has to derive that choice a second time.
+
+   Ported from arc42.de-site/assets/js/arc42-anmeldung.js when that site's
+   /anmeldung/ and /anmeldungEN/ were redirected here, so that the redirect
+   did not cost the flow that file was written to fix.
+
+   Matching is on data-id, so the value submitted to Formspark is still
+   d.code and nothing downstream changes. Deliberately a loop rather than
+   arc42.de's querySelector('option[data-id="..."]'): the id comes from the
+   URL, and comparing strings cannot be broken by a value that happens to
+   contain selector syntax.
+
+   Silent no-op when the parameter is absent, unknown, or names a date that
+   has since sold out or passed. In all of those cases the option is simply
+   not in the list, and an unpreselected form is still complete and usable. */
+(function () {
+  "use strict";
+
+  var select = document.getElementById("kurs");
+  if (!select) { return; }
+
+  var requested;
+  try {
+    requested = new URLSearchParams(window.location.search).get("kurs");
+  } catch (e) {
+    return; // very old browser; the form still works unaided
+  }
+  if (!requested) { return; }
+
+  for (var i = 0; i < select.options.length; i++) {
+    if (select.options[i].getAttribute("data-id") === requested) {
+      select.selectedIndex = i;
+      return;
+    }
+  }
+})();
 </script>
