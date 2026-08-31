@@ -165,6 +165,108 @@
   }
 }
 
+/* ==========================================================================
+   BOOKING SUMMARY
+
+   The panel under the course <select> on /anmeldung/ and /registration/. It
+   restates the selected date as prose, with the price, which the dropdown
+   itself never shows. Filled by the form's own script; `hidden` until then, so
+   with no JavaScript there is no empty box.
+
+   Ported from arc42.de's .booking-summary, but re-expressed in this theme's
+   tokens rather than carrying its colours across (ADR-0001: no satellite wears
+   another site's hue). No new colour is introduced here.
+
+   Measured pairs:
+     --ink        on --surface-1   9.08:1   the facts and the title
+     --ink-muted  on --surface-1   5.02:1   the eyebrow and the labels
+     --deep       on --surface-1   ≥ 8:1    the accent edge and the price
+
+   It is a card, so it takes the card surface (--surface-1, per _tokens.scss)
+   and the standard radius. The left edge is the only decoration: no shadow,
+   no glow (DESIGN.md §4).
+   ========================================================================== */
+
+.booking-summary {
+  /* Same measure as #main_body, so the panel and the form share both edges. */
+  max-width: 46rem;
+  margin: 1.25em 0 0;
+  padding: 1.1em 1.25em;
+  background-color: var(--surface-1);
+  border: 1px solid var(--border); /* 5.59:1 on paper */
+  border-left: 4px solid var(--deep);
+  border-radius: var(--radius);
+
+  /* The script toggles el.hidden; without this the display:grid below would
+     keep the <dl> visible even while the container is hidden. */
+  &[hidden] {
+    display: none;
+  }
+
+  .booking-summary__eyebrow {
+    margin: 0 0 0.2em;
+    font-family: $sans-serif;
+    font-size: $type-size-7;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted); /* 5.02:1 on --surface-1 */
+  }
+
+  .booking-summary__title {
+    margin: 0 0 0.5em;
+    font-size: $type-size-5;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--deep); /* the course name is the heading of this card */
+  }
+
+  /* A two-column grid rather than a floated <dl>: the labels stay aligned
+     however long a trainer list gets, and it wraps to one column on a phone. */
+  .booking-summary__facts {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.3em 0.9em;
+    font-family: $sans-serif;
+    font-size: $type-size-6;
+
+    dt {
+      margin: 0;
+      font-weight: 400;
+      color: var(--ink-muted); /* 5.02:1 — the label is not the fact */
+    }
+
+    dd {
+      margin: 0;
+      color: var(--ink); /* 9.08:1 on --surface-1 */
+    }
+
+    /* Rows hide themselves when a date carries no such fact; both halves are
+       toggled by the script, and grid would otherwise leave a gap. */
+    dt[hidden],
+    dd[hidden] {
+      display: none;
+    }
+  }
+
+  .booking-summary__price {
+    font-weight: 700;
+    color: var(--deep);
+  }
+
+  @media (max-width: 26em) {
+    .booking-summary__facts {
+      grid-template-columns: 1fr;
+      gap: 0 0;
+
+      dd {
+        margin: 0 0 0.5em;
+      }
+    }
+  }
+}
+
 /* The no-JavaScript fallback block: a real message, not a bare heading. */
 noscript {
   display: block;

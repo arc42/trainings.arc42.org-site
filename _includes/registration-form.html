@@ -114,12 +114,66 @@ activate JavaScript and reload this page.
         value = the Formspark booking code, byte-for-byte. Never decorate it.
         The delivery hint is label-only, and only when the delivery language
         differs from the form's language.
+
+        The data-* attributes feed the summary panel below and never reach
+        Formspark. data-id additionally matches ?kurs= for preselection.
+        langhint is captured once and used for BOTH the visible label and
+        data-where, so the dropdown and the panel can never disagree about
+        which language a date is held in.
       {%- endcomment -%}
-  <option value="{{ d.code }}">{{ course.short_title }}, {% include training-date-label.html date=d lang=include.lang style="short" %}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{% if include.lang == "en" and d.language == "de" %} (held in German){% elsif include.lang == "de" and d.language == "en" %} (auf Englisch){% endif %}</option>
+      {%- capture datelabel -%}{% include training-date-label.html date=d lang=include.lang style="short" %}{%- endcapture -%}
+      {%- capture langhint -%}{% if include.lang == "en" and d.language == "de" %} (held in German){% elsif include.lang == "de" and d.language == "en" %} (auf Englisch){% endif %}{%- endcapture -%}
+      {%- assign trainerlist = d.trainers | default: course.trainers -%}
+      {%- if include.lang == "de" -%}{%- assign trainer_join = " und " -%}{%- else -%}{%- assign trainer_join = " and " -%}{%- endif -%}
+      {%- capture wherelabel -%}{% if d.format == "online" %}Online{% else %}{{ d.city }}{% endif %}{{ langhint }}{%- endcapture -%}
+  <option value="{{ d.code }}"
+          data-id="{{ d.id }}"
+          data-title="{{ course.title | default: course.short_title | escape }}"
+          data-date="{{ datelabel | strip | escape }}"
+          data-where="{{ wherelabel | strip | escape }}"
+          {% if trainerlist %}data-trainers="{{ trainerlist | join: trainer_join | escape }}"{% endif %}
+          {% if course.credits %}data-credits="{{ course.credits | escape }}"{% endif %}
+          {% if d.pricing %}data-price="{{ d.pricing | escape }}"{% endif %}>{{ course.short_title }}, {{ datelabel }}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{{ langhint }}</option>
     {%- endfor -%}
   {%- endfor -%}
   <option value="sonstige">{% if include.lang == "de" %}Sonstige{% else %}other{% endif %}</option>
 </select>
+
+{%- comment -%}
+  Booking summary. Ported from arc42.de-site when its /anmeldung/ and
+  /anmeldungEN/ were redirected here.
+
+  Why it earns its place: the <option> labels above are near-identical strings,
+  and the dropdown does not show the price at all. This restates the choice
+  legibly, with the price, at the moment someone is about to commit four
+  figures. It is the last chance to notice you picked the wrong date.
+
+  Placed directly under the select rather than above the whole form as on
+  arc42.de: cause and effect stay adjacent, and this form puts the select in
+  its first third rather than at the top.
+
+  Starts `hidden` and is filled by script, so with no JavaScript there is no
+  empty box and the form is unaffected. Every value comes from a data-*
+  attribute on the selected <option>; rows whose value is absent hide
+  themselves, which is what the data-summary-row hooks are for. "date" has no
+  such hook because every date has one.
+{%- endcomment -%}
+<div id="kurs-summary" class="booking-summary" hidden>
+  <p class="booking-summary__eyebrow">{% if include.lang == "de" %}Ihre Auswahl{% else %}Your selection{% endif %}</p>
+  <p class="booking-summary__title" data-summary="title"></p>
+  <dl class="booking-summary__facts">
+    <dt>{% if include.lang == "de" %}Termin{% else %}Date{% endif %}</dt>
+    <dd data-summary="date"></dd>
+    <dt data-summary-row="where">{% if include.lang == "de" %}Ort{% else %}Location{% endif %}</dt>
+    <dd data-summary="where"></dd>
+    <dt data-summary-row="trainers">{% if include.lang == "de" %}Trainer{% else %}Trainers{% endif %}</dt>
+    <dd data-summary="trainers"></dd>
+    <dt data-summary-row="credits">{% if include.lang == "de" %}iSAQB-Punkte{% else %}iSAQB credits{% endif %}</dt>
+    <dd data-summary="credits"></dd>
+    <dt data-summary-row="price">{% if include.lang == "de" %}Preis{% else %}Price{% endif %}</dt>
+    <dd class="booking-summary__price" data-summary="price"></dd>
+  </dl>
+</div>
 
 <hr class="form-rule">
 
@@ -214,4 +268,102 @@ In case you register more than one person, please state their names in the comme
 
 <script type="text/javascript">
 document.getElementById("main_body").style.display="block";
+
+/* Two jobs, both about keeping the decision the visitor already made.
+
+   1. Preselect the course from ?kurs=<date-id>. The timeline cards on both
+      home pages link here as /anmeldung/?kurs=msa-online-sep-2026, passing the
+      date's id (the same value the card uses as its anchor). Without this,
+      someone who has just weighed up course, date, city, trainer and price
+      arrives at a dropdown of near-identical strings and has to derive that
+      choice a second time.
+
+   2. Render the summary panel from whichever option is selected: on arrival,
+      and again on every change. The dropdown does not show the price, so this
+      is the only place the full commitment is stated before the submit button.
+
+   Both ported from arc42.de-site/assets/js/arc42-anmeldung.js when that site's
+   /anmeldung/ and /anmeldungEN/ were redirected here, so the redirect did not
+   cost the flow that file was written to fix.
+
+   Matching is on data-id, so the value submitted to Formspark is still d.code
+   and nothing downstream changes. Deliberately a loop rather than arc42.de's
+   querySelector('option[data-id="..."]'): the id comes from the URL, and
+   comparing strings cannot be broken by a value containing selector syntax.
+   Values reach the DOM through textContent, never innerHTML.
+
+   Everything degrades quietly. An absent, unknown or stale ?kurs= leaves the
+   form unpreselected rather than erroring, which is also what happens when a
+   date sells out or passes and its option stops being rendered. With no
+   JavaScript there is no panel at all and the form is complete and usable. */
+(function () {
+  "use strict";
+
+  var select = document.getElementById("kurs");
+  var panel = document.getElementById("kurs-summary");
+
+  if (!select) { return; }
+
+  /* Each fact is a <dt data-summary-row="x"> + <dd data-summary="x"> pair. The
+     dt is optional: "date" has no row hook because it is always present. */
+  var FACTS = ["title", "date", "where", "trainers", "credits", "price"];
+
+  function preselect() {
+    var requested;
+
+    try {
+      requested = new URLSearchParams(window.location.search).get("kurs");
+    } catch (e) {
+      return; // very old browser; the form still works unaided
+    }
+
+    if (!requested) { return; }
+
+    for (var i = 0; i < select.options.length; i++) {
+      if (select.options[i].getAttribute("data-id") === requested) {
+        select.selectedIndex = i;
+        return;
+      }
+    }
+  }
+
+  /* Fill one row, hiding both halves when the date carries no such fact. */
+  function setFact(name, value) {
+    var dd = panel.querySelector('[data-summary="' + name + '"]');
+    var dt = panel.querySelector('[data-summary-row="' + name + '"]');
+    var has = Boolean(value);
+
+    if (dd) {
+      dd.textContent = value || "";
+      dd.hidden = !has;
+    }
+    if (dt) {
+      dt.hidden = !has;
+    }
+  }
+
+  /* Hidden for the empty placeholder and for "Sonstige"/"other": neither
+     carries course data, and an empty box is worse than no box. */
+  function render() {
+    var option = select.options[select.selectedIndex];
+
+    if (!option || !option.getAttribute("data-id")) {
+      panel.hidden = true;
+      return;
+    }
+
+    FACTS.forEach(function (name) {
+      setFact(name, option.getAttribute("data-" + name));
+    });
+
+    panel.hidden = false;
+  }
+
+  preselect();
+
+  if (panel) {
+    render();
+    select.addEventListener("change", render);
+  }
+})();
 </script>
