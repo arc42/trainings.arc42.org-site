@@ -39,6 +39,18 @@
   {% endfor %}
 {% endif %}
 
+{%- comment -%}
+  Pinned, with SRI, on purpose. Unpinned, unpkg serves whatever is newest, so
+  this page silently moved from @botpoison/browser 0.3.1 to 1.0.0 with no
+  commit here: a major version bump landed unreviewed on the one page where a
+  broken script costs a booking. Now a bump is a reviewed change.
+  When bumping, change the version and the hash together. Recompute with
+    curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A
+  `defer` keeps a third-party CDN off the render-blocking path; deferred
+  scripts still run before DOMContentLoaded, long before anyone can submit.
+{%- endcomment -%}
 {% if page.botpoison %}
-<script src="https://unpkg.com/@botpoison/browser"></script>
+<script src="https://unpkg.com/@botpoison/browser@1.0.0/dist/index.js"
+        integrity="sha384-PFiLHBpPgn3HAiDbMGBi5tI9ZL1FmZ8nr02DaNOQzuw3N1M+dpas2X6iilR9PmhW"
+        crossorigin="anonymous" defer></script>
 {% endif %}
