@@ -70,7 +70,7 @@
 
         <a class="button buttonAdoc" href="https://www.arc42.de/info-adoc/" hreflang="de">{{ info_label }}</a>
         {% unless sold_out %}
-            <a class="button buttonAnmeldung" href="{{ register_url }}">{{ register_label }}</a>
+            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ register_label }}</a>
         {% endunless %}
     </div>
 </div>
