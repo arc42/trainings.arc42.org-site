@@ -95,6 +95,51 @@ var KnownTrainers = []string{
 	"Wolfgang Reimesch",
 }
 
+// Card templates in the SITE repository, mirrored here so the forms can warn
+// before a date is published rather than after.
+//
+// The site renders each date through _includes/timeline_<type>.html, where the
+// type is DERIVED and not chosen: the course id, plus "_online" when the format
+// is online. _includes/timeline_course.html dispatches on that name and falls
+// through to an HTML comment for a type it does not know. The fallback is
+// silent on purpose, so one missing template cannot break every other card, but
+// it means a perfectly valid date can publish to the feed and render as
+// nothing. improve-apr-2027 did exactly that: valid, in the feed, invisible on
+// both home pages, unbookable.
+//
+// This app cannot see the site's _includes directory, so these two sets are a
+// copy and can go stale. That is deliberate and low-risk: being wrong here
+// costs a missing or spurious ADVISORY warning, never a wrong file. The
+// authoritative check is scripts/validate_trainings.rb, which reads the actual
+// directory and fails the pull request.
+//
+// Adding a course? Add both templates to the site and both ids here.
+var (
+	coursesWithPublicCard = map[string]bool{"msa": true, "improve": true, "req4arc": true, "adoc": true}
+	coursesWithOnlineCard = map[string]bool{"msa": true, "improve": true, "req4arc": true, "adoc": true}
+)
+
+// HasCardTemplate reports whether the site can render a date of this course and
+// format. An empty courseID or format is treated as renderable: the form has
+// other, better complaints about those.
+func HasCardTemplate(courseID, format string) bool {
+	if courseID == "" || format == "" {
+		return true
+	}
+	if format == "online" {
+		return coursesWithOnlineCard[courseID]
+	}
+	return coursesWithPublicCard[courseID]
+}
+
+// HasAnyCardTemplate reports whether the site knows this course at all.
+func HasAnyCardTemplate(courseID string) bool {
+	if courseID == "" {
+		return true
+	}
+	return coursesWithPublicCard[courseID] || coursesWithOnlineCard[courseID]
+}
+
 // Formats, Languages and Statuses back the form <select>s and the validator.
 var (
 	Formats   = []string{"public", "inhouse", "online"}

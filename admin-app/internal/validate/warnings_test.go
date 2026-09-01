@@ -169,3 +169,57 @@ func TestEnglishCourseURLIsHeldToTheSameRuleAsTheMainOne(t *testing.T) {
 		t.Errorf("an absent English page must not warn, got %q", got)
 	}
 }
+
+// The gap that made improve-apr-2027 invisible: a valid online date for a
+// course the site has no online card for. It publishes to the feed and renders
+// as an HTML comment on both home pages, so the form has to say so before the
+// pull request, not after.
+func TestOnlineDateWithoutACardTemplateWarns(t *testing.T) {
+	d := model.Date{
+		ID: "newcourse-apr-2027", Code: "27-04 NEW-EN", Start: "2027-04-13",
+		End: "2027-04-15", Language: "en", Format: "online", Status: "open",
+	}
+	got := fields(DateWarnings(d, "newcourse", "2026-09-01", true))
+	if !strings.Contains(got, "format") {
+		t.Errorf("expected a format warning for a course with no online card, got %q", got)
+	}
+}
+
+// req4arc_online was prepared before the first such date exists, precisely so
+// this does NOT warn. If this test starts failing, either the template was
+// removed from the site or the mirrored list in model drifted away from it.
+func TestOnlineReq4ArcDoesNotWarnAboutItsCard(t *testing.T) {
+	d := model.Date{
+		ID: "req4arc-apr-2027", Code: "27-04 REQ4ARC-EN", Start: "2027-04-13",
+		End: "2027-04-15", Language: "en", Format: "online", Status: "open",
+	}
+	for _, w := range DateWarnings(d, "req4arc", "2026-09-01", true) {
+		if strings.Contains(w.Message, "card") {
+			t.Errorf("unexpected card warning for an online req4arc date: %s", w)
+		}
+	}
+}
+
+// Every course that exists today has both cards, so none of them should warn.
+func TestEveryPublishedCourseHasCards(t *testing.T) {
+	for _, id := range []string{"msa", "improve", "req4arc", "adoc"} {
+		for _, format := range []string{"public", "online"} {
+			if !model.HasCardTemplate(id, format) {
+				t.Errorf("%s/%s reports no card template", id, format)
+			}
+		}
+	}
+}
+
+// A course created in the app before its templates exist in the site repo.
+func TestUnknownCourseWarnsAboutMissingCards(t *testing.T) {
+	c := model.Course{
+		ID: "brandnew", ShortTitle: "New", Title: "A New Course",
+		URL: "https://www.arc42.de/info-new/", Blurb: "Something new.",
+		Trainers: []string{"Gernot Starke"},
+	}
+	got := fields(CourseWarnings(c))
+	if !strings.Contains(got, "id") {
+		t.Errorf("expected an id warning about missing card templates, got %q", got)
+	}
+}

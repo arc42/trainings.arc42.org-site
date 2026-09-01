@@ -322,6 +322,17 @@ price:                     credit_points:        seats_limited: true
 
 Every bookable date needs a `price`. There is no template fallback any more.
 
+Every date also needs a **card template**, and its name is derived rather than
+chosen: `timeline_<course id>.html`, or `timeline_<course id>_online.html` when
+`format: online`, plus a matching `when` case in
+[`_includes/timeline_course.html`](/_includes/timeline_course.html). A date
+whose template is missing still validates and still publishes to the feed, but
+renders as an HTML comment on both home pages, so nobody can see or book it.
+`scripts/validate_trainings.rb` checks for the file and fails CI, and the admin
+app warns on the form. All four courses currently have both variants, including
+`timeline_req4arc_online.html`, which was written before the first online
+REQ4ARC date exists.
+
 `price-label.html`, `credits-label.html` and `money.html` turn those into
 `Frühbucherpreis bei Anmeldung bis 2. November 2026: 2.690 €, Normalpreis:
 2.890 €` or `Early bird until November 2, 2026: €2,690, regular: €2,890`.

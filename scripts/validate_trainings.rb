@@ -23,6 +23,19 @@ RETIRED_DATE_KEYS = {
 }.freeze
 
 path = ARGV[0] || File.expand_path("../_data/trainings.yml", __dir__)
+
+# The site renders each date through _includes/timeline_<type>.html, where the
+# type is DERIVED: the course id, plus "_online" when format is online
+# (see _includes/timeline_auto.html). timeline_course.html dispatches on it and
+# falls through to an HTML comment for a type it does not know.
+#
+# That fallback is silent by design - a missing template must not break the
+# build for every other date - but it means a perfectly valid date can publish
+# to the feed and render as nothing at all. improve-apr-2027 did exactly that:
+# the first online IMPROVE, valid, in the feed, invisible on both home pages,
+# unbookable. So the check belongs here, where a pull request still fails.
+includes_dir = File.expand_path("../_includes", File.dirname(path))
+card_templates_checkable = Dir.exist?(includes_dir)
 # permitted_classes: [Date] on purpose. Unquoted YYYY-MM-DD is a Date to YAML,
 # and without this safe_load raises Psych::DisallowedClass and dies with a
 # stack trace - which is a worse error message than the one this script
@@ -134,6 +147,15 @@ codes = Hash.new(0)
             # both drop it on their own. Deleting it by hand is optional.
           end
         end
+      end
+    end
+
+    if card_templates_checkable && d["format"].is_a?(String) && c["id"].is_a?(String)
+      type = d["format"] == "online" ? "#{c['id']}_online" : c["id"]
+      unless File.exist?(File.join(includes_dir, "timeline_#{type}.html"))
+        errors << "date #{did}: no card template _includes/timeline_#{type}.html - " \
+                  "this date would render as an HTML comment on both home pages. " \
+                  "Add the template and a `when \"#{type}\"` case in _includes/timeline_course.html."
       end
     end
 

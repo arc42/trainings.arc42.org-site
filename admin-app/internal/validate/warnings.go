@@ -78,6 +78,13 @@ func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
 		add("seats_limited", "seats are advertised on a date whose status is %q", d.Status)
 	}
 
+	// A date the site cannot render is worse than an invalid one: it validates,
+	// it publishes to the feed, and it is simply absent from both home pages.
+	if !model.HasCardTemplate(courseID, d.Format) {
+		add("format", "the site has no %s card for %q, so this date would render as nothing on the home pages - add _includes/timeline_%s.html first",
+			d.Format, courseID, cardTemplateType(courseID, d.Format))
+	}
+
 	if want := model.BookingCode(courseID, d.Start, d.Language); want != "" && d.Code != "" && d.Code != want {
 		add("code", "the house convention for this course and date is %q", want)
 	}
@@ -89,11 +96,25 @@ func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
 	return ws
 }
 
+// cardTemplateType mirrors the derivation in _includes/timeline_auto.html.
+func cardTemplateType(courseID, format string) string {
+	if format == "online" {
+		return courseID + "_online"
+	}
+	return courseID
+}
+
 // CourseWarnings judges one course.
 func CourseWarnings(c model.Course) []Warning {
 	var ws []Warning
 	add := func(field, format string, args ...any) {
 		ws = append(ws, Warning{Field: field, Message: fmt.Sprintf(format, args...)})
+	}
+
+	// A brand-new course has no card templates in the site repo yet, so every
+	// date added to it would render as nothing until they exist.
+	if !model.HasAnyCardTemplate(c.ID) {
+		add("id", "the site has no timeline card for %q yet - add _includes/timeline_%s.html (and timeline_%s_online.html) plus their cases in timeline_course.html, or its dates will not appear on the home pages", c.ID, c.ID, c.ID)
 	}
 
 	if n := len([]rune(c.ShortTitle)); n > maxShortTitle {

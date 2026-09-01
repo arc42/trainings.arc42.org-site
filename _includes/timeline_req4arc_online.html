@@ -1,0 +1,94 @@
+{%- comment -%}
+  Card copy follows include.page_lang (the PAGE language, default "en").
+  include.delivery_lang is the language the training is held in and only shows
+  up as the small note under the date line.
+
+  The online twin of timeline_req4arc.html, built like timeline_msa_online and
+  timeline_improve_online: no city line, the terms link, and the Berlin
+  time-zone note that every English online course carries.
+
+  Written BEFORE the first online REQ4ARC exists, deliberately. The template
+  name is derived, not chosen: timeline_auto.html builds "<course id>_online"
+  for any date with format: online, so the first such date would otherwise fall
+  through timeline_course.html's unknown-type branch and render as an HTML
+  comment. That is exactly what happened to improve-apr-2027, which validated,
+  published to the feed and was invisible on both home pages.
+
+  The trainer line differs from the public card on purpose. The public REQ4ARC
+  is the Hruschka/Starke pair; an online run is named per date, the way
+  timeline_msa_online does it, because that is how the online courses have
+  actually been staffed.
+{%- endcomment -%}
+{% assign position_class = include.position | default: "right" %}
+{% assign anchor_id = include.anchor_id | default: "req4arc-online" %}
+{% assign sold_out = include.sold_out | default: false %}
+
+{%- if include.page_lang == "de" -%}
+  {%- assign blurb = "Ihr systematischer Weg zu besseren Anforderungen!" -%}
+  {%- capture terms_line -%}
+    Bitte beachten Sie unsere <a href="https://www.arc42.de/terms/">Allgemeinen Geschäftsbedingungen</a>.
+  {%- endcapture -%}
+  {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
+  {%- assign info_label = "Mehr Info" -%}
+  {%- assign register_label = "Anmeldung" -%}
+  {%- assign register_url = "/anmeldung/" -%}
+{%- else -%}
+  {%- assign blurb = "Your systematic path to better requirements!" -%}
+  {%- capture terms_line -%}
+    Please see our <a href="https://www.arc42.de/terms-en/">terms and conditions</a>.
+  {%- endcapture -%}
+  {%- assign sold_out_text = "(sold out — waitlist only)" -%}
+  {%- assign info_label = "More info (in German)" -%}
+  {%- assign register_label = "Register" -%}
+  {%- assign register_url = "/registration/" -%}
+{%- endif -%}
+
+<div class="container {{ position_class }}" id="{{ anchor_id }}">
+    <div class="content{% if sold_out %} content--sold-out{% endif %}">
+        {{ include.date }} (online)<br>
+        {% if include.page_lang == "de" %}
+          {% if include.delivery_lang == "en" %}<p class="training-language-note">Durchführung auf Englisch</p>{% endif %}
+        {% else %}
+          {% if include.delivery_lang == "de" %}<p class="training-language-note">held in German</p>{% else %}<p class="training-language-note">held in English</p>{% endif %}
+        {% endif %}
+        {%- comment -%}
+          Trainers deliver every English online course from Germany, so this
+          is a hardcoded fact about the business, not per-date data. Shown
+          regardless of page_lang: foreign participants also register via
+          arc42.de's German pages.
+        {%- endcomment -%}
+        {% if include.delivery_lang == "en" %}
+          {% if include.page_lang == "de" %}<p class="training-language-note">Zeitzone: MEZ/MESZ (Berlin)</p>{% else %}<p class="training-language-note">Time zone: CET/CEST (Berlin)</p>{% endif %}
+        {% endif %}
+        <h2 class="course-title">REQ4ARC <br>(CPSA-Advanced)</h2>
+        <p>{{ blurb }}</p>
+        {{ terms_line }}
+
+        {% if sold_out %}
+            <p class="timeline-sold-out">{{ sold_out_text }}</p>
+        {% endif %}
+
+        {% if include.few_seats %}
+            <p class="timeline-few-seats">{{ include.few_seats }}</p>
+        {% endif %}
+
+        {% if include.trainer %}
+        <p>Trainer: {{ include.trainer }}.</p>
+        {% endif %}
+        {% if include.credits %}
+        <p class="date-small">
+            {% if include.page_lang == "de" %}iSAQB-Punkte{% else %}iSAQB credits{% endif %}: {{ include.credits }}
+        </p>
+        {% endif %}
+        {% if include.pricing %}
+        <p class="date-small">
+            {{ include.pricing }}
+        </p>
+        {% endif %}
+
+        <a class="button buttonReq4Arc" href="https://www.arc42.de/info-req4arc/" hreflang="de">{{ info_label }}</a>
+        {% unless sold_out %}
+            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ register_label }}</a>
+        {% endunless %}
+    </div>
+</div>

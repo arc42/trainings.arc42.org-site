@@ -64,6 +64,17 @@ and is wrong anyway.
   "clean up" by deleting them, and never turn them back into stored data: they
   are computed against the build date, which is what stops them going stale.
   An expired `early_bird` is omitted from the feed entirely.
+- **A card template's name is derived, not chosen.** `_includes/timeline_auto.html`
+  builds the type as `<course id>`, plus `_online` when `format: online`, and
+  `timeline_course.html` dispatches on it. An unknown type falls through to an
+  HTML comment: the date validates, publishes to `/api/trainings.json`, and is
+  invisible on both home pages. `improve-apr-2027` shipped that way. So a new
+  course, or a course's first online date, needs `timeline_<id>.html` /
+  `timeline_<id>_online.html` **and** a `when` case, before the date exists.
+  Two guardrails now enforce it: `scripts/validate_trainings.rb` checks the
+  actual `_includes/` directory and fails CI, and the admin app warns on the
+  form from the mirrored lists in `admin-app/internal/model/model.go` (keep
+  those in step when adding a course).
 - **Jekyll includes share the caller's scope.** `assign` inside an include
   cannot shadow a caller's `for`-loop item, so every variable in
   `money.html`, `price-label.html` and `credits-label.html` is prefixed
