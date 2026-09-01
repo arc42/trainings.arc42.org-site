@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -62,7 +63,7 @@ func newDateDefaults(courses []model.Course) model.Date {
 		return d
 	}
 	def := model.DefaultsFor(courses[0])
-	d.City, d.Country, d.Pricing, d.Trainers = def.City, def.Country, def.Pricing, def.Trainers
+	d.City, d.Country, d.Price, d.Trainers = def.City, def.Country, def.Price, def.Trainers
 	return d
 }
 
@@ -121,7 +122,7 @@ func parseDateForm(r *http.Request) (model.Date, string) {
 		ID: get("id"), Code: get("code"), Start: get("start"), End: get("end"),
 		City: get("city"), Country: strings.ToUpper(get("country")),
 		Language: get("language"), Format: get("format"),
-		Pricing: get("pricing"), FewSeats: get("few_seats"),
+		Price: parsePrice(get), SeatsLimited: get("seats_limited") != "",
 		Status: get("status"),
 	}
 	// The form no longer asks for the registration link. Every published date
@@ -129,6 +130,41 @@ func parseDateForm(r *http.Request) (model.Date, string) {
 	d.URL = model.RegistrationURL(d.ID)
 	d.Trainers = parseTrainers(r)
 	return d, get("course_id")
+}
+
+// parsePrice builds the price from the four number fields. An empty regular
+// amount means the run has no published price at all, which is the normal case
+// for three of the four courses.
+//
+// A field that is filled in but unparseable yields a zero amount rather than a
+// silent nil, so the schema check downstream rejects it and says so. Dropping
+// it quietly would lose an operator's edit without telling them - and the whole
+// reason prices moved out of free text is that a wrong price is expensive.
+func parsePrice(get func(string) string) *model.Price {
+	raw := get("price_amount")
+	if raw == "" {
+		return nil
+	}
+	amount, err := strconv.Atoi(raw)
+	if err != nil {
+		amount = 0
+	}
+	cur := strings.ToUpper(get("price_currency"))
+	if cur == "" {
+		cur = "EUR"
+	}
+	p := &model.Price{Amount: amount, Currency: cur}
+	if alumni, err := strconv.Atoi(get("price_alumni")); err == nil && alumni > 0 {
+		p.Alumni = alumni
+	}
+	if ebRaw := get("early_bird_amount"); ebRaw != "" {
+		ebAmount, err := strconv.Atoi(ebRaw)
+		if err != nil {
+			ebAmount = 0
+		}
+		p.EarlyBird = &model.EarlyBird{Amount: ebAmount, Until: get("early_bird_until")}
+	}
+	return p
 }
 
 func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {

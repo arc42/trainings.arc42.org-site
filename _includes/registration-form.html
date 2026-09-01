@@ -126,14 +126,18 @@ activate JavaScript and reload this page.
       {%- assign trainerlist = d.trainers | default: course.trainers -%}
       {%- if include.lang == "de" -%}{%- assign trainer_join = " und " -%}{%- else -%}{%- assign trainer_join = " and " -%}{%- endif -%}
       {%- capture wherelabel -%}{% if d.format == "online" %}Online{% else %}{{ d.city }}{% endif %}{{ langhint }}{%- endcapture -%}
+      {%- capture pricelabel -%}{% include price-label.html price=d.price lang=include.lang %}{%- endcapture -%}
+      {%- assign pricelabel = pricelabel | strip -%}
+      {%- capture creditlabel -%}{% include credits-label.html credits=course.credit_points lang=include.lang %}{%- endcapture -%}
+      {%- assign creditlabel = creditlabel | strip -%}
   <option value="{{ d.code }}"
           data-id="{{ d.id }}"
           data-title="{{ course.title | default: course.short_title | escape }}"
           data-date="{{ datelabel | strip | escape }}"
           data-where="{{ wherelabel | strip | escape }}"
           {% if trainerlist %}data-trainers="{{ trainerlist | join: trainer_join | escape }}"{% endif %}
-          {% if course.credits %}data-credits="{{ course.credits | escape }}"{% endif %}
-          {% if d.pricing %}data-price="{{ d.pricing | escape }}"{% endif %}>{{ course.short_title }}, {{ datelabel }}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{{ langhint }}</option>
+          {% if creditlabel != "" %}data-credits="{{ creditlabel | escape }}"{% endif %}
+          {% if pricelabel != "" %}data-price="{{ pricelabel | escape }}"{% endif %}>{{ course.short_title }}, {{ datelabel }}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{{ langhint }}</option>
     {%- endfor -%}
   {%- endfor -%}
   <option value="sonstige">{% if include.lang == "de" %}Sonstige{% else %}other{% endif %}</option>

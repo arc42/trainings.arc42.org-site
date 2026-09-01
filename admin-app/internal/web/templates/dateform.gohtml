@@ -18,7 +18,9 @@
         {{range .Courses}}{{$d := defaultsOf .}}<option value="{{.ID}}"
           data-code-token="{{codeToken .ID}}"
           data-city="{{$d.City}}" data-country="{{$d.Country}}"
-          data-pricing="{{$d.Pricing}}" data-trainers="{{join $d.Trainers ", "}}"
+          data-price-amount="{{with $d.Price}}{{.Amount}}{{end}}"
+          data-price-currency="{{with $d.Price}}{{.Currency}}{{end}}"
+          data-trainers="{{join $d.Trainers ", "}}"
           {{if eqStr .ID $cid}}selected{{end}}>{{.ShortTitle}} — {{.Title}}</option>{{end}}
       </select>
       <small id="course-hint" class="hint">Which course this run belongs to.
@@ -115,19 +117,69 @@
   {{template "trainers" dict "Selected" .Date.Trainers "Known" .KnownTrainers "Other" .OtherTrainers}}
 
   <fieldset class="group">
+    <legend>Price</legend>
+    {{/* Numbers, not a sentence. This used to be one free-text "Pricing" box
+         holding a German sentence with the early-bird deadline written inside
+         it, which meant the deadline was invisible to every machine and the
+         site advertised an expired price for weeks. Amounts are whole euros;
+         the wording, the € symbol and the thousands separator are added per
+         language at render time, so nothing typed here can be wrong in
+         English. */}}
+    <div class="row">
+      <label>Regular price
+        <input name="price_amount" type="number" min="0" step="1" inputmode="numeric"
+               value="{{with .Date.Price}}{{.Amount}}{{end}}"
+               placeholder="e.g. 2890" aria-describedby="price-hint">
+        <small id="price-hint" class="hint">Digits only, whole currency units.
+          Leave empty when this run has no published price.</small>
+      </label>
+      <label>Alumni price
+        <input name="price_alumni" type="number" min="0" step="1" inputmode="numeric"
+               value="{{with .Date.Price}}{{if .Alumni}}{{.Alumni}}{{end}}{{end}}"
+               placeholder="e.g. 2050" aria-describedby="alumni-hint">
+        <small id="alumni-hint" class="hint">The reduced price for former
+          participants. Unlike the early-bird price it never expires. Leave
+          empty when the course has no alumni rate.</small>
+      </label>
+    </div>
+    <div class="row">
+      <label>Currency
+        <input name="price_currency" pattern="[A-Za-z]{3}" maxlength="3"
+               value="{{with .Date.Price}}{{.Currency}}{{else}}EUR{{end}}"
+               aria-describedby="currency-hint">
+        <small id="currency-hint" class="hint">ISO code. EUR unless something
+          has genuinely changed.</small>
+      </label>
+    </div>
+    <div class="row">
+    <div class="row">
+      <label>Early-bird price
+        <input name="early_bird_amount" type="number" min="0" step="1" inputmode="numeric"
+               value="{{with .Date.Price}}{{with .EarlyBird}}{{.Amount}}{{end}}{{end}}"
+               placeholder="e.g. 2690" aria-describedby="eb-hint">
+        <small id="eb-hint" class="hint">Leave empty for no early-bird offer.
+          Must be below the regular price.</small>
+      </label>
+      <label>Early-bird deadline
+        <input name="early_bird_until" type="date"
+               value="{{with .Date.Price}}{{with .EarlyBird}}{{.Until}}{{end}}{{end}}"
+               aria-describedby="ebu-hint">
+        <small id="ebu-hint" class="hint">The last day the offer applies. After
+          it passes the site and the feed drop the offer on their own, so an
+          expired one does not need deleting.</small>
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="group">
     <legend>Optional notes</legend>
-    <label>Pricing
-      <input name="pricing" value="{{.Date.Pricing}}" aria-describedby="pricing-hint">
-      <small id="pricing-hint" class="hint">Shown verbatim on the card, in the
-        language of the date.</small>
+    <label class="check">
+      <input type="checkbox" name="seats_limited" value="1" {{if .Date.SeatsLimited}}checked{{end}}>
+      <span>Only a few seats left</span>
     </label>
-    <label>Few seats note
-      <input name="few_seats" value="{{.Date.FewSeats}}" placeholder="e.g. nur noch wenige Plätze"
-             aria-describedby="few-seats-hint">
-      <small id="few-seats-hint" class="hint">A short nudge shown on the card,
-        in the language of the date. Leave empty unless seats really are
-        running out.</small>
-    </label>
+    <small class="hint">Adds a short nudge to the card. The wording is written
+      per language by the site, so there is nothing to type. Leave it off
+      unless seats really are running out.</small>
   </fieldset>
 
   {{template "actions" dict "Warnings" .Warnings "IsNew" .IsNew "Cancel" "/"}}

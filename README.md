@@ -214,6 +214,48 @@ carry an optional `url_en` — an English detail page on this site,
 `https://trainings.arc42.org/courses/<id>/`. English consumers render
 `course.url_en | default: course.url`; arc42.de ignores `url_en`.
 
+### Prices, credits and seats: read the structured fields
+
+Three fields exist twice in the feed, and new consumers should read the second
+of each pair:
+
+| deprecated (German prose) | read this instead | shape |
+| --- | --- | --- |
+| `date.pricing` | `date.price` | `{ amount, currency, alumni?, early_bird? }` |
+| `course.credits` | `course.credit_points` | `{ methodical?, technical?, communication? }` |
+| `date.few_seats` | `date.seats_limited` | `true` |
+
+The three deprecated fields were hand-written German sentences. They were
+rendered verbatim on English pages, and `pricing` additionally buried its
+early-bird deadline inside the prose, where no machine could see it — so the
+site advertised an expired early-bird price for weeks before anyone noticed.
+
+They are still published, unchanged in name and type, because four consumers
+render them verbatim and [ADR-0004](https://github.com/arc42/meta.arc42.org)
+makes the feed a contract: adding optional fields is free, changing an existing
+one is not. But they are now **generated** on every build rather than stored,
+so they can no longer go stale. Nothing downstream had to change; consumers
+that migrate simply gain the ability to render prices and credits in their own
+language.
+
+Two guarantees worth relying on:
+
+- **Amounts are integers** in whole currency units (`2890` means EUR 2890). The
+  currency symbol, the thousands separator and the surrounding wording belong
+  to whoever renders it.
+- **An expired `early_bird` is never published.** The producer compares
+  `early_bird.until` against the build date and omits the offer from both
+  `price` and `pricing`. Consumers do not need a calendar. `alumni`, the
+  reduced rate for former participants, never expires and is always published
+  when present.
+- **Every published date carries a price.** Four card templates used to hold a
+  hardcoded bilingual price sentence, which meant the price never reached this
+  feed at all and consumers could not quote those courses. A test
+  (`TestEveryPublishedDateHasAPrice`) keeps it that way.
+
+docs.arc42.org and faq.arc42.org render no prices and are unaffected by any of
+this; arc42.de and arc42.org are the consumers that show them.
+
 ### Consumers
 
 Four sites render the training dates at build time from this feed. Each pulls
@@ -262,6 +304,36 @@ any dispatch is one week.
 
 All training dates for ALL arc42 sites live in `_data/trainings.yml` (single
 source of truth). To change dates:
+
+**No prose in `_data/trainings.yml`.** Everything in that file is rendered on
+both the German and the English pages, so a hand-written sentence is wrong on
+half of them. Sentences live in `_includes/*-label.html`, which branch on the
+page language; the data file holds numbers and flags:
+
+```yaml
+price:                     credit_points:        seats_limited: true
+  amount: 2890               methodical: 20
+  currency: EUR              technical: 10       # also: communication
+  alumni: 2050             # optional, never expires
+  early_bird:
+    amount: 2690
+    until: "2026-11-02"    # QUOTED, like start/end
+```
+
+Every bookable date needs a `price`. There is no template fallback any more.
+
+`price-label.html`, `credits-label.html` and `money.html` turn those into
+`Frühbucherpreis bei Anmeldung bis 2. November 2026: 2.690 €, Normalpreis:
+2.890 €` or `Early bird until November 2, 2026: €2,690, regular: €2,890`.
+`scripts/validate_trainings.rb` rejects the retired `pricing`, `credits` and
+`few_seats` keys by name, so reintroducing one fails CI rather than quietly
+shipping German to English readers.
+
+An `early_bird` whose `until` has passed does **not** need deleting. Both the
+site and the feed stop rendering it on their own, and the weekly rebuild
+([`weekly-refresh.yml`](/.github/workflows/weekly-refresh.yml)) bounds the
+staleness to one Monday — the same guarantee that already covers dates that
+have passed.
 
 1. Edit `_data/trainings.yml` on a branch (every date needs `language: de|en` —
    validation fails loudly otherwise).

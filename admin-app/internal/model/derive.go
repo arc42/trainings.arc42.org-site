@@ -82,13 +82,19 @@ func RegistrationURL(dateID string) string {
 
 // Defaults are the values a new date for a course starts with. They come from
 // the course's most recent date, because a repeat run is overwhelmingly the
-// same city with the same pricing sentence — the two longest things to retype.
+// same city at the same price — the two most tedious things to retype.
 // Nothing here is identity: id, code, url, start and end are what make the new
 // date new, and are never carried over.
+//
+// Price carries the AMOUNTS but never the early-bird deadline. A deadline is
+// tied to the run it belongs to, so copying it forward would seed the next
+// date with an offer that expires before anybody can take it — which is a
+// tidier version of the bug that motivated this whole shape. The operator sets
+// the new deadline deliberately, or leaves the offer off.
 type Defaults struct {
 	City     string
 	Country  string
-	Pricing  string
+	Price    *Price
 	Trainers []string
 }
 
@@ -105,7 +111,12 @@ func DefaultsFor(c Course) Defaults {
 	if latest == nil {
 		return d
 	}
-	d.City, d.Country, d.Pricing = latest.City, latest.Country, latest.Pricing
+	d.City, d.Country = latest.City, latest.Country
+	if latest.Price != nil {
+		p := *latest.Price
+		p.EarlyBird = nil
+		d.Price = &p
+	}
 	if len(latest.Trainers) > 0 {
 		d.Trainers = latest.Trainers
 	}

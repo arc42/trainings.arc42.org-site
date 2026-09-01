@@ -1,6 +1,7 @@
 package yamldoc
 
 import (
+	"strconv"
 	"strings"
 
 	"arc42-trainings-admin/internal/model"
@@ -12,7 +13,7 @@ import (
 // characters that would otherwise need escaping anyway.
 var alwaysQuoted = map[string]bool{
 	"code": true, "start": true, "end": true, "city": true,
-	"country": true, "url": true, "url_en": true, "pricing": true, "few_seats": true,
+	"country": true, "url": true, "url_en": true, "until": true,
 	"short_title": true, "title": true, "certification": true,
 }
 
@@ -45,8 +46,34 @@ func RenderDate(d model.Date, indent string) string {
 	if len(d.Trainers) > 0 {
 		b.WriteString(indent + "  trainers: " + fmtList(d.Trainers) + "\n")
 	}
-	put("pricing", d.Pricing)
-	put("few_seats", d.FewSeats)
+	// price and credit_points are the only nested mappings in the file. They
+	// are written out by hand rather than marshalled for the reason given at
+	// the top of parse.go: this package only ever splices text, so what it
+	// emits has to match the file's existing hand-written layout exactly.
+	// Integers are never quoted — quoting them would turn a comparable number
+	// back into the string this whole shape exists to stop being.
+	if d.Price != nil && d.Price.Amount > 0 {
+		b.WriteString(indent + "  price:\n")
+		b.WriteString(indent + "    amount: " + strconv.Itoa(d.Price.Amount) + "\n")
+		cur := d.Price.Currency
+		if cur == "" {
+			cur = "EUR"
+		}
+		b.WriteString(indent + "    currency: " + cur + "\n")
+		if d.Price.Alumni > 0 {
+			b.WriteString(indent + "    alumni: " + strconv.Itoa(d.Price.Alumni) + "\n")
+		}
+		if eb := d.Price.EarlyBird; eb != nil && eb.Amount > 0 {
+			b.WriteString(indent + "    early_bird:\n")
+			b.WriteString(indent + "      amount: " + strconv.Itoa(eb.Amount) + "\n")
+			// until is quoted for the same reason start/end are: unquoted
+			// YYYY-MM-DD is a timestamp to YAML, not a string.
+			b.WriteString(indent + "      until: " + quote(eb.Until) + "\n")
+		}
+	}
+	if d.SeatsLimited {
+		b.WriteString(indent + "  seats_limited: true\n")
+	}
 	put("url", d.URL)
 	put("status", d.Status)
 	return b.String()
@@ -79,10 +106,23 @@ func renderCourseScalars(c model.Course, indent string) string {
 		}
 	}
 	put("certification", c.Certification)
-	if c.Credits == "" {
-		b.WriteString(indent + "  credits: null\n")
-	} else {
-		b.WriteString(indent + "  credits: " + fmtScalar("credits", c.Credits) + "\n")
+	// Omitted entirely when the course has no credits. The previous shape wrote
+	// "credits: null" to keep the key present for a string field; a mapping has
+	// no equivalent, and an empty one would be worse than absent.
+	if !c.CreditPoints.Empty() {
+		b.WriteString(indent + "  credit_points:\n")
+		for _, cat := range []struct {
+			key string
+			n   int
+		}{
+			{"methodical", c.CreditPoints.Methodical},
+			{"technical", c.CreditPoints.Technical},
+			{"communication", c.CreditPoints.Communication},
+		} {
+			if cat.n > 0 {
+				b.WriteString(indent + "    " + cat.key + ": " + strconv.Itoa(cat.n) + "\n")
+			}
+		}
 	}
 	put("url", c.URL)
 	put("url_en", c.URLEn)

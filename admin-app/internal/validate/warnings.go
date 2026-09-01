@@ -74,8 +74,8 @@ func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
 	if d.Status != "" && d.Status != "open" {
 		add("status", "%q keeps this date out of the registration form on arc42.de — nobody can book it", d.Status)
 	}
-	if d.FewSeats != "" && (d.Status == "full" || d.Status == "cancelled") {
-		add("few_seats", "seats are advertised on a date whose status is %q", d.Status)
+	if d.SeatsLimited && (d.Status == "full" || d.Status == "cancelled") {
+		add("seats_limited", "seats are advertised on a date whose status is %q", d.Status)
 	}
 
 	if want := model.BookingCode(courseID, d.Start, d.Language); want != "" && d.Code != "" && d.Code != want {

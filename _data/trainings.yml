@@ -6,6 +6,34 @@
 # Keep start/end QUOTED "YYYY-MM-DD" strings. Quote country codes ("NO" is false!).
 # language (de|en) is REQUIRED on every date - no default, validation fails loudly.
 # url_en (optional, per course) = English detail page, https://trainings.arc42.org/courses/<id>/
+#
+# NO PROSE IN THIS FILE. Everything here is rendered on German AND English
+# pages, so a hand-written sentence is wrong on half of them. Sentences live in
+# _includes/*-label.html, which branch on the page language. This is why price,
+# credits and few_seats are numbers and flags rather than the strings they
+# strings they used to be:
+#
+#   price:                     credit_points:      seats_limited: true
+#     amount: 2890               methodical: 20
+#     currency: EUR              technical: 10     (also: communication)
+#     alumni: 2050             (optional, the reduced price for former
+#     early_bird:               participants; omit it when there is none)
+#       amount: 2690
+#       until: "2026-11-02"    <- QUOTED "YYYY-MM-DD", like start/end
+#
+# EVERY bookable date carries a price. Four card templates used to hold a
+# hardcoded bilingual sentence instead ("Normalpreis: € 2200 (für unsere
+# Alumni € 2050)"), which meant the price never reached /api/trainings.json,
+# the four consumer sites showed none, and the booking summary on the
+# registration page disagreed with the card next to it.
+#
+# early_bird.until is compared against the build date by
+# _includes/price-label.html, so an expired offer stops being advertised on its
+# own. It does NOT need deleting when it lapses, and it must not be left as a
+# sentence: the previous free-text version quoted "bis 8. August 2026" into
+# September because no machine could see the deadline inside the string.
+# Weekly rebuilds (.github/workflows/weekly-refresh.yml) bound the staleness to
+# one Monday, exactly as they already do for dates that have passed.
 # ============================================================================
 courses:
   - id: msa
@@ -15,7 +43,6 @@ courses:
       Two expert trainers at all times, highly practical and pragmatic,
       ideal preparation for iSAQB CPSA-Foundation certification.
     certification: "iSAQB CPSA-Foundation"
-    credits: null
     url: "https://www.arc42.de/info-msa/"
     url_en: "https://trainings.arc42.org/courses/msa/"
     trainers: ["Peter Hruschka", "Gernot Starke"]
@@ -27,7 +54,9 @@ courses:
         language: en
         format: online
         trainers: ["Wolfgang Reimesch"]
-        pricing: "€2100"
+        price:
+          amount: 2100
+          currency: EUR
         url: "https://www.arc42.de/termine#msa-online-sep-2026"
         status: open
       - id: msa-dez-2026
@@ -38,7 +67,12 @@ courses:
         country: "DE"
         language: de
         format: public
-        pricing: "Frühbucherpreis bei Anmeldung bis 8. August 2026: € 2690, Normalpreis: € 2890"
+        price:
+          amount: 2890
+          currency: EUR
+          early_bird:
+            amount: 2690
+            until: "2026-08-08"
         url: "https://www.arc42.de/termine#msa-dez-2026"
         status: open
       - id: msa-mar-2027
@@ -49,29 +83,44 @@ courses:
         country: "DE"
         language: de
         format: public
-        pricing: "Frühbucherpreis bei Anmeldung bis 2. November 2026: € 2690, Normalpreis: € 2890"
+        price:
+          amount: 2890
+          currency: EUR
+          early_bird:
+            amount: 2690
+            until: "2026-11-02"
         url: "https://www.arc42.de/termine#msa-mar-2027"
         status: open
       - id: msa-jun-2027
         code: "27-06 MSA"
         start: "2027-06-08"
         end: "2027-06-11"
-        city: "Mannheim oder Frankfurt (t.b.d.)"
+        city: "Mannheim / Frankfurt (t.b.d.)"
         country: "DE"
         language: de
         format: public
-        pricing: "Frühbucherpreis bei Anmeldung bis 8. Februar 2027: € 2690, Normalpreis: € 2890"
+        price:
+          amount: 2890
+          currency: EUR
+          early_bird:
+            amount: 2690
+            until: "2027-02-08"
         url: "https://www.arc42.de/termine#msa-jun-2027"
         status: open
       - id: msa-sep-2027
         code: "27-09 MSA"
         start: "2027-09-14"
         end: "2027-09-17"
-        city: "Mannheim oder Frankfurt (t.b.d.)"
+        city: "Mannheim / Frankfurt (t.b.d.)"
         country: "DE"
         language: de
         format: public
-        pricing: "Frühbucherpreis bei Anmeldung bis 14. Mai 2027: € 2690, Normalpreis: € 2890"
+        price:
+          amount: 2890
+          currency: EUR
+          early_bird:
+            amount: 2690
+            until: "2027-05-14"
         url: "https://www.arc42.de/termine#msa-sep-2027"
         status: open
       - id: msa-dez-2027
@@ -82,7 +131,12 @@ courses:
         country: "DE"
         language: de
         format: public
-        pricing: "Frühbucherpreis bei Anmeldung bis 30. Juli 2027: € 2690, Normalpreis: € 2890"
+        price:
+          amount: 2890
+          currency: EUR
+          early_bird:
+            amount: 2690
+            until: "2027-07-30"
         url: "https://www.arc42.de/termine#msa-dez-2027"
         status: open
 
@@ -93,8 +147,10 @@ courses:
         language: en
         format: online
         trainers: ["Wolfgang Reimesch"]
-        pricing: "€2100"
-        few_seats: "only few seats available"
+        price:
+          amount: 2100
+          currency: EUR
+        seats_limited: true
         url: "https://www.arc42.de/termine#msa-27-02-online"
         status: open
   - id: improve
@@ -103,7 +159,9 @@ courses:
     blurb: >-
       Learn to effectively evolve and maintain systems.
     certification: "iSAQB CPSA-A (Advanced)"
-    credits: "20 methodische und 10 technische Punkte"
+    credit_points:
+      methodical: 20
+      technical: 10
     url: "https://www.arc42.de/info-improve/"
     trainers: ["Carola Lilienthal", "Gernot Starke"]
     dates:
@@ -115,6 +173,10 @@ courses:
         country: "DE"
         language: de
         format: public
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
         url: "https://www.arc42.de/termine#improve-nov-2026"
         status: open
       - id: improve-jun-2027
@@ -125,6 +187,10 @@ courses:
         country: "DE"
         language: de
         format: public
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
         url: "https://www.arc42.de/termine#improve-jun-2027"
         status: open
       - id: improve-nov-2027
@@ -135,6 +201,10 @@ courses:
         country: "DE"
         language: de
         format: public
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
         url: "https://www.arc42.de/termine#improve-nov-2027"
         status: open
   - id: req4arc
@@ -143,7 +213,9 @@ courses:
     blurb: >-
       What to do if your requirements need improvement.
     certification: "iSAQB CPSA-A (Advanced)"
-    credits: "20 methodische und 10 kommunikative Punkte"
+    credit_points:
+      methodical: 20
+      communication: 10
     url: "https://www.arc42.de/info-req4arc/"
     trainers: ["Peter Hruschka", "Gernot Starke"]
     dates:
@@ -155,6 +227,10 @@ courses:
         country: "DE"
         language: de
         format: public
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
         url: "https://www.arc42.de/termine#req4arc-sep-2026"
         status: open
       - id: req4arc-mar-2027
@@ -165,16 +241,24 @@ courses:
         country: "DE"
         language: de
         format: public
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
         url: "https://www.arc42.de/termine#req4arc-mar-2027"
         status: open
       - id: req4arc-sep-2027
         code: "27-09 Req4Arc"
         start: "2027-09-21"
         end: "2027-09-23"
-        city: "Mannheim oder Frankfurt (t.b.d.)"
+        city: "Mannheim / Frankfurt (t.b.d.)"
         country: "DE"
         language: de
         format: public
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
         url: "https://www.arc42.de/termine#req4arc-sep-2027"
         status: open
   - id: adoc
@@ -185,7 +269,8 @@ courses:
       documentation, with a strong focus on arc42. Within this practical course
       you improve your own documentation! From the founders and maintainers of arc42.
     certification: "iSAQB CPSA-A (Advanced)"
-    credits: "20 methodische Punkte"
+    credit_points:
+      methodical: 20
     url: "https://www.arc42.de/info-adoc/"
     trainers: ["Peter Hruschka", "Gernot Starke"]
     dates:
@@ -198,15 +283,23 @@ courses:
         language: de
         format: public
         trainers: ["Gernot Starke"]
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
         url: "https://www.arc42.de/termine#adoc-oct-2026"
         status: open
       - id: adoc-jun-2027
         code: "27-06 ADOC"
         start: "2027-06-02"
         end: "2027-06-03"
-        city: "Mannheim oder Frankfurt (t.b.d.)"
+        city: "Mannheim / Frankfurt (t.b.d.)"
         country: "DE"
         language: de
         format: public
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
         url: "https://www.arc42.de/termine#adoc-jun-2027"
         status: open

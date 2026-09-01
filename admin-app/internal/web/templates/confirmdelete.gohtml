@@ -11,7 +11,8 @@
   <dt>Language</dt><dd>{{$d.Language}}</dd>
   <dt>Format</dt><dd>{{$d.Format}}</dd>
   {{if $d.Trainers}}<dt>Trainers</dt><dd>{{join $d.Trainers ", "}}</dd>{{end}}
-  {{if $d.Pricing}}<dt>Pricing</dt><dd>{{$d.Pricing}}</dd>{{end}}
+  {{with $d.Price}}<dt>Price</dt><dd>{{.Amount}} {{.Currency}}{{if .Alumni}}, alumni {{.Alumni}}{{end}}{{with .EarlyBird}}, early bird {{.Amount}} until {{.Until}}{{end}}</dd>{{end}}
+  {{if $d.SeatsLimited}}<dt>Seats</dt><dd>only a few left</dd>{{end}}
   <dt>Status</dt><dd><span class="status status-{{$d.Status}}">{{$d.Status}}</span></dd>
   <dt>Date ID</dt><dd><code>{{$d.ID}}</code></dd>
 </dl>

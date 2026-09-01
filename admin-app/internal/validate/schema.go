@@ -15,32 +15,55 @@ import (
 // FeedJSON renders the model in the shape api/trainings.schema.json describes,
 // so the repository's own schema can judge the draft before it becomes a PR.
 func FeedJSON(t model.Trainings) ([]byte, error) {
+	// NOTE the fields that are deliberately ABSENT: the deprecated prose keys
+	// `pricing`, `credits` and `few_seats`. The published feed still carries
+	// them (see api/trainings.json), generated per build, but they are optional
+	// in the schema and reproducing them here would mean a second Go
+	// implementation of German wording that already exists once in Liquid. Two
+	// implementations of the same sentence drift; one does not. What this shim
+	// exists to catch is a malformed *value* the app is about to write, and the
+	// structured fields below are where those values now live.
+	type jsonEarlyBird struct {
+		Amount int    `json:"amount"`
+		Until  string `json:"until"`
+	}
+	type jsonPrice struct {
+		Amount    int            `json:"amount"`
+		Currency  string         `json:"currency"`
+		Alumni    int            `json:"alumni,omitempty"`
+		EarlyBird *jsonEarlyBird `json:"early_bird,omitempty"`
+	}
+	type jsonCredits struct {
+		Methodical    int `json:"methodical,omitempty"`
+		Technical     int `json:"technical,omitempty"`
+		Communication int `json:"communication,omitempty"`
+	}
 	type jsonDate struct {
-		ID       string   `json:"id"`
-		Code     string   `json:"code"`
-		Start    string   `json:"start"`
-		End      string   `json:"end"`
-		City     string   `json:"city,omitempty"`
-		Country  string   `json:"country,omitempty"`
-		Language string   `json:"language"`
-		Format   string   `json:"format"`
-		Trainers []string `json:"trainers,omitempty"`
-		Pricing  string   `json:"pricing,omitempty"`
-		FewSeats string   `json:"few_seats,omitempty"`
-		URL      string   `json:"url"`
-		Status   string   `json:"status"`
+		ID           string     `json:"id"`
+		Code         string     `json:"code"`
+		Start        string     `json:"start"`
+		End          string     `json:"end"`
+		City         string     `json:"city,omitempty"`
+		Country      string     `json:"country,omitempty"`
+		Language     string     `json:"language"`
+		Format       string     `json:"format"`
+		Trainers     []string   `json:"trainers,omitempty"`
+		Price        *jsonPrice `json:"price,omitempty"`
+		SeatsLimited bool       `json:"seats_limited,omitempty"`
+		URL          string     `json:"url"`
+		Status       string     `json:"status"`
 	}
 	type jsonCourse struct {
-		ID            string     `json:"id"`
-		ShortTitle    string     `json:"short_title"`
-		Title         string     `json:"title"`
-		Blurb         string     `json:"blurb,omitempty"`
-		Certification *string    `json:"certification"`
-		Credits       *string    `json:"credits"`
-		URL           string     `json:"url"`
-		URLEn         string     `json:"url_en,omitempty"`
-		Trainers      []string   `json:"trainers"`
-		Dates         []jsonDate `json:"dates"`
+		ID            string       `json:"id"`
+		ShortTitle    string       `json:"short_title"`
+		Title         string       `json:"title"`
+		Blurb         string       `json:"blurb,omitempty"`
+		Certification *string      `json:"certification"`
+		CreditPoints  *jsonCredits `json:"credit_points,omitempty"`
+		URL           string       `json:"url"`
+		URLEn         string       `json:"url_en,omitempty"`
+		Trainers      []string     `json:"trainers"`
+		Dates         []jsonDate   `json:"dates"`
 	}
 	out := struct {
 		Generated string       `json:"generated"`
@@ -56,17 +79,31 @@ func FeedJSON(t model.Trainings) ([]byte, error) {
 			v := c.Certification
 			jc.Certification = &v
 		}
-		if c.Credits != "" {
-			v := c.Credits
-			jc.Credits = &v
+		if !c.CreditPoints.Empty() {
+			jc.CreditPoints = &jsonCredits{
+				Methodical:    c.CreditPoints.Methodical,
+				Technical:     c.CreditPoints.Technical,
+				Communication: c.CreditPoints.Communication,
+			}
 		}
 		for _, d := range c.Dates {
-			jc.Dates = append(jc.Dates, jsonDate{
+			jd := jsonDate{
 				ID: d.ID, Code: d.Code, Start: d.Start, End: d.End,
 				City: d.City, Country: d.Country, Language: d.Language,
-				Format: d.Format, Trainers: d.Trainers, Pricing: d.Pricing,
-				FewSeats: d.FewSeats, URL: d.URL, Status: d.Status,
-			})
+				Format: d.Format, Trainers: d.Trainers,
+				SeatsLimited: d.SeatsLimited, URL: d.URL, Status: d.Status,
+			}
+			if d.Price != nil && d.Price.Amount > 0 {
+				cur := d.Price.Currency
+				if cur == "" {
+					cur = "EUR"
+				}
+				jd.Price = &jsonPrice{Amount: d.Price.Amount, Currency: cur, Alumni: d.Price.Alumni}
+				if eb := d.Price.EarlyBird; eb != nil && eb.Amount > 0 {
+					jd.Price.EarlyBird = &jsonEarlyBird{Amount: eb.Amount, Until: eb.Until}
+				}
+			}
+			jc.Dates = append(jc.Dates, jd)
 		}
 		out.Courses = append(out.Courses, jc)
 	}

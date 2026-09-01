@@ -44,6 +44,33 @@ and is wrong anyway.
   reaches the back office. Never decorate it; language hints go in the label.
 - **`_data/trainings.yml` is the single source of truth** for dates, and the
   admin app writes it by pull request. Booking codes must stay unique.
+- **No prose in `_data/trainings.yml`.** Every value there is rendered on the
+  German *and* the English pages, so a hand-written sentence is wrong on half
+  of them. `price`, `credit_points` and `seats_limited` are numbers and flags;
+  the wording is built per language by `_includes/price-label.html`,
+  `credits-label.html` and `money.html`. The retired string keys `pricing`,
+  `credits` and `few_seats` are rejected by name in
+  `scripts/validate_trainings.rb`, because the last time they existed the site
+  advertised an expired early-bird price for weeks and showed German pricing to
+  English readers. **Every date needs a `price`**: four card templates used to
+  carry a hardcoded bilingual price sentence instead, so those courses had no
+  price in the feed at all and the booking summary contradicted the card.
+  `timeline_course.html` must forward `pricing=` to every template it
+  dispatches to; three of the six did not, which was invisible until the price
+  moved into the data.
+- **`/api/trainings.json` publishes the retired keys too, generated.** Four
+  consumers render them verbatim, so they keep their old names and old string
+  types (ADR-0004: additive is free, changing an existing field is not). Never
+  "clean up" by deleting them, and never turn them back into stored data: they
+  are computed against the build date, which is what stops them going stale.
+  An expired `early_bird` is omitted from the feed entirely.
+- **Jekyll includes share the caller's scope.** `assign` inside an include
+  cannot shadow a caller's `for`-loop item, so every variable in
+  `money.html`, `price-label.html` and `credits-label.html` is prefixed
+  (`m_`, `pl_`, `cl_`). A bare name silently reads the caller's value; this
+  cost a debugging round when a bare `c` collided with a loop over courses.
+  Also: a literal Liquid tag written inside a `{%- comment -%}` block is still
+  parsed, and an unclosed one is a build error.
 - **The bilingual front-matter contract** (`lang`, `translation_url`, `locale`,
   the hreflang triple, per-language nav) is described in
   [README §Languages](/README.md#languages). `_pages/home.html` and

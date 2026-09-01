@@ -274,7 +274,9 @@ func TestNewDateFormRendersCompletely(t *testing.T) {
 	// save, which TestSaveDerivesTheRegistrationURL covers.
 	for _, field := range []string{
 		`name="id"`, `name="code"`, `name="start"`, `name="end"`,
-		`name="format"`, `name="language"`, `name="status"`, `name="few_seats"`,
+		`name="format"`, `name="language"`, `name="status"`,
+		`name="price_amount"`, `name="price_alumni"`, `name="early_bird_until"`,
+		`name="seats_limited"`,
 	} {
 		if !strings.Contains(body, field) {
 			t.Errorf("form is missing %s — rendering stopped early", field)
@@ -815,7 +817,7 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 		{"/dates/new", []string{
 			"course-hint", "id-hint", "code-hint", "start-hint", "end-hint",
 			"format-hint", "city-hint", "country-hint", "language-hint",
-			"status-hint", "pricing-hint", "few-seats-hint",
+			"status-hint", "price-hint", "alumni-hint", "currency-hint", "eb-hint", "ebu-hint",
 		}},
 		{"/courses/new", []string{
 			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-hint",

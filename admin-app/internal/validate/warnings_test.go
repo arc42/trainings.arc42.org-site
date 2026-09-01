@@ -73,10 +73,10 @@ func TestPublicDateWithoutCountryWarns(t *testing.T) {
 func TestFewSeatsOnAnUnbookableDateWarns(t *testing.T) {
 	d := model.Date{
 		ID: "msa-feb-2027", Code: "27-02 MSA-EN", Start: "2027-02-23", End: "2027-02-25",
-		Language: "en", Format: "online", Status: "full", FewSeats: "only few seats available",
+		Language: "en", Format: "online", Status: "full", SeatsLimited: true,
 	}
-	if got := fields(DateWarnings(d, "msa", "2026-08-16", true)); !strings.Contains(got, "few_seats") {
-		t.Errorf("expected a few_seats warning, got %q", got)
+	if got := fields(DateWarnings(d, "msa", "2026-08-16", true)); !strings.Contains(got, "seats_limited") {
+		t.Errorf("expected a seats_limited warning, got %q", got)
 	}
 }
 

@@ -68,9 +68,24 @@
         <small id="cert-hint" class="hint">The certificate this course prepares
           for, if any. Leave empty when it prepares for none.</small>
       </label>
-      <label>Credits
-        <input name="credits" value="{{.Course.Credits}}" aria-describedby="credits-hint">
-        <small id="credits-hint" class="hint">Leave empty if the course carries none.</small>
+      {{/* Three counts, not the sentence this used to be. "20 methodische und
+           10 technische Punkte" was German prose on a field rendered on the
+           English pages too; the wording is now built per language from these
+           numbers. */}}
+      <label>iSAQB points, methodical
+        <input name="credits_methodical" type="number" min="0" step="1" inputmode="numeric"
+               value="{{with .Course.CreditPoints}}{{if .Methodical}}{{.Methodical}}{{end}}{{end}}"
+               aria-describedby="credits-hint">
+        <small id="credits-hint" class="hint">Leave all three empty if the
+          course carries no credit points.</small>
+      </label>
+      <label>iSAQB points, technical
+        <input name="credits_technical" type="number" min="0" step="1" inputmode="numeric"
+               value="{{with .Course.CreditPoints}}{{if .Technical}}{{.Technical}}{{end}}{{end}}">
+      </label>
+      <label>iSAQB points, communication
+        <input name="credits_communication" type="number" min="0" step="1" inputmode="numeric"
+               value="{{with .Course.CreditPoints}}{{if .Communication}}{{.Communication}}{{end}}{{end}}">
       </label>
     </div>
   </fieldset>

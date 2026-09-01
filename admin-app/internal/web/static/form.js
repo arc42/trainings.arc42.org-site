@@ -130,10 +130,10 @@
 
     var city = document.querySelector('input[name="city"]');
     var country = document.querySelector('input[name="country"]');
-    var pricing = document.querySelector('input[name="pricing"]');
+    var priceAmount = document.querySelector('input[name="price_amount"]');
     var cityState = claim(city, function () { return attr("data-city"); });
     var countryState = claim(country, function () { return attr("data-country"); });
-    var pricingState = claim(pricing, function () { return attr("data-pricing"); });
+    var priceState = claim(priceAmount, function () { return attr("data-price-amount"); });
 
     var refreshEnd = function () {
       if (!start.value) return;
@@ -154,7 +154,7 @@
       if (idState) idState.apply();
       cityState.apply();
       countryState.apply();
-      pricingState.apply();
+      priceState.apply();
       refreshMasks();
     });
 

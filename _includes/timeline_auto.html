@@ -46,6 +46,29 @@ frontmatter behaviour (course-default trainers stay baked into the templates).
   {%- if d.status == "waitlist" or d.status == "full" -%}{%- assign sold_out = true -%}{%- endif -%}
   {%- assign trainerline = nil -%}
   {%- if d.trainers -%}{%- assign trainerline = d.trainers | join: trainer_join -%}{%- endif -%}
+  {%- comment -%}
+    price, credits and few_seats are rendered HERE, once, and handed down as
+    finished strings, because this is the only include that holds both the data
+    and the page language. The six card templates keep taking plain strings and
+    did not have to change.
+
+    The empty-string guard matters: Liquid treats "" as truthy, so an
+    unpriced date would otherwise render an empty <p> on the card.
+  {%- endcomment -%}
+  {%- capture pricing -%}{% include price-label.html price=d.price lang=page_lang %}{%- endcapture -%}
+  {%- assign pricing = pricing | strip -%}
+  {%- if pricing == "" -%}{%- assign pricing = nil -%}{%- endif -%}
+  {%- capture creditline -%}{% include credits-label.html credits=c.credit_points lang=page_lang %}{%- endcapture -%}
+  {%- assign creditline = creditline | strip -%}
+  {%- if creditline == "" -%}{%- assign creditline = nil -%}{%- endif -%}
+  {%- assign few_seats = nil -%}
+  {%- if d.seats_limited -%}
+    {%- if page_lang == "de" -%}
+      {%- assign few_seats = "Nur noch wenige Plätze verfügbar" -%}
+    {%- else -%}
+      {%- assign few_seats = "Only a few seats available" -%}
+    {%- endif -%}
+  {%- endif -%}
   {% include timeline_course.html
      type=type
      position=position
@@ -53,10 +76,10 @@ frontmatter behaviour (course-default trainers stay baked into the templates).
      location=d.city
      anchor_id=d.id
      sold_out=sold_out
-     few_seats=d.few_seats
-     pricing=d.pricing
+     few_seats=few_seats
+     pricing=pricing
      trainer=trainerline
-     credits=c.credits
+     credits=creditline
      page_lang=page_lang
      delivery_lang=d.language %}
 {%- endfor -%}

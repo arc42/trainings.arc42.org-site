@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 
 	"arc42-trainings-admin/internal/gh"
@@ -119,6 +120,28 @@ func courseProblems(c model.Course, existing []model.Course, isNew bool) []valid
 	return problems
 }
 
+// parseCreditPoints reads the three iSAQB category counts. All three empty (or
+// all zero) means the course carries no credit points and the key is left out
+// of the YAML entirely, rather than written as an empty mapping.
+func parseCreditPoints(get func(string) string) *model.CreditPoints {
+	num := func(k string) int {
+		n, err := strconv.Atoi(get(k))
+		if err != nil || n < 0 {
+			return 0
+		}
+		return n
+	}
+	cp := &model.CreditPoints{
+		Methodical:    num("credits_methodical"),
+		Technical:     num("credits_technical"),
+		Communication: num("credits_communication"),
+	}
+	if cp.Empty() {
+		return nil
+	}
+	return cp
+}
+
 func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
 	d, err := s.loadDraft(r.Context(), sess, client)
 	if err != nil {
@@ -133,7 +156,8 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	c := model.Course{
 		ID: get("id"), ShortTitle: get("short_title"), Title: get("title"),
 		Blurb: get("blurb"), Certification: get("certification"),
-		Credits: get("credits"), URL: get("url"), URLEn: get("url_en"), Trainers: parseTrainers(r),
+		CreditPoints: parseCreditPoints(get), URL: get("url"), URLEn: get("url_en"),
+		Trainers: parseTrainers(r),
 	}
 	isNew := r.PathValue("id") == ""
 

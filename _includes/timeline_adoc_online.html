@@ -11,18 +11,28 @@
 {%- if include.page_lang == "de" -%}
   {%- assign blurb = "Effektive und sparsame Architekturdokumentation (mit Schwerpunkt arc42)" -%}
   {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
-  {%- assign default_price = "Normalpreis: € 1500" -%}
   {%- assign info_label = "Mehr Info" -%}
   {%- assign register_label = "Anmeldung" -%}
   {%- assign register_url = "/anmeldung/" -%}
 {%- else -%}
   {%- assign blurb = "Effective and lean architecture documentation (with a focus on arc42)" -%}
   {%- assign sold_out_text = "(sold out — waitlist only)" -%}
-  {%- assign default_price = "Regular price: € 1500" -%}
   {%- assign info_label = "More info (in German)" -%}
   {%- assign register_label = "Register" -%}
   {%- assign register_url = "/registration/" -%}
 {%- endif -%}
+
+  {%- comment -%}
+    No price literal here any more. It used to be a hardcoded bilingual
+    sentence, so this course's price never reached _data/trainings.yml and
+    therefore never reached /api/trainings.json: the consumer sites showed no
+    price for it at all, and the booking summary on the registration page
+    disagreed with the card beside it. Every date now carries a price block,
+    rendered per language by _includes/price-label.html and handed down as
+    include.pricing by timeline_auto.html.
+    The retired literal read "Normalpreis: € 1500". No online ADOC date is
+    scheduled at the moment; when one is, its price block carries 1500.
+  {%- endcomment -%}
 
 <div class="container {{ position_class }}" id="{{ anchor_id }}">
     <div class="content{% if sold_out %} content--sold-out{% endif %}">
@@ -46,7 +56,7 @@
         <p>Trainer: {{ trainer }}.</p>
         {% if include.credits %}
         <p class="date-small">
-            CPSA-Credits: {{ include.credits }}
+            {% if include.page_lang == "de" %}iSAQB-Punkte{% else %}iSAQB credits{% endif %}: {{ include.credits }}
         </p>
         {% endif %}
 
@@ -61,10 +71,6 @@
         {% if include.pricing %}
         <p class="date-small">
             {{ include.pricing }}
-        </p>
-        {% else %}
-        <p class="date-small">
-            {{ default_price }}
         </p>
         {% endif %}
 

@@ -2,9 +2,94 @@
 layout: none
 # JSON with front matter (not .md) follows repo's search.json pattern;
 # .md extension triggers Jekyll Markdown processing that wraps output in <p> tags.
+#
+# WHY THIS IS WRITTEN OUT BY HAND INSTEAD OF `courses | jsonify`
+#
+# It used to be exactly that one filter. It stopped being enough when price,
+# credit points and the limited-seats flag became structured data in
+# trainings.yml instead of hand-written German sentences: four consumer sites
+# read `pricing`, `credits` and `few_seats` as STRINGS and render them
+# verbatim, and jsonify would have silently changed their types.
+#
+# ADR-0004 says the feed is a contract, and CLAUDE.md spells out the rule:
+# adding optional fields is free, changing an existing one is not. So every
+# document below carries BOTH:
+#
+#   legacy (unchanged type, unchanged name)   new (structured)
+#   ---------------------------------------   -----------------------------
+#   pricing   "Frühbucherpreis ... 2.690 €"    price       { amount, currency,
+#   credits   "20 methodische und 10 ..."                    early_bird }
+#   few_seats "only few seats available"       credit_points { methodical, ... }
+#                                              seats_limited true
+#
+# No published key ever changes type, so no consumer has to do anything, ever.
+# The legacy strings are now GENERATED rather than stored, which is the whole
+# point: `pricing` is rendered through _includes/price-label.html against the
+# build date, so an expired early-bird offer stops being published on its own.
+# Consumers that migrate to `price` get to render it in their own language;
+# consumers that never migrate simply stop being lied to.
+#
+# The legacy strings are German, because that is what they have always been.
+# Their exact money formatting changed once, at the migration, from "€ 2690"
+# to "2.690 €" (correct German). That is cosmetic, not a type change.
 ---
+{%- assign courses = site.data.trainings.courses -%}
+{%- assign today = 'now' | date: '%Y-%m-%d' -%}
 {
   "$schema": "https://trainings.arc42.org/api/trainings.schema.json",
   "generated": {{ site.time | date_to_xmlschema | jsonify }},
-  "courses": {{ site.data.trainings.courses | jsonify }}
+  "courses": [
+{%- for course in courses %}
+  {%- capture creditstr -%}{% include credits-label.html credits=course.credit_points lang="de" %}{%- endcapture -%}
+  {%- assign creditstr = creditstr | strip -%}
+    {
+      {% if course.blurb %}"blurb": {{ course.blurb | strip | jsonify }},
+      {% endif %}{% if course.certification %}"certification": {{ course.certification | jsonify }},
+      {% endif %}{% if creditstr != "" %}"credits": {{ creditstr | append: " Punkte" | jsonify }},
+      "credit_points": {{ course.credit_points | jsonify }},
+      {% endif %}{% if course.url_en %}"url_en": {{ course.url_en | jsonify }},
+      {% endif %}"id": {{ course.id | jsonify }},
+      "short_title": {{ course.short_title | jsonify }},
+      "title": {{ course.title | jsonify }},
+      "url": {{ course.url | jsonify }},
+      "trainers": {{ course.trainers | jsonify }},
+      "dates": [
+{%- for d in course.dates %}
+  {%- capture pricestr -%}{% include price-label.html price=d.price lang="de" %}{%- endcapture -%}
+  {%- assign pricestr = pricestr | strip -%}
+        {
+          {% if d.city %}"city": {{ d.city | jsonify }},
+          {% endif %}{% if d.country %}"country": {{ d.country | jsonify }},
+          {% endif %}{% if d.trainers %}"trainers": {{ d.trainers | jsonify }},
+          {% endif %}{% if pricestr != "" %}"pricing": {{ pricestr | jsonify }},
+          {%- comment -%}
+            price is written out rather than jsonified so that an EXPIRED
+            early_bird is omitted here too. Leaving it in would push the
+            expiry decision onto four consumers, which is the arrangement
+            this whole change exists to remove: the producer decides once,
+            at build time, and everyone downstream can render what they get
+            without a calendar.
+          {%- endcomment -%}
+          "price": {
+            "amount": {{ d.price.amount }},
+            "currency": {{ d.price.currency | default: "EUR" | jsonify }}{% if d.price.alumni %},
+            "alumni": {{ d.price.alumni }}{% endif %}{% if d.price.early_bird.until >= today %},
+            "early_bird": { "amount": {{ d.price.early_bird.amount }}, "until": {{ d.price.early_bird.until | jsonify }} }{% endif %}
+          },
+          {% endif %}{% if d.seats_limited %}"few_seats": "only few seats available",
+          "seats_limited": true,
+          {% endif %}"id": {{ d.id | jsonify }},
+          "code": {{ d.code | jsonify }},
+          "start": {{ d.start | jsonify }},
+          "end": {{ d.end | jsonify }},
+          "language": {{ d.language | jsonify }},
+          "format": {{ d.format | jsonify }},
+          "status": {{ d.status | jsonify }},
+          "url": {{ d.url | jsonify }}
+        }{% unless forloop.last %},{% endunless %}
+{%- endfor %}
+      ]
+    }{% unless forloop.last %},{% endunless %}
+{%- endfor %}
+  ]
 }
