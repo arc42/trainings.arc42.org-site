@@ -1,0 +1,86 @@
+{%- comment -%}
+  Card copy follows include.page_lang (the PAGE language, default "en").
+  include.delivery_lang is the language the training is held in and only shows
+  up as the small note under the date line.
+
+  The online twin of timeline_improve.html, built the way timeline_msa_online
+  is: no city line, the terms link and the time-zone note that every online
+  course carries, and the trainer named per date rather than baked in.
+
+  It exists because timeline_auto.html derives the template name as
+  "<course id>_online" for any date with format: online. improve-apr-2027
+  arrived through the admin app as the first online IMPROVE, and without this
+  file timeline_course.html fell through to its unknown-type branch: the date
+  validated, published to the feed, and rendered as an HTML comment. A booking
+  nobody could see.
+{%- endcomment -%}
+{% assign position_class = include.position | default: "right" %}
+{% assign anchor_id = include.anchor_id | default: "improve-online" %}
+{% assign sold_out = include.sold_out | default: false %}
+{% assign trainer = include.trainer | default: "Wolfgang Reimesch" %}
+
+{%- if include.page_lang == "de" -%}
+  {%- capture terms_line -%}
+    Bitte beachten Sie unsere <a href="https://www.arc42.de/terms/">Allgemeinen Geschäftsbedingungen</a>.
+  {%- endcapture -%}
+  {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
+  {%- assign info_label = "Mehr Info" -%}
+  {%- assign register_label = "Anmeldung" -%}
+  {%- assign register_url = "/anmeldung/" -%}
+{%- else -%}
+  {%- capture terms_line -%}
+    Please see our <a href="https://www.arc42.de/terms-en/">terms and conditions</a>.
+  {%- endcapture -%}
+  {%- assign sold_out_text = "(sold out — waitlist only)" -%}
+  {%- assign info_label = "More info (in German)" -%}
+  {%- assign register_label = "Register" -%}
+  {%- assign register_url = "/registration/" -%}
+{%- endif -%}
+
+<div class="container {{ position_class }}" id="{{ anchor_id }}">
+    <div class="content{% if sold_out %} content--sold-out{% endif %}">
+        {{ include.date }} (online)<br>
+        {% if include.page_lang == "de" %}
+          {% if include.delivery_lang == "en" %}<p class="training-language-note">Durchführung auf Englisch</p>{% endif %}
+        {% else %}
+          {% if include.delivery_lang == "de" %}<p class="training-language-note">held in German</p>{% else %}<p class="training-language-note">held in English</p>{% endif %}
+        {% endif %}
+        {%- comment -%}
+          Trainers deliver every English online course from Germany, so this
+          is a hardcoded fact about the business, not per-date data. Shown
+          regardless of page_lang: foreign participants also register via
+          arc42.de's German pages.
+        {%- endcomment -%}
+        {% if include.delivery_lang == "en" %}
+          {% if include.page_lang == "de" %}<p class="training-language-note">Zeitzone: MEZ/MESZ (Berlin)</p>{% else %}<p class="training-language-note">Time zone: CET/CEST (Berlin)</p>{% endif %}
+        {% endif %}
+        <h2 class="course-title">IMPROVE<br>
+        (CPSA-Advanced)<br></h2>
+        {{ terms_line }}
+
+        {% if sold_out %}
+            <p class="timeline-sold-out">{{ sold_out_text }}</p>
+        {% endif %}
+
+        {% if include.few_seats %}
+            <p class="timeline-few-seats">{{ include.few_seats }}</p>
+        {% endif %}
+
+        <p>Trainer: {{ trainer }}.</p>
+        {% if include.credits %}
+        <p class="date-small">
+            {% if include.page_lang == "de" %}iSAQB-Punkte{% else %}iSAQB credits{% endif %}: {{ include.credits }}
+        </p>
+        {% endif %}
+        {% if include.pricing %}
+        <p class="date-small">
+            {{ include.pricing }}
+        </p>
+        {% endif %}
+
+        <a class="button buttonImprove" href="https://www.arc42.de/info-improve/" hreflang="de">{{ info_label }}</a>
+        {% unless sold_out %}
+            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ register_label }}</a>
+        {% endunless %}
+    </div>
+</div>

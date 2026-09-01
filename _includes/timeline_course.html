@@ -26,6 +26,8 @@ Parameters:
     {% include timeline_msa_online.html pricing=include.pricing position=include.position date=include.date anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats trainer=include.trainer page_lang=include.page_lang delivery_lang=include.delivery_lang %}
   {% when "req4arc" %}
     {% include timeline_req4arc.html pricing=include.pricing position=include.position date=include.date location=include.location anchor_id=include.anchor_id credits=include.credits sold_out=include.sold_out few_seats=include.few_seats page_lang=include.page_lang delivery_lang=include.delivery_lang %}
+  {% when "improve_online" %}
+    {% include timeline_improve_online.html pricing=include.pricing position=include.position date=include.date anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats trainer=include.trainer credits=include.credits page_lang=include.page_lang delivery_lang=include.delivery_lang %}
   {% when "improve" %}
     {% include timeline_improve.html pricing=include.pricing position=include.position date=include.date location=include.location anchor_id=include.anchor_id sold_out=include.sold_out few_seats=include.few_seats credits=include.credits page_lang=include.page_lang delivery_lang=include.delivery_lang %}
   {% when "adoc" %}
