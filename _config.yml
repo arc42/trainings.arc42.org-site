@@ -66,6 +66,11 @@ exclude:
   - demo-out
   - preview-out
   - docs
+  # Internal working notes and handovers. Not documentation of the site,
+  # and not for publication: Jekyll copies anything it is not told to
+  # exclude into _site/, so without this line training/todo/*.html would
+  # be served from trainings.arc42.org.
+  - training
   - vendor
   - .asset-cache
   - .bundle

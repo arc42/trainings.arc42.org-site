@@ -1,0 +1,1332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  Internal testing handover for the prices-as-data rollout, 7 September 2026.
+  Standalone: open it in a browser, no server needed.
+
+  NOT part of the published site. `training` is in the exclude: list in
+  _config.yml, because anything Jekyll is not told to exclude is copied into
+  _site/ and served from trainings.arc42.org.
+
+  Also published as a private artifact:
+  https://claude.ai/code/artifact/4257cb65-da18-4d45-b834-3cd718549f7d
+-->
+<style>
+  html { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Prices-as-Data Handover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+
+<style>
+  :root {
+    --ground:   #F1F4F2;
+    --surface:  #FFFFFF;
+    --surface-2:#F7F9F8;
+    --ink:      #151E1B;
+    --ink-soft: #3C4B46;
+    --muted:    #61716C;
+    --rule:     #D8E1DD;
+    --rule-soft:#E7EDEA;
+    --accent:   #0F6B5C;
+    --accent-ink:#0B4E43;
+    --accent-wash:#E4EFEC;
+    --pass:     #2F7A4F;
+    --pass-wash:#E3F0E8;
+    --watch:    #9C6412;
+    --watch-wash:#F6EBD9;
+    --stop:     #A83228;
+    --stop-wash:#F6E4E2;
+    --shadow:   0 1px 2px rgba(21,30,27,.05), 0 8px 24px -14px rgba(21,30,27,.22);
+
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --sans:  "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono:  "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #0E1412;
+      --surface:  #151D1A;
+      --surface-2:#1A2422;
+      --ink:      #E7EDEA;
+      --ink-soft: #C2CFCA;
+      --muted:    #8FA09A;
+      --rule:     #27322F;
+      --rule-soft:#1F2A27;
+      --accent:   #57C4AC;
+      --accent-ink:#8AD9C6;
+      --accent-wash:#16302B;
+      --pass:     #62C08A;
+      --pass-wash:#162C21;
+      --watch:    #D9A24A;
+      --watch-wash:#2E2517;
+      --stop:     #E28376;
+      --stop-wash:#331C19;
+      --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #0E1412;
+    --surface:  #151D1A;
+    --surface-2:#1A2422;
+    --ink:      #E7EDEA;
+    --ink-soft: #C2CFCA;
+    --muted:    #8FA09A;
+    --rule:     #27322F;
+    --rule-soft:#1F2A27;
+    --accent:   #57C4AC;
+    --accent-ink:#8AD9C6;
+    --accent-wash:#16302B;
+    --pass:     #62C08A;
+    --pass-wash:#162C21;
+    --watch:    #D9A24A;
+    --watch-wash:#2E2517;
+    --stop:     #E28376;
+    --stop-wash:#331C19;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 20px 96px;
+  }
+  @media (min-width: 1040px) {
+    .shell {
+      grid-template-columns: 232px minmax(0, 1fr);
+      gap: 56px;
+      padding: 0 32px 120px;
+    }
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    grid-column: 1 / -1;
+    padding: 56px 0 32px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(30px, 4.6vw, 46px);
+    line-height: 1.1;
+    letter-spacing: -.015em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 17.5px;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+  .meta-line {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 22px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+  }
+
+  /* ---------- rail ---------- */
+  .rail { display: none; }
+  @media (min-width: 1040px) {
+    .rail {
+      display: block;
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      padding-bottom: 24px;
+    }
+  }
+  .rail-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .rail ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .rail a {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    line-height: 1.3;
+    border-left: 2px solid transparent;
+  }
+  .rail a:hover { background: var(--surface); color: var(--ink); }
+  .rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rail .n { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .rail .tally {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .rail a[data-done="yes"] { border-left-color: var(--pass); }
+  .rail a[data-done="yes"] .tally { color: var(--pass); }
+  .rail-foot {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+  }
+  .reset {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 5px 9px;
+    cursor: pointer;
+  }
+  .reset:hover { color: var(--ink); border-color: var(--muted); }
+  .reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- generic blocks ---------- */
+  main { min-width: 0; }
+  section { margin-bottom: 52px; }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 23px;
+    letter-spacing: -.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 15px;
+    margin: 26px 0 8px;
+    letter-spacing: -.005em;
+  }
+  p { margin: 0 0 14px; max-width: 68ch; }
+  .lede { color: var(--ink-soft); max-width: 66ch; margin-bottom: 24px; }
+  strong { font-weight: 600; }
+  code {
+    font-family: var(--mono);
+    font-size: .88em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule-soft);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--accent-ink);
+    word-break: break-word;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.62;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 7px;
+    padding: 13px 15px;
+    margin: 0 0 14px;
+    overflow-x: auto;
+    color: var(--ink-soft);
+  }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; }
+  pre .c { color: var(--muted); }
+  pre .ok { color: var(--pass); }
+
+  /* ---------- status board ---------- */
+  .board {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+    margin-bottom: 22px;
+  }
+  @media (min-width: 720px) { .board { grid-template-columns: repeat(3, 1fr); } }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 9px;
+    padding: 16px 17px;
+    box-shadow: var(--shadow);
+    border-top: 3px solid var(--rule);
+  }
+  .card.is-old  { border-top-color: var(--watch); }
+  .card.is-new  { border-top-color: var(--pass); }
+  .card.is-hold { border-top-color: var(--accent); }
+  .card h4 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 10px;
+    font-weight: 500;
+  }
+  .card .headline {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0 0 8px;
+    color: var(--ink);
+  }
+  .card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 12.5px; }
+  .card dt { color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+  .card dd { margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  .verdict {
+    background: var(--accent-wash);
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 15px;
+    color: var(--ink);
+    max-width: none;
+  }
+  .verdict p { margin: 0; max-width: 70ch; }
+  .verdict p + p { margin-top: 8px; }
+
+  /* ---------- checks table ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 520px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    background: var(--surface-2);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.cmd { font-family: var(--mono); font-size: 12px; color: var(--ink); white-space: nowrap; }
+  td.res { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+  .dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--pass);
+    margin-right: 7px;
+    vertical-align: middle;
+  }
+
+  /* ---------- phases ---------- */
+  .phase {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 22px 22px 8px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .phase-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 14px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .phase-n {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+    background: var(--accent-wash);
+    border-radius: 4px;
+    padding: 2px 7px;
+    flex: none;
+  }
+  .phase-head h2 { flex: 1 1 260px; font-size: 21px; margin: 0; }
+  .chip {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+    color: var(--muted);
+    background: var(--surface-2);
+    flex: none;
+  }
+  .chip.where-local { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: var(--accent-wash); }
+  .chip.where-ship  { color: var(--stop); border-color: color-mix(in srgb, var(--stop) 30%, transparent); background: var(--stop-wash); }
+  .chip.where-live  { color: var(--watch); border-color: color-mix(in srgb, var(--watch) 34%, transparent); background: var(--watch-wash); }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .step { border-radius: 7px; padding: 10px 12px 10px 10px; }
+  .step:hover { background: var(--surface-2); }
+  .step-top { display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: start; }
+  .step input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    margin: 3px 0 0;
+    border: 1.5px solid var(--muted);
+    border-radius: 4px;
+    background: var(--surface);
+    cursor: pointer;
+    display: grid;
+    place-content: center;
+    flex: none;
+  }
+  .step input[type="checkbox"]::after {
+    content: "";
+    width: 8px; height: 8px;
+    transform: scale(0);
+    transition: transform .12s ease;
+    box-shadow: inset 8px 8px var(--surface);
+    clip-path: polygon(14% 44%, 0 65%, 40% 100%, 100% 16%, 84% 0, 39% 66%);
+  }
+  .step input[type="checkbox"]:checked { background: var(--pass); border-color: var(--pass); }
+  .step input[type="checkbox"]:checked::after { transform: scale(1); }
+  .step input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .step label { cursor: pointer; font-size: 14.5px; line-height: 1.5; }
+  .step input:checked ~ label .task { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--rule); }
+  .task { font-weight: 500; }
+  .detail { margin: 8px 0 0 31px; color: var(--ink-soft); font-size: 13.5px; }
+  .detail p { margin: 0 0 9px; max-width: 66ch; }
+  .detail p:last-child { margin-bottom: 0; }
+  .detail ul { margin: 0 0 9px; padding-left: 18px; max-width: 66ch; }
+  .detail li { margin-bottom: 4px; }
+  .detail pre { margin-top: 2px; }
+
+  .expect {
+    border-left: 2px solid var(--pass);
+    background: var(--pass-wash);
+    border-radius: 0 6px 6px 0;
+    padding: 9px 13px;
+    margin: 0 0 10px;
+    font-size: 13px;
+  }
+  .expect .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--pass);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .expect p { margin: 0 0 6px; }
+  .expect p:last-child { margin: 0; }
+  .expect .pair { display: grid; gap: 2px; font-family: var(--mono); font-size: 12px; }
+
+  .note {
+    border-left: 2px solid var(--watch);
+    background: var(--watch-wash);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 15px;
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .note .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--watch);
+    display: block;
+    margin-bottom: 5px;
+  }
+  .note p { margin: 0 0 8px; max-width: 68ch; }
+  .note p:last-child { margin: 0; }
+
+  .rule-box {
+    border: 1px solid var(--stop);
+    background: var(--stop-wash);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 0 0 16px;
+  }
+  .rule-box .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--stop);
+    display: block;
+    margin-bottom: 5px;
+  }
+  .rule-box p { margin: 0; max-width: 68ch; font-size: 14.5px; }
+
+  .files { font-family: var(--mono); font-size: 12.5px; columns: 2; column-gap: 28px; margin: 0; padding: 0; list-style: none; }
+  .files li { break-inside: avoid; color: var(--ink-soft); margin-bottom: 3px; }
+  @media (max-width: 620px) { .files { columns: 1; } }
+
+  footer {
+    grid-column: 1 / -1;
+    margin-top: 30px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header class="masthead">
+    <p class="eyebrow">Handover · trainings.arc42.org</p>
+    <h1>Prices-as-Data Handover</h1>
+    <p class="standfirst">
+      How to test the price restructuring, in the order it has to be done. Six phases run locally
+      against the branch. Phase&nbsp;7 ships it. The last two can only be done in production.
+    </p>
+    <p class="meta-line">
+      <span>branch <strong>prices-as-data</strong> · 784ad4b</span>
+      <span>16 commits ahead of main</span>
+      <span>10 files, +361 lines</span>
+      <span>verified 7 Sep 2026</span>
+    </p>
+  </header>
+
+  <nav class="rail" aria-label="Phases">
+    <p class="rail-title">Sequence</p>
+    <ol id="rail-list"></ol>
+    <div class="rail-foot">
+      <p class="rail-title" style="margin-bottom:8px">Progress <span id="overall" class="tally"></span></p>
+      <button class="reset" id="reset" type="button">Clear all ticks</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ============ WHERE THINGS STAND ============ -->
+    <section id="stand">
+      <h2>Where things stand</h2>
+      <p class="lede">
+        The single fact that governs the order below: none of the price work is live yet.
+        The branch is pushed, but <code>origin/main</code> is what GitHub Pages serves, and it
+        still has the old world on it.
+      </p>
+
+      <div class="board">
+        <div class="card is-old">
+          <h4>Live now</h4>
+          <p class="headline">The old world</p>
+          <dl>
+            <dt>ref</dt><dd>origin/main · 5122978</dd>
+            <dt>dates</dt><dd>15</dd>
+            <dt>priced</dt><dd>0</dd>
+            <dt>format</dt><dd>€2100</dd>
+          </dl>
+        </div>
+        <div class="card is-new">
+          <h4>Local branch</h4>
+          <p class="headline">The new world</p>
+          <dl>
+            <dt>ref</dt><dd>prices-as-data · 784ad4b</dd>
+            <dt>dates</dt><dd>16</dd>
+            <dt>priced</dt><dd>16</dd>
+            <dt>format</dt><dd>2.100 € / €2,100</dd>
+          </dl>
+        </div>
+        <div class="card is-hold">
+          <h4>Local main</h4>
+          <p class="headline">One commit behind the gate</p>
+          <dl>
+            <dt>ref</dt><dd>main · ae0612c</dd>
+            <dt>unpushed</dt><dd>1 commit</dd>
+            <dt>state</dt><dd>not merged</dd>
+            <dt>action</dt><dd>phase 7</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="verdict">
+        <p>
+          <strong>Read this as:</strong> everything in phases 1 to 6 is testable right now on your
+          machine and affects nobody. Phase 7 is the irreversible one. Phases 8 and 9 cannot be
+          faked locally, because they involve four other repositories and a third-party form service.
+        </p>
+      </div>
+
+      <h3>What actually changed on the branch</h3>
+      <ul class="files">
+        <li>_includes/timeline_req4arc_online.html <span style="color:var(--pass)">new</span></li>
+        <li>_includes/timeline_improve_online.html <span style="color:var(--pass)">new</span></li>
+        <li>_includes/timeline_course.html</li>
+        <li>_data/trainings.yml</li>
+        <li>scripts/validate_trainings.rb</li>
+        <li>admin-app/internal/model/model.go</li>
+        <li>admin-app/internal/validate/warnings.go</li>
+        <li>admin-app/internal/validate/warnings_test.go</li>
+        <li>CLAUDE.md</li>
+        <li>README.md</li>
+      </ul>
+    </section>
+
+    <!-- ============ ALREADY GREEN ============ -->
+    <section id="green">
+      <h2>What the machine already checked</h2>
+      <p class="lede">
+        All five ran clean on the untouched branch today. This is why nothing below asks you to
+        re-run them by hand: your time is worth spending only on what a check cannot decide.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Check</th><th>Result</th><th>What it can see</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cmd">validate_trainings.rb</td>
+              <td class="res"><span class="dot"></span>OK: 4 courses, 16 dates</td>
+              <td>Shape, retired keys, price sanity, card template exists</td>
+            </tr>
+            <tr>
+              <td class="cmd">make site</td>
+              <td class="res"><span class="dot"></span>clean</td>
+              <td>Liquid compiles, no unknown-type comment in either language</td>
+            </tr>
+            <tr>
+              <td class="cmd">make check-links</td>
+              <td class="res"><span class="dot"></span>12 files, no failures</td>
+              <td>Internal links and hashes resolve</td>
+            </tr>
+            <tr>
+              <td class="cmd">make app-check</td>
+              <td class="res"><span class="dot"></span>9 packages, vet + gofmt clean</td>
+              <td>YAML round-trip, every published date has a price</td>
+            </tr>
+            <tr>
+              <td class="cmd">feed vs schema</td>
+              <td class="res"><span class="dot"></span>valid</td>
+              <td>Draft 7 conformance of /api/trainings.json</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:14px;color:var(--muted);font-size:13.5px">
+        None of them can tell you whether the German reads as German, whether the price on a card
+        matches the price in the booking panel, or whether a booking code survives the trip to your
+        back office. That is the whole content of this handover.
+      </p>
+    </section>
+
+    <!-- ============ PHASES ============ -->
+    <section id="phases">
+      <h2>The sequence</h2>
+      <p class="lede">
+        The numbering is real. You cannot verify the live feed before you push, and you should not
+        push before you have read the cards.
+      </p>
+
+      <!-- P1 -->
+      <article class="phase" id="p1" data-phase="1" data-title="Get to a known state" data-where="local">
+        <div class="phase-head">
+          <span class="phase-n">01</span>
+          <h2>Get to a known state</h2>
+          <span class="chip where-local">Local</span>
+          <span class="chip">2 min</span>
+        </div>
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s1a">
+              <label for="s1a"><span class="task">Check out the branch and confirm the tree is clean</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>git checkout prices-as-data
+git status          <span class="c"># must print nothing</span></code></pre>
+              <p>A dirty tree here will make every later result ambiguous, especially in phases 4 and 5 where you deliberately edit files.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s1b">
+              <label for="s1b"><span class="task">Run the four checks once, as your baseline</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>ruby scripts/validate_trainings.rb
+make site &amp;&amp; make check-links &amp;&amp; make app-check</code></pre>
+              <div class="expect">
+                <span class="k">Expect</span>
+                <p><code>OK: 4 courses, 16 dates</code>, then <code>HTML-Proofer finished successfully</code>, then <code>tests, vet and gofmt are clean</code>.</p>
+              </div>
+              <p>If any one of these is red, stop. Everything below assumes a green base, and a pre-existing failure will look like something you caused.</p>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- P2 -->
+      <article class="phase" id="p2" data-phase="2" data-title="Read the 16 cards" data-where="local">
+        <div class="phase-head">
+          <span class="phase-n">02</span>
+          <h2>Read the 16 cards</h2>
+          <span class="chip where-local">Local</span>
+          <span class="chip">20 min</span>
+        </div>
+        <p style="margin-bottom:16px;color:var(--ink-soft)">
+          Read them, do not diff them. Nothing in this phase can be automated, because what you are
+          judging is whether the wording is right in two languages.
+        </p>
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s2a">
+              <label for="s2a"><span class="task">Start the dev server and open both home pages side by side</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>make dev</code></pre>
+              <p>Open <code>http://localhost:4040/</code> and <code>http://localhost:4040/de/</code>. Use
+              <code>localhost</code>, not <code>0.0.0.0</code>: Firefox refuses the latter.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s2b">
+              <label for="s2b"><span class="task">Inspect the three online cards, which nobody has ever looked at</span></label>
+            </div>
+            <div class="detail">
+              <p>These are the new ones:</p>
+              <ul>
+                <li><code>#msa-online-sep-2026</code>, Wolfgang Reimesch</li>
+                <li><code>#msa-27-02-online</code>, Wolfgang Reimesch</li>
+                <li><code>#improve-apr-2027</code>, Wolfgang Reimesch. This one rendered as an HTML
+                    comment for weeks: it validated, it was in the feed, and it was invisible on both
+                    home pages.</li>
+              </ul>
+              <p>On each, check in order: no city line, the date ends in <code>(online)</code>, the
+              delivery-language note, the Berlin time-zone note, the trainer, the price, the terms link.</p>
+              <div class="expect">
+                <span class="k">Expect on the September MSA online date</span>
+                <div class="pair">
+                  <span>September 29 - October 1, 2026 (online)</span>
+                  <span>held in English</span>
+                  <span>Time zone: CET/CEST (Berlin)</span>
+                  <span>Trainer: Wolfgang Reimesch.</span>
+                  <span>€2,100</span>
+                </div>
+                <p style="margin-top:8px"></p>
+                <div class="pair">
+                  <span>29. September - 1. Oktober 2026 (online)</span>
+                  <span>Durchführung auf Englisch</span>
+                  <span>Zeitzone: MEZ/MESZ (Berlin)</span>
+                  <span>Trainer: Wolfgang Reimesch.</span>
+                  <span>2.100 €</span>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s2c">
+              <label for="s2c"><span class="task">Judge the money formatting as a native reader would</span></label>
+            </div>
+            <div class="detail">
+              <p>German is <code>2.100 €</code>: thousands dot, symbol after. English is
+              <code>€2,100</code>: comma, symbol before. This is built by hand in
+              <code>_includes/money.html</code> because Liquid has no number formatter, so it is
+              exactly the kind of thing that is either right or embarrassing.</p>
+              <p>Same for credits: <code>20 methodische und 10 technische</code> has to read as
+              German, <code>20 methodology and 10 technical</code> as English. A half-translated
+              <code>CPSA-Credits:</code> label is the old bug returning.</p>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- P3 -->
+      <article class="phase" id="p3" data-phase="3" data-title="Card price vs booking panel" data-where="local">
+        <div class="phase-head">
+          <span class="phase-n">03</span>
+          <h2>Card price against booking panel</h2>
+          <span class="chip where-local">Local</span>
+          <span class="chip">10 min</span>
+        </div>
+        <p style="margin-bottom:16px;color:var(--ink-soft)">
+          The card and the panel render the same number by different routes. Agreement between two
+          renderings of one number is precisely the thing that breaks quietly.
+        </p>
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s3a">
+              <label for="s3a"><span class="task">Open both registration pages with a course preselected</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>http://localhost:4040/anmeldung/?kurs=msa-online-sep-2026
+http://localhost:4040/registration/?kurs=msa-27-02-online</code></pre>
+              <p>The course must preselect from the query string. An unknown anchor must fall back to
+              no selection, never to the first course in the list.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s3b">
+              <label for="s3b"><span class="task">Confirm the panel price matches the card for the same date</span></label>
+            </div>
+            <div class="detail">
+              <p>A mismatch here is what exposed the hardcoded price literals in the first place: the
+              card showed a price the panel knew nothing about.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s3c">
+              <label for="s3c"><span class="task">Confirm both honeypots are present, hidden and empty</span></label>
+            </div>
+            <div class="detail">
+              <p>Inspect the DOM for <code>_gotcha</code> and <code>company_website</code>. Looking at
+              the rendered page proves nothing, since a working honeypot is invisible by design.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s3d">
+              <label for="s3d"><span class="task">Check the option values byte for byte</span></label>
+            </div>
+            <div class="detail">
+              <div class="expect">
+                <span class="k">Expect</span>
+                <div class="pair">
+                  <span>26-09 MSA-EN</span>
+                  <span>27-02 MSA-EN</span>
+                </div>
+              </div>
+              <p>The <code>&lt;option value&gt;</code> is the booking code your back office receives.
+              Language hints belong in the label, never in the value.</p>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- P4 -->
+      <article class="phase" id="p4" data-phase="4" data-title="Break the guardrails on purpose" data-where="local">
+        <div class="phase-head">
+          <span class="phase-n">04</span>
+          <h2>Break the guardrails on purpose</h2>
+          <span class="chip where-local">Local</span>
+          <span class="chip">15 min</span>
+        </div>
+
+        <div class="rule-box">
+          <span class="k">The rule that caused last week's confusion</span>
+          <p>
+            A guardrail proof and a real failure print identical text. An error only counts on a tree
+            you have not touched. End every proof by restoring the file and running the validator
+            until it says OK again.
+          </p>
+        </div>
+
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s4a">
+              <label for="s4a"><span class="task">Prove a missing card template fails the build</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>git mv _includes/timeline_msa_online.html /tmp/
+ruby scripts/validate_trainings.rb ; echo "exit=$?"</code></pre>
+              <div class="expect">
+                <span class="k">Expect</span>
+                <p>Exit 1, with one error for <em>each</em> of the two online MSA dates, naming the
+                missing file and the <code>when "msa_online"</code> case to add.</p>
+              </div>
+              <pre><code>git mv /tmp/timeline_msa_online.html _includes/
+ruby scripts/validate_trainings.rb   <span class="ok"># OK: 4 courses, 16 dates</span></code></pre>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s4b">
+              <label for="s4b"><span class="task">Prove an unknown course id fails too</span></label>
+            </div>
+            <div class="detail">
+              <p>Rename a course id in <code>_data/trainings.yml</code> to something no template
+              matches, for example <code>adocx</code>. Every date under it must error. Then:</p>
+              <pre><code>git checkout _data/trainings.yml
+ruby scripts/validate_trainings.rb   <span class="ok"># OK again</span></code></pre>
+              <p>This is the failure mode that shipped <code>improve-apr-2027</code> as an invisible
+              date. Seeing it fire once is worth more than trusting that it would.</p>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- P5 -->
+      <article class="phase" id="p5" data-phase="5" data-title="Prove the early bird expires" data-where="local">
+        <div class="phase-head">
+          <span class="phase-n">05</span>
+          <h2>Prove the early bird expires</h2>
+          <span class="chip where-local">Local</span>
+          <span class="chip">15 min</span>
+        </div>
+        <p style="margin-bottom:16px;color:var(--ink-soft)">
+          This is the behaviour the whole restructuring exists for: an offer that lapses without
+          anyone editing anything. Half of it can be observed on real data right now.
+        </p>
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s5a">
+              <label for="s5a"><span class="task">Confirm the offer that has already lapsed</span></label>
+            </div>
+            <div class="detail">
+              <p><code>msa-dez-2026</code>'s early bird ran out on 8 August 2026, which is in the
+              past. It should already be gone from the build, with no clock trickery at all. Check
+              <code>_site/api/trainings.json</code>:</p>
+              <pre><code>msa-dez-2026  pricing: "2.890 €"
+              price:   {"amount":2890,"currency":"EUR"}   <span class="c">&lt;- no early_bird key</span>
+
+msa-mar-2027  pricing: "Frühbucherpreis bei Anmeldung bis
+                        2. November 2026: 2.690 €, Normalpreis: 2.890 €"
+              price:   {... "early_bird":{"amount":2690,"until":"2026-11-02"}}</code></pre>
+              <p>An expired offer is omitted from the feed entirely. Consumers must never have to
+              check a date themselves.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s5b">
+              <label for="s5b"><span class="task">Force the transition on a date you control</span></label>
+            </div>
+            <div class="detail">
+              <p>Set <code>msa-mar-2027</code>'s <code>early_bird.until</code> to <code>"2026-01-01"</code>,
+              then <code>make site</code>. The offer must vanish from all four places:</p>
+              <ul>
+                <li>the card in <code>_site/index.html</code> and <code>_site/de/index.html</code></li>
+                <li>the <code>data-price</code> attribute in both built registration pages</li>
+                <li><code>pricing</code> in <code>_site/api/trainings.json</code></li>
+                <li><code>price.early_bird</code>, which must be <strong>absent</strong>, not merely ignored</li>
+              </ul>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s5c">
+              <label for="s5c"><span class="task">Confirm an expired block is not an error, then revert</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>ruby scripts/validate_trainings.rb   <span class="ok"># still OK</span>
+git checkout _data/trainings.yml</code></pre>
+              <p>That is deliberate. An expired offer is inert, and deleting it by hand would lose the
+              record of what was once offered.</p>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- P6 -->
+      <article class="phase" id="p6" data-phase="6" data-title="Admin app warnings" data-where="local">
+        <div class="phase-head">
+          <span class="phase-n">06</span>
+          <h2>Admin app warnings</h2>
+          <span class="chip where-local">Local</span>
+          <span class="chip">15 min</span>
+        </div>
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s6a">
+              <label for="s6a"><span class="task">Start the demo, which never writes your data</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>make app-demo       <span class="c"># http://localhost:8080</span>
+                    <span class="c"># reads _data/trainings.yml, never writes it</span>
+                    <span class="c"># publishing writes to demo-out/ and opens nothing</span></code></pre>
+              <p>Stop it afterwards with <code>make app-stop</code>. Note that <code>make stop</code>
+              does not stop the demo.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s6b">
+              <label for="s6b"><span class="task">See the missing-card warning fire on an invented course</span></label>
+            </div>
+            <div class="detail">
+              <p>Add a course with an id no template matches, for example <code>flow</code>. Read the
+              warning bar and cancel. It should name <code>_includes/timeline_flow.html</code>,
+              <code>timeline_flow_online.html</code> and their cases in <code>timeline_course.html</code>.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s6c">
+              <label for="s6c"><span class="task">Confirm an online MSA date produces no warning</span></label>
+            </div>
+            <div class="detail">
+              <p>This is the case that matters most to you. Most of Wolfgang's runs are online, and a
+              false alarm here would train you to ignore the warning bar. Do the same for an online
+              REQ4ARC date: that template was added ahead of the first such course, so it should be
+              silent too.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s6d">
+              <label for="s6d"><span class="task">Try to publish an early bird that is not a discount</span></label>
+            </div>
+            <div class="detail">
+              <p>Set the early-bird amount at or above the regular price. This must be rejected, not
+              warned about.</p>
+              <div class="note" style="margin-top:10px">
+                <span class="k">Where these warnings come from</span>
+                <p>The lists live in <code>admin-app/internal/model/model.go</code> and mirror the real
+                <code>_includes/</code> directory. That mirror can drift. When it does, the cost is a
+                wrong advisory, never a wrong file, because
+                <code>scripts/validate_trainings.rb</code> checks the actual directory in CI and is the
+                authority.</p>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- P7 -->
+      <article class="phase" id="p7" data-phase="7" data-title="Merge, push, watch it deploy" data-where="ship">
+        <div class="phase-head">
+          <span class="phase-n">07</span>
+          <h2>Merge, push, watch it deploy</h2>
+          <span class="chip where-ship">Ship</span>
+          <span class="chip">15 min plus wait</span>
+        </div>
+        <div class="note">
+          <span class="k">The one-way door</span>
+          <p>Everything before this is private to your machine. Everything after it is visible to
+          customers and to four other repositories. Do not start phase 7 with phases 2 to 5
+          unfinished.</p>
+        </div>
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s7a">
+              <label for="s7a"><span class="task">Merge into main and push</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>git checkout main
+git merge prices-as-data
+git push origin main</code></pre>
+              <p>Local <code>main</code> also carries one unpushed commit, <code>ae0612c</code>. The
+              push sends both, which is what you want.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s7b">
+              <label for="s7b"><span class="task">Watch the three things that fire automatically</span></label>
+            </div>
+            <div class="detail">
+              <ul>
+                <li><code>validate-trainings.yml</code> runs, because <code>_data/trainings.yml</code>,
+                    <code>scripts/**</code> and the schema all changed.</li>
+                <li>GitHub Pages rebuilds the site and the feed.</li>
+                <li><code>notify-consumers.yml</code> fires, because <code>_data/trainings.yml</code>
+                    changed on main. It polls the published <code>generated</code> timestamp until
+                    Pages has caught up, up to ten minutes, then dispatches to all four consumer
+                    repositories.</li>
+              </ul>
+              <p>A missing <code>CONSUMER_DISPATCH_TOKEN</code> is a notice, not a failure. Consumers
+              then pick the change up on their weekly schedule instead.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s7c">
+              <label for="s7c"><span class="task">Verify the live feed flipped</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>curl -s https://trainings.arc42.org/api/trainings.json | python3 -c '
+import json,sys
+d=json.load(sys.stdin); n=[x for c in d["courses"] for x in c["dates"]]
+print(d["generated"])
+print(len(n),"dates,",sum(1 for x in n if x.get("price")),"priced")
+print("legacy pricing on all:", all("pricing" in x for x in n))
+'</code></pre>
+              <div class="expect">
+                <span class="k">Expect</span>
+                <p><code>16 dates, 16 priced</code> and <code>legacy pricing on all: True</code>.
+                Today the same command prints <code>15 dates, 0 priced</code>.</p>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- P8 -->
+      <article class="phase" id="p8" data-phase="8" data-title="The four consumer sites" data-where="live">
+        <div class="phase-head">
+          <span class="phase-n">08</span>
+          <h2>The four consumer sites</h2>
+          <span class="chip where-live">Live</span>
+          <span class="chip">20 min</span>
+        </div>
+        <p style="margin-bottom:16px;color:var(--ink-soft)">
+          Two things change for consumers, and neither is a schema break. The field names and types
+          are untouched; the values are not.
+        </p>
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s8a">
+              <label for="s8a"><span class="task">Expect reformatted money and three courses that gain a price</span></label>
+            </div>
+            <div class="detail">
+              <ul>
+                <li>The legacy <code>pricing</code> string moved from <code>€ 2690</code> to
+                    <code>2.690 €</code>. Same field, same type, different text.</li>
+                <li>IMPROVE, REQ4ARC and ADOC had their prices hardcoded in this repository's own card
+                    templates, so they never reached the feed at all. Consumers showed nothing for
+                    them and will now show a price.</li>
+              </ul>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s8b">
+              <label for="s8b"><span class="task">Check what each of the four sites should do</span></label>
+            </div>
+            <div class="detail">
+              <ul>
+                <li><strong>arc42.de and arc42.org</strong>: a bot commit to their
+                    <code>_data/trainings.json</code>, then prices rendering on their Termine pages.
+                    Read the German.</li>
+                <li><strong>docs.arc42.org and faq.arc42.org</strong>: workflow green and pages
+                    <em>unchanged</em>. Neither renders a price, so a visible diff there means
+                    something consumes the feed more broadly than expected and is worth understanding.</li>
+              </ul>
+              <p>No consumer build should fail. One that does is parsing the string rather than
+              printing it, which is worth knowing about regardless.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s8c">
+              <label for="s8c"><span class="task">Check which price wins on arc42.de</span></label>
+            </div>
+            <div class="detail">
+              <div class="note">
+                <span class="k">Known follow-up, not a blocker</span>
+                <p>arc42.de still has its own hardcoded price literals in its own copy of the timeline
+                templates. Until those go, it may show its literal rather than the feed's price. Find
+                out which one wins. If they disagree, that is a new task, not a reason to roll back.</p>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- P9 -->
+      <article class="phase" id="p9" data-phase="9" data-title="One real registration per language" data-where="live">
+        <div class="phase-head">
+          <span class="phase-n">09</span>
+          <h2>One real registration per language</h2>
+          <span class="chip where-live">Live</span>
+          <span class="chip">20 min</span>
+        </div>
+        <p style="margin-bottom:16px;color:var(--ink-soft)">
+          The only end-to-end proof that a booking code reaches your back office. Everything upstream
+          of Formspark is testable locally. This is not.
+        </p>
+        <ul class="steps">
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s9a">
+              <label for="s9a"><span class="task">Submit one German and one English registration</span></label>
+            </div>
+            <div class="detail">
+              <pre><code>DE  /anmeldung/?kurs=msa-online-sep-2026     <span class="c"># form AIKiYyJP</span>
+EN  /registration/?kurs=msa-27-02-online    <span class="c"># form Tq1M7LqmX</span></code></pre>
+              <p>Use an obviously disposable name. One form per language, because Formspark allows
+              exactly one autoresponder template per form and no hidden field overrides it per
+              submission.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s9b">
+              <label for="s9b"><span class="task">Confirm the booking code arrives byte for byte</span></label>
+            </div>
+            <div class="detail">
+              <div class="expect">
+                <span class="k">Expect in the mail</span>
+                <div class="pair">
+                  <span>26-09 MSA-EN</span>
+                  <span>27-02 MSA-EN</span>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-top">
+              <input type="checkbox" id="s9c">
+              <label for="s9c"><span class="task">Delete both test submissions</span></label>
+            </div>
+            <div class="detail">
+              <p>Remove them in the Formspark dashboard so they never reach the back office as real
+              bookings.</p>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+    </section>
+
+    <!-- ============ AFTER ============ -->
+    <section id="after">
+      <h2>After the rollout</h2>
+
+      <h3>Deferred: 3 November 2026</h3>
+      <p>
+        <code>msa-mar-2027</code>'s early-bird deadline is 2 November 2026. Nobody will edit anything.
+        The Monday rebuild (<code>weekly-refresh.yml</code>, 04:43 UTC) is what turns the passing of a
+        date into a content change. There is already a Todoist task dated for it.
+      </p>
+      <p>
+        If the offer is still being advertised on 3 November, the failure is in the rebuild cadence,
+        not in the rendering: check that the weekly refresh ran and that the consumers' own refresh
+        workflows are green. Remaining deadlines after that one: 8 Feb 2027, 14 May 2027, 30 Jul 2027.
+      </p>
+
+      <h3>If it goes wrong</h3>
+      <p>
+        Revert the merge commit on <code>main</code>. Consumers recover on their next refresh, weekly
+        at worst, immediately via <code>notify-consumers.yml</code>. <strong>No consumer change is
+        needed to roll back</strong>, which is the entire reason the legacy string fields were kept
+        rather than cleaned up.
+      </p>
+
+      <h3>Still open, deliberately not in this pass</h3>
+      <ul style="max-width:68ch;color:var(--ink-soft)">
+        <li>arc42.de's own hardcoded price literals, in its copy of the timeline templates.</li>
+        <li>How to model an undecided venue. One date currently reads
+            <code>Mannheim / Frankfurt (t.b.d.)</code> in a field that is otherwise a city name.</li>
+        <li>Six merged branches that can be deleted once main is pushed.</li>
+      </ul>
+    </section>
+
+    <footer>
+      Facts verified against the working tree on 7 September 2026 · branch prices-as-data at 784ad4b
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  (function () {
+    var KEY = "a42-prices-handover-v1";
+
+    function load() {
+      try {
+        var raw = localStorage.getItem(KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) { return {}; }
+    }
+    function save(state) {
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
+    }
+
+    var state = load();
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.step input[type="checkbox"]'));
+    var phases = Array.prototype.slice.call(document.querySelectorAll('.phase'));
+
+    boxes.forEach(function (b) {
+      if (state[b.id]) b.checked = true;
+      b.addEventListener("change", function () {
+        state[b.id] = b.checked;
+        save(state);
+        render();
+      });
+    });
+
+    // Build the rail from the phases themselves, so it can never drift.
+    var list = document.getElementById("rail-list");
+    phases.forEach(function (p) {
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.href = "#" + p.id;
+      a.dataset.for = p.id;
+      var n = document.createElement("span");
+      n.className = "n";
+      n.textContent = String(p.dataset.phase).padStart(2, "0");
+      var t = document.createElement("span");
+      t.textContent = p.dataset.title;
+      var tally = document.createElement("span");
+      tally.className = "tally";
+      a.appendChild(n); a.appendChild(t); a.appendChild(tally);
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+
+    function render() {
+      var doneAll = 0, total = 0;
+      phases.forEach(function (p) {
+        var bs = Array.prototype.slice.call(p.querySelectorAll('input[type="checkbox"]'));
+        var done = bs.filter(function (b) { return b.checked; }).length;
+        doneAll += done; total += bs.length;
+        var link = list.querySelector('a[data-for="' + p.id + '"]');
+        if (link) {
+          link.querySelector(".tally").textContent = done + "/" + bs.length;
+          link.dataset.done = (done === bs.length && bs.length > 0) ? "yes" : "no";
+        }
+      });
+      var overall = document.getElementById("overall");
+      if (overall) overall.textContent = doneAll + "/" + total;
+    }
+
+    document.getElementById("reset").addEventListener("click", function () {
+      boxes.forEach(function (b) { b.checked = false; });
+      state = {};
+      save(state);
+      render();
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>
