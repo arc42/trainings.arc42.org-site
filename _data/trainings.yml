@@ -150,7 +150,6 @@ courses:
         price:
           amount: 2100
           currency: EUR
-        seats_limited: true
         url: "https://www.arc42.de/termine#msa-27-02-online"
         status: open
   - id: improve
