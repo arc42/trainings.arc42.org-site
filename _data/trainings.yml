@@ -165,6 +165,19 @@ courses:
           currency: EUR
         url: "https://www.arc42.de/termine#msa-06-2027"
         status: open
+
+      - id: msa-sep-2027-en
+        code: "27-09 MSA-EN"
+        start: "2027-09-28"
+        end: "2027-09-30"
+        language: en
+        format: online
+        trainers: ["Wolfgang Reimesch"]
+        price:
+          amount: 2100
+          currency: EUR
+        url: "https://www.arc42.de/termine#msa-sep-2027-en"
+        status: open
   - id: improve
     short_title: "IMPROVE"
     title: "IMPROVE: Evolve and maintain systems"
