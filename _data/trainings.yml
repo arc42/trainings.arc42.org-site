@@ -269,6 +269,7 @@ courses:
           amount: 2200
           currency: EUR
           alumni: 2050
+        seats_limited: true
         url: "https://www.arc42.de/termine#req4arc-sep-2026"
         status: open
       - id: req4arc-mar-2027
