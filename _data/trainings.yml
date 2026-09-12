@@ -286,6 +286,21 @@ courses:
           alumni: 2050
         url: "https://www.arc42.de/termine#req4arc-sep-2027"
         status: open
+
+      - id: req4arc-jun-2027
+        code: "27-06 Req4Arc-EN"
+        start: "2027-06-15"
+        end: "2027-06-17"
+        country: "DE"
+        language: en
+        format: online
+        trainers: ["Wolfgang Reimesch"]
+        price:
+          amount: 2200
+          currency: EUR
+          alumni: 2050
+        url: "https://www.arc42.de/termine#req4arc-jun-2027"
+        status: open
   - id: adoc
     short_title: "ADOC"
     title: "ADOC: Architecture Documentation"
