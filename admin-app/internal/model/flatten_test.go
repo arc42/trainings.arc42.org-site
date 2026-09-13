@@ -42,6 +42,61 @@ func TestFindDate(t *testing.T) {
 	}
 }
 
+// Most published dates name no trainers of their own, so a row that reads
+// Date.Trainers alone is blank for the majority of the table. The fallback is
+// the site's (`d.trainers | default: course.trainers`), and the row has to say
+// which of the two it is showing.
+func TestTrainersFallBackToTheCourseAndSayThatTheyDid(t *testing.T) {
+	tr := Trainings{Courses: []Course{{
+		ID: "msa", ShortTitle: "MSA", Trainers: []string{"Peter Hruschka", "Dr. Gernot Starke"},
+		Dates: []Date{
+			{ID: "msa-a", Start: "2026-01-01"},
+			{ID: "msa-b", Start: "2026-02-01", Trainers: []string{"Wolfgang Reimesch"}},
+		},
+	}}}
+	rows := tr.Rows()
+
+	if got := rows[0].TrainerSurnames(); got != "Hruschka, Starke" {
+		t.Errorf("inherited trainers = %q, want %q", got, "Hruschka, Starke")
+	}
+	if !rows[0].TrainersInherited() {
+		t.Error("a date with no trainers of its own is not marked as inheriting them")
+	}
+	if got := rows[1].TrainerSurnames(); got != "Reimesch" {
+		t.Errorf("own trainers = %q, want %q", got, "Reimesch")
+	}
+	if rows[1].TrainersInherited() {
+		t.Error("a date naming its own trainer was marked as inheriting")
+	}
+}
+
+// Nothing to inherit is not inheritance: the row would otherwise claim the
+// course assigned somebody when neither of them names anyone.
+func TestNoTrainersAnywhereIsTheAbsentValue(t *testing.T) {
+	r := Trainings{Courses: []Course{{ID: "msa", Dates: []Date{{ID: "msa-a"}}}}}.Rows()[0]
+	if r.TrainersInherited() {
+		t.Error("an empty course roster was reported as inherited")
+	}
+	if got := r.TrainerSurnames(); got != NoValue {
+		t.Errorf("TrainerSurnames() = %q, want the absent-value dash", got)
+	}
+}
+
+// A missing price is a broken record (the Ruby validator requires one on every
+// date), so the list has to show that rather than an empty cell or a guess.
+func TestAMissingPriceShowsTheAbsentValue(t *testing.T) {
+	rows := Trainings{Courses: []Course{{ID: "msa", Dates: []Date{
+		{ID: "msa-a", Start: "2026-01-01"},
+		{ID: "msa-b", Start: "2026-02-01", Price: &Price{Amount: 2100, Currency: "EUR", Alumni: 1900}},
+	}}}}.Rows()
+	if got := rows[0].PriceShort(); got != NoValue {
+		t.Errorf("PriceShort() with no price = %q, want the absent-value dash", got)
+	}
+	if got := rows[1].PriceShort(); got != "€ 2,100" {
+		t.Errorf("PriceShort() = %q, want %q (main amount only)", got, "€ 2,100")
+	}
+}
+
 func TestCourseOfReturnsIndex(t *testing.T) {
 	tr := fixture()
 	c, idx, ok := tr.CourseOf("msa-dez-2026")

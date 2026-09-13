@@ -118,6 +118,21 @@ func FormatPrice(p *Price) string {
 	return strings.Join(parts, ", ")
 }
 
+// FormatPriceShort renders the headline amount alone — "€ 2,100" — for views
+// with one line per date, where the alumni and early-bird detail would be
+// noise rather than information. It goes through the same formatMoney as
+// FormatPrice on purpose: the dates list and the change report must never
+// disagree about how one amount is written.
+//
+// "No published price" is "" here as it is there, so the caller decides how an
+// absent value looks.
+func FormatPriceShort(p *Price) string {
+	if p == nil || p.Amount == 0 {
+		return ""
+	}
+	return formatMoney(p.Amount, p.Currency)
+}
+
 // FormatCredits renders credit points as the sentence the site builds from
 // them, minus the language: "20 methodical, 10 technical".
 func FormatCredits(c *CreditPoints) string {

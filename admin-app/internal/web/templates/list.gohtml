@@ -2,23 +2,92 @@
 {{define "content"}}
 <h1>Training dates</h1>
 <p><a class="button" href="/dates/new">New date</a></p>
+
+{{/* A real GET form with a real submit button, enhanced by htmx rather than
+     replaced by it: with scripting off this posts the same query string to the
+     same handler and the page reloads filtered. That is not a courtesy to a
+     hypothetical user — it is why the filtering can be tested at all, and why
+     a filtered view can be bookmarked and pasted into a mail.
+
+     hx-trigger="change" is the whole enhancement: no Apply click needed. The
+     button stays visible because it is what makes the form work without htmx,
+     and hiding it with JS would mean the two paths no longer look alike.
+
+     Two things are swapped. The table (#dates) is the target; the count and
+     the Clear link ride along out of band, because #date-count is a live
+     region and has to STAY in the document for a screen reader to announce the
+     new text — swapping the element itself away replaces the announcer along
+     with the announcement. */}}
+<form class="filters" method="get" action="/"
+      hx-get="/" hx-trigger="change, submit" hx-target="#dates" hx-select="#dates"
+      hx-swap="outerHTML" hx-select-oob="#date-count:innerHTML,#filter-clear:outerHTML"
+      hx-push-url="true">
+  {{range $c := .Filters.Controls}}
+  <p class="filter">
+    <label for="filter-{{$c.Name}}">{{$c.Label}}</label>
+    <select id="filter-{{$c.Name}}" name="{{$c.Name}}">
+      {{range $c.Options}}<option value="{{.Value}}"{{if eq .Value $c.Value}} selected{{end}}>{{.Label}}</option>
+      {{end}}{{/* A value this list does not offer is echoed back as its own
+           option rather than dropped, so the control cannot show "Any course"
+           over an empty table. See deriveFilters. */}}
+      {{if $c.Unknown}}<option value="{{$c.Value}}" selected>{{$c.Value}} — not a known value</option>{{end}}
+    </select>
+  </p>
+  {{end}}
+  <p class="filter-actions">
+    <button type="submit">Apply</button>
+    {{/* Always present, empty when there is nothing to clear: the out-of-band
+         swap above needs an element with this id in every response. */}}
+    <span id="filter-clear">{{if .Filters.Active}}<a href="/">Clear filters</a>{{end}}</span>
+  </p>
+</form>
+
+{{/* role="status" (implicitly aria-live="polite") so the count is spoken after
+     an htmx swap. It is never only decoration: past dates are hidden by
+     default, so even the first view is narrowed, and a table that did not say
+     how much it was leaving out would be read as the whole file. */}}
+<p class="count" id="date-count" role="status">Showing {{.Shown}} of {{.Total}} date{{if ne .Total 1}}s{{end}}</p>
+
+<div id="dates">
+{{if .Filters.UnknownNote}}<p class="filter-warning" role="alert">{{.Filters.UnknownNote}}</p>{{end}}
+{{if .Rows}}
 <table class="dates">
-<thead><tr><th>Code</th><th>Course</th><th>When</th><th>Where</th><th>Lang</th><th>Status</th><th></th></tr></thead>
+<thead><tr><th>Code</th><th>Course</th><th>When</th><th>Where</th><th>Lang</th><th>Price</th><th>Trainers</th><th>Status</th><th></th></tr></thead>
 <tbody>
 {{range .Rows}}<tr class="{{if .Past}}past{{end}}">
 <td><a href="/dates/{{.Date.ID}}">{{.Date.Code}}</a></td>
 <td>{{.CourseShortTitle}}</td>
-<td>{{.Date.Start}} → {{.Date.End}}</td>
-<td>{{if eqStr .Date.Format "online"}}online{{else}}{{.Date.City}}{{end}}</td>
+<td class="when">{{.Date.Start}} → {{.Date.End}}</td>
+{{/* Location, not a second copy of the city-or-online rule: the Where filter
+     compares against exactly this value, so the control and the column cannot
+     drift apart. */}}
+<td>{{.Location}}</td>
 <td>{{.Date.Language}}</td>
+{{/* The main amount only; a dash means the date has no price, which the Ruby
+     validator rejects — so it is a finding, not a gap to fill in. */}}
+<td class="price">{{.PriceShort}}</td>
+{{/* Surnames, because the given names never tell two rows apart. An inherited
+     roster is set back a step AND carries the reason in text: colour is never
+     the only carrier of meaning here, and `title` alone is not reliably
+     announced on a non-interactive element. */}}
+<td>{{if .TrainersInherited}}<span class="inherited" title="No trainers on this date — showing the course roster">{{.TrainerSurnames}}<span class="visually-hidden"> (from the course)</span></span>{{else}}{{.TrainerSurnames}}{{end}}</td>
 <td><span class="status status-{{.Date.Status}}">{{.Date.Status}}</span></td>
 <td class="row-actions">
-  <a href="/dates/new?from={{.Date.ID}}">Duplicate</a>
-  {{/* A link, not a submit: removal goes through the confirmation page, which
-       is the only chance to catch a misclick — there is no per-change undo. */}}
-  <a class="danger" href="/dates/{{.Date.ID}}/delete">Remove</a>
-</td></tr>{{else}}
-<tr><td colspan="7">No dates yet.</td></tr>
+  <a class="button amber" href="/dates/new?from={{.Date.ID}}">Duplicate</a>
+  {{/* Links, not submits: Remove navigates to the confirmation page, which is
+       the only chance to catch a misclick — there is no per-change undo. They
+       are drawn as buttons because two bare links at the end of every row read
+       as part of the record rather than as things that act on it. */}}
+  <a class="button danger" href="/dates/{{.Date.ID}}/delete">Remove</a>
+</td></tr>
 {{end}}
 </tbody></table>
+{{else if eq .Total 0}}
+<p class="empty">No dates yet. <a href="/dates/new">Add the first one.</a></p>
+{{else}}
+{{/* An empty table with no explanation reads as "the file is empty", which is
+     the one thing it never means here. */}}
+<p class="empty">No date matches these filters. <a href="/">Clear the filters</a> to start again.</p>
+{{end}}
+</div>
 {{end}}

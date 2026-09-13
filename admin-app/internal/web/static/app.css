@@ -36,8 +36,14 @@
 
   /* ---- Shared family tokens (BRAND.md), each with a job on this app ----- */
   --danger: #c22b47;        /* --arc42-coral-deep — white on it 5.63:1 */
+  --danger-hover: #9d2138;  /* darkened danger — white on it 7.75:1, and 7.62:1 against paper */
   --amber: #ffc95c;         /* "few seats" / waitlist marker */
   --amber-ink: #4a3a0a;     /* on --amber: 7.24:1 */
+  --amber-hover: #edb433;   /* darkened amber — --amber-ink on it 5.88:1 */
+  /* An amber fill is only 1.50:1 against --paper, so an amber control drawn
+     without a darker edge has no boundary at the 3:1 SC 1.4.11 asks of a UI
+     component. This edge is 3.20:1 on --paper. */
+  --amber-edge: #b8860b;
   --green-wash: #d9f7d3;
   --green-ink: #1b5e20;     /* on --green-wash: 6.82:1; white on --green-ink: 7.87:1 */
   --grey-wash: #e8e8ea;     /* neutral, off-hue: the "full" status has no strong
@@ -113,6 +119,12 @@ main {
   margin: 0 auto;
   padding: 1.5rem 1.25rem 5rem;
 }
+/* The pages whose content is a record rather than prose — the dates table and
+   the change report — opt out of the reading measure. Still capped: a table
+   stretched to the full width of a 32" screen puts the row actions a head-turn
+   away from the code they belong to. Set per page in the handler, never here:
+   the forms and the help text want the 75ch above. */
+main.wide { max-width: 115ch; }
 table.dates { max-width: none; width: 100%; } /* tables are a documented wider-measure exception */
 
 /* ---- Buttons and link-buttons -------------------------------------------- */
@@ -251,6 +263,82 @@ button.help:hover { background: var(--surface-2); border-color: var(--hairline-h
 button.help[aria-expanded="true"] { background: var(--surface-hover); border-color: var(--border); }
 button.help:focus-visible { outline: 2px solid var(--band); outline-offset: 2px; }
 
+/* ---- Filter bar (dates list) ------------------------------------------------
+   The list narrows through the query string, so this is a plain GET form; htmx
+   only saves the reload (see list.gohtml). The bar is a card rather than a row
+   of bare controls because it is persistent state, not a one-off action: with
+   past dates hidden by default the operator is always looking at a narrowed
+   table, and the thing doing the narrowing has to be visible.
+
+   Ratios below are measured against the exact hex pair named, per ADR-0002. */
+form.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--surface-1);         /* #f5eff2 */
+  border: 1px solid var(--hairline);    /* divider tier: decorative only */
+  border-radius: var(--radius);
+}
+form.filters .filter { display: flex; flex-direction: column; margin: 0; }
+/* The caption sits above its control, not beside it: five labelled selects on
+   one line only stay readable if each caption is directly over the box it
+   names. Smaller than a form label — this is a viewing control, not a field
+   being filled in — but no lighter, because the ink is what keeps it legible
+   at 0.85rem. */
+form.filters label {
+  margin-bottom: 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);                    /* #3d4144 on --surface-1: 9.08:1 */
+}
+form.filters select {
+  min-width: 13ch;
+  background: var(--paper);             /* ink #3d4144 on #fcfdff: 10.12:1 */
+  border-color: var(--band);            /* #a04c5e on --surface-1: 5.02:1, past
+                                           the 3:1 SC 1.4.11 asks of a control's
+                                           own boundary */
+}
+form.filters .filter-actions { display: flex; align-items: center; gap: 1rem; margin: 0; }
+/* Apply stays visible with scripting on as well. It is the control that makes
+   the form work without htmx, and a button that disappears once JS loads means
+   the two paths no longer look like the same form. */
+form.filters .filter-actions a { color: var(--deep); } /* #743442 on --surface-1: 8.00:1 */
+@media (max-width: 34rem) {
+  /* Five side-by-side selects on a phone shrink to unreadable; stack instead,
+     the same way .row and dl.record do. */
+  form.filters { flex-direction: column; align-items: stretch; }
+}
+
+/* "Showing 7 of 20 dates". Full ink and semibold, not a muted footnote: it is
+   the only thing on the page that says the table is not the whole file. */
+.count {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  color: var(--ink);                    /* #3d4144 on --paper: 10.12:1 */
+}
+
+/* A filter value no date carries. The amber note vocabulary, not --danger:
+   nothing is broken and nothing was lost — a URL simply asked for something
+   this file does not contain. Same measured pair as the form warnings box. */
+.filter-warning {
+  max-width: 70ch;
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--amber);             /* #ffc95c */
+  border: 1px solid var(--amber-edge);  /* #b8860b on --paper: 3.20:1 — the
+                                           amber fill alone is 1.50:1 */
+  border-radius: var(--radius);
+  color: var(--amber-ink);              /* #4a3a0a on --amber: 7.24:1 */
+}
+
+/* An empty result, which under a filter is an ordinary answer rather than a
+   fault — so it is set back like the rest of the quiet prose on this app. */
+p.empty { color: var(--ink-muted); }    /* #646769 on --paper: 5.60:1 */
+p.empty a { color: var(--deep); }       /* #743442 on --paper: 8.92:1 */
+
 /* ---- Tables ---------------------------------------------------------------- */
 table.dates { border-collapse: collapse; }
 table.dates th, table.dates td {
@@ -260,10 +348,64 @@ table.dates th, table.dates td {
 }
 table.dates thead th { color: var(--ink-muted); font-weight: 600; } /* 5.60:1 on paper */
 table.dates tr.past { color: var(--ink-muted); } /* 5.60:1 on paper */
+/* Dates and prices are single facts and must not break across lines; the wide
+   measure exists so they do not have to. */
+table.dates td.when, table.dates td.price { white-space: nowrap; }
+/* A trainer roster the date did not set: legible, but set back from the ones
+   that are a real assignment. The reason travels in text as well (title plus a
+   visually hidden suffix, see list.gohtml) — colour never carries it alone. */
+table.dates .inherited { color: var(--ink-muted); } /* 5.60:1 on paper */
+
 table.dates .row-actions { display: flex; gap: 0.75rem; white-space: nowrap; }
-/* Remove is a link to the confirmation page, not a submit — see list.gohtml. */
-table.dates .row-actions a.danger { color: var(--danger); } /* 5.53:1 on paper */
-table.dates .row-actions a.danger:hover { color: #ffffff; background: var(--danger); } /* 5.63:1 */
+/* Both row actions stay links — Remove goes to the confirmation page, see
+   list.gohtml — and are drawn as buttons so they read as actions rather than
+   as more of the record. Amber for the harmless repeat, the reserved red for
+   the one action with no undo. Slightly tighter than a standalone button, but
+   never below the 44px target the rest of the app keeps. */
+table.dates .row-actions a.button { padding: 0.4rem 0.75rem; font-size: 0.9rem; }
+table.dates .row-actions a.button.amber {
+  background: var(--amber);
+  border-color: var(--amber-edge);  /* 3.20:1 on --paper — the fill alone is 1.50:1 */
+  color: var(--amber-ink);          /* 7.24:1 on --amber */
+}
+table.dates .row-actions a.button.amber:hover {
+  background: var(--amber-hover);
+  border-color: var(--amber-edge);
+  color: var(--amber-ink);          /* 5.88:1 on --amber-hover */
+}
+table.dates .row-actions a.button.danger {
+  background: var(--danger);
+  border-color: var(--danger);      /* 5.53:1 on --paper */
+  color: #ffffff;                   /* 5.63:1 on --danger */
+}
+table.dates .row-actions a.button.danger:hover {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+  color: #ffffff;                   /* 7.75:1 on --danger-hover */
+}
+/* The 2px offset is what makes this ring measurable on both buttons: it puts
+   paper between ring and fill, so the pair SC 1.4.11 judges is --deep on
+   --paper, 8.92:1. Drawn against the fills themselves the ring would be
+   5.95:1 on --amber but only 1.61:1 on --danger — the red button is the reason
+   the offset is not optional. */
+table.dates .row-actions a.button:focus-visible {
+  outline: 3px solid var(--deep);
+  outline-offset: 2px;
+}
+
+/* Available to assistive technology, not to the eye. Used where a visual
+   distinction (here: the muted inherited roster) needs a textual twin. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* ---- Status badges ---------------------------------------------------------
    Each is a wash + dark ink pair, never saturated fill behind text

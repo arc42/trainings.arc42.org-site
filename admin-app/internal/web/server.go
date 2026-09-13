@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"arc42-trainings-admin/internal/config"
 	"arc42-trainings-admin/internal/gh"
@@ -29,6 +30,14 @@ type Server struct {
 	oauth    gh.OAuth
 	apiBase  string
 	set      map[string]*template.Template
+	// now is the clock the handlers compare dates against: which rows the list
+	// counts as past, and whether a newly entered date warns about starting
+	// before today. A field rather than a call to time.Now() inside the
+	// handler, because "past dates are hidden by default" is behaviour a test
+	// has to be able to state without depending on the day it runs — otherwise
+	// the fixture's dates change sides as real time passes and the suite
+	// quietly starts testing something else.
+	now func() time.Time
 }
 
 // pages lists the page templates that need their own template.Template, since
@@ -75,6 +84,7 @@ func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
 		},
 		apiBase: apiBase,
 		set:     set,
+		now:     time.Now,
 	}, nil
 }
 
