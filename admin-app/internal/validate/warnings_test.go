@@ -94,7 +94,7 @@ func TestIDConventionIsOnlyCheckedForNewDates(t *testing.T) {
 
 func TestCourseWarnings(t *testing.T) {
 	ok := model.Course{
-		ID: "msa", ShortTitle: "Mastering SW Architectures",
+		ID: "msa", ShortTitle: "MSA",
 		Title: "Mastering Software Architectures", URL: "https://www.arc42.de/info-msa/",
 		Blurb: "Two expert trainers at all times, highly practical and pragmatic.",
 	}
@@ -155,7 +155,7 @@ func TestPastStartIsOnlyWarnedForNewDates(t *testing.T) {
 // on either form that could be plain http without anyone saying so.
 func TestEnglishCourseURLIsHeldToTheSameRuleAsTheMainOne(t *testing.T) {
 	c := model.Course{
-		ID: "msa", ShortTitle: "Mastering SW Architectures",
+		ID: "msa", ShortTitle: "MSA",
 		Title: "Mastering Software Architectures", URL: "https://www.arc42.de/info-msa/",
 		Blurb: "Two expert trainers at all times, highly practical and pragmatic.",
 		URLEn: "http://trainings.arc42.org/courses/msa/",
