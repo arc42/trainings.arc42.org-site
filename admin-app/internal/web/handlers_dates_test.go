@@ -10,15 +10,37 @@ import (
 
 	"arc42-trainings-admin/internal/config"
 	"arc42-trainings-admin/internal/ghfake"
+	"arc42-trainings-admin/internal/model"
+	"arc42-trainings-admin/internal/validate"
 )
 
+// The two dates are deliberately unlike each other: msa-a names no trainers
+// and no price (both optional in the file, and the common case — most
+// published dates inherit their trainers from the course), msa-b names both.
+// A view that only ever sees one of the two shapes is a view that has not been
+// tested. msa-b starts earlier than msa-a so that it is never the course's
+// latest date, which is what the new-date form prefills from.
 const fixtureYAML = `courses:
   - id: msa
     short_title: "MSA"
     title: "Mastering Software Architectures"
     url: "https://example.org/msa"
-    trainers: ["Peter Hruschka"]
+    trainers: ["Peter Hruschka", "Dr. Gernot Starke"]
     dates:
+      - id: msa-b
+        code: "25-09 MSA-EN"
+        start: "2025-09-14"
+        end: "2025-09-17"
+        city: "Hamburg"
+        country: "DE"
+        language: en
+        format: public
+        trainers: ["Wolfgang Reimesch"]
+        price:
+          amount: 2100
+          currency: EUR
+        url: "https://example.org/b"
+        status: open
       - id: msa-a
         code: "26-01 MSA"
         start: "2026-01-01"
@@ -106,6 +128,150 @@ func TestListShowsDates(t *testing.T) {
 	}
 	if !strings.Contains(body, "München") {
 		t.Error("list is missing the city")
+	}
+}
+
+// The list carries the price the operator is checking against, and only the
+// main amount: alumni and early-bird detail is what the change report is for.
+// A date with no price shows the absent-value dash, because the Ruby validator
+// requires one — the cell is reporting broken data, not a missing feature.
+func TestListShowsThePriceOfEachDate(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/", nil))
+	body := rec.Body.String()
+
+	if !strings.Contains(body, "€ 2,100") {
+		t.Errorf("list does not show the formatted price:\n%s", body)
+	}
+	if !strings.Contains(body, `<td class="price">—</td>`) {
+		t.Errorf("a date with no price does not show the absent-value dash:\n%s", body)
+	}
+}
+
+// Trainers are shown by surname, and eleven of the twenty published dates name
+// none of their own — so the fallback to the course roster is what the column
+// mostly shows, and it has to be distinguishable from a real assignment
+// without relying on colour.
+func TestListShowsTrainerSurnamesAndMarksInheritedOnes(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/", nil))
+	body := rec.Body.String()
+
+	// msa-b names its own trainer: surname alone, in normal ink.
+	if !strings.Contains(body, "<td>Reimesch</td>") {
+		t.Errorf("a date's own trainer is not shown as a bare surname:\n%s", body)
+	}
+	if strings.Contains(body, "Wolfgang Reimesch") {
+		t.Error("the trainer column still carries given names")
+	}
+	// msa-a names none, so it shows the course roster — muted, with the reason
+	// available as text and not only as a colour.
+	if !strings.Contains(body, `<span class="inherited" title="No trainers on this date`) {
+		t.Errorf("an inherited roster is not marked:\n%s", body)
+	}
+	if !strings.Contains(body, `Hruschka, Starke<span class="visually-hidden"> (from the course)</span>`) {
+		t.Errorf("the inherited roster is missing or has no textual hint:\n%s", body)
+	}
+}
+
+// Both row actions have to stay links: Remove navigates to the confirmation
+// page, which is the only thing between a misclick and an undoable change.
+// Looking like buttons is the whole point of the change, so both halves are
+// pinned here — the element and the styling.
+func TestRowActionsAreButtonsButStillLinks(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/", nil))
+	body := rec.Body.String()
+
+	for _, want := range []string{
+		`<a class="button amber" href="/dates/new?from=msa-a">Duplicate</a>`,
+		`<a class="button danger" href="/dates/msa-a/delete">Remove</a>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("row action missing or not a styled link: %s\n%s", want, body)
+		}
+	}
+}
+
+// The dates table and the change report opt out of the reading measure; the
+// forms and the prose pages keep it. A modifier, not a new default — widening
+// every page would take the forms with it.
+func TestOnlyTheRecordPagesAskForTheWideMeasure(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/", nil))
+	if !strings.Contains(rec.Body.String(), `<main class="wide">`) {
+		t.Errorf("the dates list is still at the reading measure:\n%s", rec.Body.String())
+	}
+
+	// A page that sets no Wide key must still render — the data is a map, so
+	// the missing key has to be a plain false and not a render error.
+	recForm := httptest.NewRecorder()
+	s.Routes().ServeHTTP(recForm, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	if recForm.Code != http.StatusOK || !strings.Contains(recForm.Body.String(), "<main>") {
+		t.Errorf("the date form did not render at the reading measure (%d):\n%s",
+			recForm.Code, recForm.Body.String())
+	}
+
+	s2 := testServer(t, gh.URL)
+	s2.Routes().ServeHTTP(httptest.NewRecorder(),
+		signedIn(t, s2, http.MethodPost, "/dates/msa-a/delete", url.Values{}))
+	recP := httptest.NewRecorder()
+	s2.Routes().ServeHTTP(recP, signedIn(t, s2, http.MethodGet, "/propose", nil))
+	if !strings.Contains(recP.Body.String(), `<main class="wide">`) {
+		t.Errorf("the review screen is still at the reading measure:\n%s", recP.Body.String())
+	}
+}
+
+// The price, the surnames and the inheritance marker exist only on screen.
+// Nothing they are derived from may reach the file the app proposes or the
+// feed the schema is checked against — a display helper that leaked into
+// either would change what is published without anyone reviewing a diff.
+func TestRenderingTheListPublishesNothing(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	s.Routes().ServeHTTP(httptest.NewRecorder(), signedIn(t, s, http.MethodGet, "/", nil))
+
+	d, ok := s.drafts.Get("sid")
+	if !ok {
+		t.Fatal("no draft after viewing the list")
+	}
+	if d.Dirty() {
+		t.Error("viewing the list marked the draft dirty")
+	}
+	if got := string(d.Doc.Bytes()); got != fixtureYAML {
+		t.Errorf("the list rewrote the file:\n%s", got)
+	}
+	feed, err := validate.FeedJSON(d.Doc.Model())
+	if err != nil {
+		t.Fatalf("FeedJSON: %v", err)
+	}
+	// Surnames are a rendering, so the feed must still carry the full names —
+	// and the em dash must not have become a published price.
+	for _, unwanted := range []string{`"Reimesch"`, model.NoValue} {
+		if strings.Contains(string(feed), unwanted) {
+			t.Errorf("the feed carries a display-only value %q:\n%s", unwanted, feed)
+		}
+	}
+	if !strings.Contains(string(feed), "Wolfgang Reimesch") {
+		t.Errorf("the feed lost the trainer's full name:\n%s", feed)
 	}
 }
 

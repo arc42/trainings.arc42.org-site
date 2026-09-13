@@ -256,7 +256,10 @@ func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request, sess Sess
 	problems = append(problems, s.schemaProblems(r, client, d)...)
 
 	s.render(w, "propose.gohtml", map[string]any{
-		"Title": "Review & propose", "Draft": d, "Login": sess.Login,
+		// Wide for the same reason as the dates list: the change report and the
+		// YAML diff are tables, and a before/after pair does not fit a reading
+		// measure.
+		"Title": "Review & propose", "Draft": d, "Login": sess.Login, "Wide": true,
 		"Diff":     safeDiff(unifiedDiff(before, d.Doc.Bytes())),
 		"Problems": problems,
 		"PRTitle":  prTitle(d.Changes),
@@ -309,7 +312,7 @@ func (s *Server) handleProposeSubmit(w http.ResponseWriter, r *http.Request, ses
 	}
 	if problems := validate.Rules(d.Doc.Model()); len(problems) > 0 {
 		s.render(w, "propose.gohtml", map[string]any{
-			"Title": "Fix these first", "Draft": d, "Login": sess.Login,
+			"Title": "Fix these first", "Draft": d, "Login": sess.Login, "Wide": true,
 			"Problems": problems, "PRTitle": r.PostFormValue("title"), "PRBody": r.PostFormValue("body"),
 		})
 		return

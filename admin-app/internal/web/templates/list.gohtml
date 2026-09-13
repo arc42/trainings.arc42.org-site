@@ -3,22 +3,32 @@
 <h1>Training dates</h1>
 <p><a class="button" href="/dates/new">New date</a></p>
 <table class="dates">
-<thead><tr><th>Code</th><th>Course</th><th>When</th><th>Where</th><th>Lang</th><th>Status</th><th></th></tr></thead>
+<thead><tr><th>Code</th><th>Course</th><th>When</th><th>Where</th><th>Lang</th><th>Price</th><th>Trainers</th><th>Status</th><th></th></tr></thead>
 <tbody>
 {{range .Rows}}<tr class="{{if .Past}}past{{end}}">
 <td><a href="/dates/{{.Date.ID}}">{{.Date.Code}}</a></td>
 <td>{{.CourseShortTitle}}</td>
-<td>{{.Date.Start}} → {{.Date.End}}</td>
+<td class="when">{{.Date.Start}} → {{.Date.End}}</td>
 <td>{{if eqStr .Date.Format "online"}}online{{else}}{{.Date.City}}{{end}}</td>
 <td>{{.Date.Language}}</td>
+{{/* The main amount only; a dash means the date has no price, which the Ruby
+     validator rejects — so it is a finding, not a gap to fill in. */}}
+<td class="price">{{.PriceShort}}</td>
+{{/* Surnames, because the given names never tell two rows apart. An inherited
+     roster is set back a step AND carries the reason in text: colour is never
+     the only carrier of meaning here, and `title` alone is not reliably
+     announced on a non-interactive element. */}}
+<td>{{if .TrainersInherited}}<span class="inherited" title="No trainers on this date — showing the course roster">{{.TrainerSurnames}}<span class="visually-hidden"> (from the course)</span></span>{{else}}{{.TrainerSurnames}}{{end}}</td>
 <td><span class="status status-{{.Date.Status}}">{{.Date.Status}}</span></td>
 <td class="row-actions">
-  <a href="/dates/new?from={{.Date.ID}}">Duplicate</a>
-  {{/* A link, not a submit: removal goes through the confirmation page, which
-       is the only chance to catch a misclick — there is no per-change undo. */}}
-  <a class="danger" href="/dates/{{.Date.ID}}/delete">Remove</a>
+  <a class="button amber" href="/dates/new?from={{.Date.ID}}">Duplicate</a>
+  {{/* Links, not submits: Remove navigates to the confirmation page, which is
+       the only chance to catch a misclick — there is no per-change undo. They
+       are drawn as buttons because two bare links at the end of every row read
+       as part of the record rather than as things that act on it. */}}
+  <a class="button danger" href="/dates/{{.Date.ID}}/delete">Remove</a>
 </td></tr>{{else}}
-<tr><td colspan="7">No dates yet.</td></tr>
+<tr><td colspan="9">No dates yet.</td></tr>
 {{end}}
 </tbody></table>
 {{end}}

@@ -50,7 +50,9 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request, sess Session
 		rows = append(rows, listRow{Row: r0, Past: r0.Date.End < today})
 	}
 	s.render(w, "list.gohtml", map[string]any{
-		"Title": "Training dates", "Rows": rows, "Draft": d, "Login": sess.Login,
+		// Wide: nine columns of record, not prose. At the 75ch reading measure
+		// every "When" cell broke across four lines.
+		"Title": "Training dates", "Rows": rows, "Draft": d, "Login": sess.Login, "Wide": true,
 	})
 }
 

@@ -1,6 +1,9 @@
 package model
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func aDate() Date {
 	return Date{
@@ -142,6 +145,41 @@ func TestMoneyIsGrouped(t *testing.T) {
 		if got := FormatPrice(c.price); got != c.want {
 			t.Errorf("FormatPrice(%+v) = %q, want %q", c.price, got, c.want)
 		}
+	}
+}
+
+// The list shows the main amount alone. It shares formatMoney with
+// FormatPrice so the two can never spell one amount two ways — the pairs below
+// are the same prices TestMoneyIsGrouped feeds the long form.
+func TestTheShortPriceIsTheHeadlineAmountOnly(t *testing.T) {
+	cases := []struct {
+		price *Price
+		want  string
+	}{
+		{nil, ""},
+		{&Price{Amount: 0, Currency: "EUR"}, ""},
+		{&Price{Amount: 990, Currency: "EUR"}, "€ 990"},
+		{&Price{Amount: 2100, Currency: "EUR"}, "€ 2,100"},
+		{&Price{Amount: 12500, Currency: "CHF"}, "CHF 12,500"},
+		// The detail the long form spells out is dropped, not summarised: one
+		// line per date has room for the number the operator is looking for
+		// and nothing else.
+		{&Price{Amount: 2890, Currency: "EUR", Alumni: 2390,
+			EarlyBird: &EarlyBird{Amount: 2490, Until: "2026-08-08"}}, "€ 2,890"},
+	}
+	for _, c := range cases {
+		if got := FormatPriceShort(c.price); got != c.want {
+			t.Errorf("FormatPriceShort(%+v) = %q, want %q", c.price, got, c.want)
+		}
+	}
+}
+
+// A price that renders at all must render identically in both views, or the
+// list and the change report describe the same number differently.
+func TestShortAndLongPriceAgreeOnTheAmount(t *testing.T) {
+	p := &Price{Amount: 2890, Currency: "EUR", Alumni: 2390}
+	if short, long := FormatPriceShort(p), FormatPrice(p); !strings.HasPrefix(long, short) {
+		t.Errorf("FormatPrice(%+v) = %q does not start with FormatPriceShort = %q", p, long, short)
 	}
 }
 

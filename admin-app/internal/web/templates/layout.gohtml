@@ -16,6 +16,11 @@
 <span class="who">{{.Login}}</span>
 <form method="post" action="/auth/logout"><button class="link">Sign out</button></form></nav>{{end}}
 </header>
-<main>{{template "content" .}}</main>
+{{/* Wide opts one page out of the 75ch reading measure. It is a per-page
+     decision, not a default: the measure is right for the prose pages and the
+     forms, and wrong for a table of dates, which wrapped every row onto four
+     lines inside it. A page that never sets the key gets the zero value from
+     the data map and stays at 75ch. */}}
+<main{{if .Wide}} class="wide"{{end}}>{{template "content" .}}</main>
 {{if .Draft}}{{template "draftbar.gohtml" .}}{{end}}
 </body></html>{{end}}
