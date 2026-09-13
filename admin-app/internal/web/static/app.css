@@ -532,3 +532,84 @@ button.secondary:hover {
   .masthead .brand { font-size: 1rem; }
   .hero-mascot { height: 7rem; }
 }
+
+/* ---- Change report (review & propose) -------------------------------------
+   The screen used to be a unified YAML diff, which answers "what will the
+   commit look like" when the question at this point is "did I change what I
+   meant to". One card per change, one row per field that actually moved.
+
+   Before/after is carried by the column headers, never by colour alone: the
+   two cells differ in weight and tone, and both stay above the text floor. */
+.report {
+  background: var(--surface-1);        /* ink 9.08:1 on this */
+  border: 1px solid var(--hairline);   /* divider tier: decorative only */
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem 1rem;
+  margin-bottom: 1rem;
+  max-width: none;                     /* the table is the measure here */
+}
+.report-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+.report-what { font-family: var(--sans); color: var(--ink); } /* 9.08:1 on --surface-1 */
+
+/* Same pill shape as the status markers in the dates table, so the two read as
+   one vocabulary. Each pair is the one already measured for that wash. */
+.kind {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.kind-added   { background: var(--green-wash); color: var(--green-ink); } /* 6.82:1 */
+.kind-updated { background: var(--amber);      color: var(--amber-ink); } /* 7.24:1 */
+.kind-removed { background: color-mix(in oklab, var(--danger) 12%, var(--paper)); color: var(--danger); } /* as .status-cancelled: >= 5.53:1 */
+
+table.report-fields { border-collapse: collapse; width: 100%; }
+table.report-fields th, table.report-fields td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.35rem 0.75rem 0.35rem 0;
+  border-bottom: 1px solid var(--hairline);
+}
+table.report-fields thead th {
+  color: var(--ink-muted);             /* 5.02:1 on --surface-1 */
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+table.report-fields tbody th { font-weight: 600; color: var(--ink); } /* 9.08:1 */
+table.report-fields tbody tr:last-child th,
+table.report-fields tbody tr:last-child td { border-bottom: none; }
+/* The old value stays fully legible — this is evidence, not decoration — but
+   sits back a step so the eye lands on the new one. */
+.report-fields .was { color: var(--ink-muted); }  /* 5.02:1 on --surface-1 */
+.report-fields .now { color: var(--ink); font-weight: 600; } /* 9.08:1 */
+
+/* The diff is not gone, just no longer first: it is the only view that shows
+   collateral damage a field-by-field comparison cannot, such as a key dropped
+   by a re-render. */
+.rawdiff { margin: 1.5rem 0; max-width: none; }
+.rawdiff > summary {
+  cursor: pointer;
+  color: var(--deep);                  /* 8.92:1 on paper */
+  font-weight: 600;
+}
+.rawdiff > summary:focus-visible { outline: 2px solid var(--band); outline-offset: 2px; }
+.rawdiff pre.diff {
+  overflow-x: auto;                    /* long YAML lines scroll in place */
+  background: var(--paper);            /* ink 10.12:1 on this */
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}

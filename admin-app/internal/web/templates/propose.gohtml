@@ -3,14 +3,56 @@
 <h1>Review &amp; propose</h1>
 {{if .Problems}}<ul class="problems">{{range .Problems}}<li>{{.String}}</li>{{end}}</ul>
 <p>Fix these before opening a pull request — CI would reject them anyway.</p>{{end}}
-<h2>Changes</h2>
-<ul class="changes">{{range .Draft.Changes}}<li><strong>{{.Kind}}</strong> {{.DateID}} — {{.Summary}}</li>{{end}}</ul>
-<h2>Diff against <code>main</code></h2>
-<pre class="diff">{{.Diff}}</pre>
+
+{{/* One card per change, listing only the fields that actually moved. The
+     unified diff below is still here, and still what CI sees, but it is not
+     what a person deciding whether to publish should have to read: marking a
+     run as "few seats left" showed up there as four lines of YAML context
+     around one key. */}}
+<h2>What changed</h2>
+{{range .Draft.Changes}}
+{{$kind := .Kind}}
+<section class="report">
+  <h3 class="report-head">
+    <span class="kind kind-{{$kind}}">{{$kind}}</span>
+    <span class="report-what">{{.Headline}}</span>
+  </h3>
+  {{with .Fields}}
+  <table class="report-fields">
+    <thead>
+      <tr>
+        <th scope="col">Field</th>
+        {{if ne $kind "added"}}<th scope="col">Before</th>{{end}}
+        {{if ne $kind "removed"}}<th scope="col">After</th>{{end}}
+      </tr>
+    </thead>
+    <tbody>
+      {{range .}}
+      <tr>
+        <th scope="row">{{.Label}}</th>
+        {{if ne $kind "added"}}<td class="was">{{.Before}}</td>{{end}}
+        {{if ne $kind "removed"}}<td class="now">{{.After}}</td>{{end}}
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="hint">No net change — this was edited back to what the file already says.</p>
+  {{end}}
+</section>
+{{end}}
+
+{{with .Diff}}
+<details class="rawdiff">
+  <summary>YAML diff against <code>main</code> — what CI will see</summary>
+  <pre class="diff">{{.}}</pre>
+</details>
+{{end}}
+
 {{if not .Problems}}
 <form method="post" action="/propose" class="detail">
 <label>Pull request title<input name="title" value="{{.PRTitle}}" required></label>
-<label>Description<textarea name="body" rows="8">{{.PRBody}}</textarea></label>
+<label>Description<textarea name="body" rows="12">{{.PRBody}}</textarea></label>
 <div class="actions"><button type="submit">Open pull request</button> <a href="/">Keep editing</a></div>
 </form>{{end}}
 {{end}}

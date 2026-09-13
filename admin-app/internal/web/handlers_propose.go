@@ -14,6 +14,7 @@ import (
 	"github.com/hexops/gotextdiff/span"
 
 	"arc42-trainings-admin/internal/gh"
+	"arc42-trainings-admin/internal/model"
 	"arc42-trainings-admin/internal/validate"
 )
 
@@ -33,23 +34,181 @@ func safeDiff(diff string) template.HTML {
 	return template.HTML(html.EscapeString(diff))
 }
 
+// prTitleMax keeps the title inside what GitHub shows in a list without
+// eliding it. The operator can still edit the field before submitting; this is
+// the default, not a limit.
+const prTitleMax = 72
+
+// prTitle names the change in the pull request list. "Training dates: 1 change"
+// said nothing that the list did not already say — every proposal from this app
+// changes training dates, and the one thing a reviewer needs from a title is
+// which course it is about.
 func prTitle(changes []Change) string {
-	if len(changes) == 1 {
-		return "Training dates: 1 change"
+	switch len(changes) {
+	case 0:
+		return "Training dates"
+	case 1:
+		return truncate(oneChangeTitle(changes[0]), prTitleMax)
 	}
-	return fmt.Sprintf("Training dates: %d changes", len(changes))
+	courses := distinctCourses(changes)
+	switch len(courses) {
+	case 0:
+		return fmt.Sprintf("Training dates: %d changes", len(changes))
+	case 1:
+		return truncate(fmt.Sprintf("%s: %d changes", courses[0], len(changes)), prTitleMax)
+	}
+	return truncate(fmt.Sprintf("Training dates: %d changes (%s)",
+		len(changes), strings.Join(courses, ", ")), prTitleMax)
 }
 
+func oneChangeTitle(c Change) string {
+	subject := strings.TrimSpace(courseName(c) + " " + c.Code)
+	if subject == "" {
+		subject = c.DateID
+	}
+	switch c.Kind {
+	case "added":
+		if c.AfterCourse != nil {
+			return "New course: " + subject
+		}
+		if span := date(c.After).Span(); span != "" {
+			return subject + ": new date, " + span
+		}
+		return subject + ": new date"
+	case "removed":
+		return subject + ": date removed"
+	}
+	return subject + ": " + whatChanged(c.Fields())
+}
+
+// whatChanged is the tail of a single-change title. One field gets a phrase
+// worth reading; a handful get their names; more than a handful get counted,
+// because past that the title stops being a summary and the report below is
+// the thing to read.
+func whatChanged(fs []model.FieldChange) string {
+	switch {
+	case len(fs) == 0:
+		return "no net change"
+	case len(fs) == 1:
+		return phrase(fs[0])
+	case len(fs) > 3:
+		return fmt.Sprintf("%d fields changed", len(fs))
+	}
+	labels := make([]string, 0, len(fs))
+	for _, f := range fs {
+		labels = append(labels, strings.ToLower(f.Label))
+	}
+	return joinAnd(labels) + " changed"
+}
+
+// phrase says what a single changed field means, where "means" is worth more
+// than the field name. Switching on Key rather than Label so rewording a label
+// cannot silently change every title.
+func phrase(f model.FieldChange) string {
+	switch f.Key {
+	case "seats_limited":
+		if f.After == "yes" {
+			return "only few seats left"
+		}
+		return "no longer short of seats"
+	case "status":
+		return "status " + f.After
+	case "start", "end":
+		return "moved to " + f.After
+	case "city":
+		return "now in " + f.After
+	}
+	return strings.ToLower(f.Label) + " changed"
+}
+
+func courseName(c Change) string {
+	if c.CourseShortTitle != "" {
+		return c.CourseShortTitle
+	}
+	return c.CourseID
+}
+
+// distinctCourses lists the courses a multi-change proposal touches, in the
+// order they were first edited, so the title can name them.
+func distinctCourses(changes []Change) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, c := range changes {
+		name := courseName(c)
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
+}
+
+func joinAnd(parts []string) string {
+	switch len(parts) {
+	case 0:
+		return ""
+	case 1:
+		return parts[0]
+	}
+	return strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1]
+}
+
+// truncate cuts on a rune boundary — the course titles and cities here are not
+// all ASCII, and half a rune in a pull request title is a mojibake bug report.
+func truncate(s string, max int) string {
+	if len([]rune(s)) <= max {
+		return s
+	}
+	return strings.TrimRight(string([]rune(s)[:max-1]), " ,-·") + "…"
+}
+
+// prBody writes the same report the review screen shows, as Markdown. A
+// reviewer on GitHub sees which fields moved and from what, without opening
+// the Files tab and reading YAML.
 func prBody(changes []Change, login string) string {
 	var b strings.Builder
 	b.WriteString("Opened from the trainings admin app by @" + login + ".\n\n")
 	for _, c := range changes {
-		b.WriteString(fmt.Sprintf("- **%s** `%s` — %s\n", c.Kind, c.DateID, c.Summary))
+		b.WriteString("### " + c.Kind + " — " + c.Headline() + "\n\n")
+		fields := c.Fields()
+		if len(fields) == 0 {
+			b.WriteString("_No net change: the values were edited back to what the file already says._\n\n")
+			continue
+		}
+		switch c.Kind {
+		case "added", "removed":
+			b.WriteString("| Field | Value |\n| --- | --- |\n")
+			for _, f := range fields {
+				value := f.After
+				if c.Kind == "removed" {
+					value = f.Before
+				}
+				b.WriteString("| " + mdCell(f.Label) + " | " + mdCell(value) + " |\n")
+			}
+		default:
+			b.WriteString("| Field | Before | After |\n| --- | --- | --- |\n")
+			for _, f := range fields {
+				b.WriteString("| " + mdCell(f.Label) + " | " + mdCell(f.Before) +
+					" | " + mdCell(f.After) + " |\n")
+			}
+		}
+		b.WriteString("\n")
 	}
-	b.WriteString("\nCI validates this against `api/trainings.schema.json` and " +
+	b.WriteString("CI validates this against `api/trainings.schema.json` and " +
 		"`scripts/validate_trainings.rb`. Merging republishes the feed and " +
 		"notifies the four consumer sites.\n")
 	return b.String()
+}
+
+// mdCell keeps a value inside its table cell. A pipe would end the cell early
+// and shift every following column; a newline (a course blurb has them) would
+// end the table. Neither is escapable inside a GitHub table cell, so the
+// newline becomes a break and the pipe is backslash-escaped.
+func mdCell(s string) string {
+	s = strings.ReplaceAll(s, "|", "\\|")
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	return strings.ReplaceAll(s, "\n", "<br>")
 }
 
 var unsafeRef = regexp.MustCompile(`[^a-z0-9-]+`)
