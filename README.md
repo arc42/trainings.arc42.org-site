@@ -73,7 +73,7 @@ Everything runs in Docker — no local Ruby/bundler needed.
 | `make dev` | Start the dev server with live reload at <http://localhost:4260> (not `0.0.0.0:4260`) |
 | `make site` | Build the static site into `_site/` |
 | `make check-links` | Run html-proofer over the built `_site` (internal links, images, HTML) |
-| `make stop` | Stop and remove the Jekyll dev container — it does not touch the admin app demo, which is not a container (see `make app-stop`) |
+| `make stop` | Stop and remove the Jekyll dev container — it does not touch the admin app demo, which is not a container (see `make training-app-stop`) |
 | `make clean` | Remove `_site/`, Jekyll caches, the Docker volumes and the admin binary |
 | `make install` | Re-resolve gems after editing the `Gemfile` (rewrites `Gemfile.lock`) |
 
@@ -95,8 +95,8 @@ works and why it is deployed in exactly one place.
 
 | Target | What it does |
 | --- | --- |
-| `make app-demo` | Run the real app offline on <http://localhost:8080> against a fake GitHub — nothing is published |
-| `make app-stop` | Stop a demo left running in the background |
+| `make training-app-demo` | Run the real app offline on <http://localhost:8080> against a fake GitHub — nothing is published |
+| `make training-app-stop` | Stop a demo left running in the background |
 | `make app-check` | Tests, `go vet` and `gofmt` — the same three checks CI gates the deploy on |
 | `make app-test` | Just the Go test suite |
 | `make app-preview` | Render every page to `preview-out/` as static HTML, no server |
@@ -107,7 +107,7 @@ works and why it is deployed in exactly one place.
 | `make fly-releases` | What has actually been deployed, newest first |
 | `make fly-secrets` | The *names* of the fly secrets; values are never readable |
 
-`make app-demo` is how you try a change, or show the app to somebody, without a
+`make training-app-demo` is how you try a change, or show the app to somebody, without a
 GitHub account or a network: it reads this checkout's `_data/trainings.yml`,
 never writes it, and "publishing" writes the proposed file to `demo-out/` and
 opens no pull request. See
@@ -115,7 +115,7 @@ opens no pull request. See
 does not prove.
 
 It runs in the foreground, so Ctrl-C ends it. If you started it in the background
-instead, `make app-stop` is what ends it: `make stop` only stops the Jekyll
+instead, `make training-app-stop` is what ends it: `make stop` only stops the Jekyll
 container, and the demo is a Go process. Killing the `go run` by hand is not
 enough either — that leaves the binary it compiled still holding port 8080.
 
