@@ -263,6 +263,82 @@ button.help:hover { background: var(--surface-2); border-color: var(--hairline-h
 button.help[aria-expanded="true"] { background: var(--surface-hover); border-color: var(--border); }
 button.help:focus-visible { outline: 2px solid var(--band); outline-offset: 2px; }
 
+/* ---- Filter bar (dates list) ------------------------------------------------
+   The list narrows through the query string, so this is a plain GET form; htmx
+   only saves the reload (see list.gohtml). The bar is a card rather than a row
+   of bare controls because it is persistent state, not a one-off action: with
+   past dates hidden by default the operator is always looking at a narrowed
+   table, and the thing doing the narrowing has to be visible.
+
+   Ratios below are measured against the exact hex pair named, per ADR-0002. */
+form.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--surface-1);         /* #f5eff2 */
+  border: 1px solid var(--hairline);    /* divider tier: decorative only */
+  border-radius: var(--radius);
+}
+form.filters .filter { display: flex; flex-direction: column; margin: 0; }
+/* The caption sits above its control, not beside it: five labelled selects on
+   one line only stay readable if each caption is directly over the box it
+   names. Smaller than a form label — this is a viewing control, not a field
+   being filled in — but no lighter, because the ink is what keeps it legible
+   at 0.85rem. */
+form.filters label {
+  margin-bottom: 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);                    /* #3d4144 on --surface-1: 9.08:1 */
+}
+form.filters select {
+  min-width: 13ch;
+  background: var(--paper);             /* ink #3d4144 on #fcfdff: 10.12:1 */
+  border-color: var(--band);            /* #a04c5e on --surface-1: 5.02:1, past
+                                           the 3:1 SC 1.4.11 asks of a control's
+                                           own boundary */
+}
+form.filters .filter-actions { display: flex; align-items: center; gap: 1rem; margin: 0; }
+/* Apply stays visible with scripting on as well. It is the control that makes
+   the form work without htmx, and a button that disappears once JS loads means
+   the two paths no longer look like the same form. */
+form.filters .filter-actions a { color: var(--deep); } /* #743442 on --surface-1: 8.00:1 */
+@media (max-width: 34rem) {
+  /* Five side-by-side selects on a phone shrink to unreadable; stack instead,
+     the same way .row and dl.record do. */
+  form.filters { flex-direction: column; align-items: stretch; }
+}
+
+/* "Showing 7 of 20 dates". Full ink and semibold, not a muted footnote: it is
+   the only thing on the page that says the table is not the whole file. */
+.count {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  color: var(--ink);                    /* #3d4144 on --paper: 10.12:1 */
+}
+
+/* A filter value no date carries. The amber note vocabulary, not --danger:
+   nothing is broken and nothing was lost — a URL simply asked for something
+   this file does not contain. Same measured pair as the form warnings box. */
+.filter-warning {
+  max-width: 70ch;
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--amber);             /* #ffc95c */
+  border: 1px solid var(--amber-edge);  /* #b8860b on --paper: 3.20:1 — the
+                                           amber fill alone is 1.50:1 */
+  border-radius: var(--radius);
+  color: var(--amber-ink);              /* #4a3a0a on --amber: 7.24:1 */
+}
+
+/* An empty result, which under a filter is an ordinary answer rather than a
+   fault — so it is set back like the rest of the quiet prose on this app. */
+p.empty { color: var(--ink-muted); }    /* #646769 on --paper: 5.60:1 */
+p.empty a { color: var(--deep); }       /* #743442 on --paper: 8.92:1 */
+
 /* ---- Tables ---------------------------------------------------------------- */
 table.dates { border-collapse: collapse; }
 table.dates th, table.dates td {

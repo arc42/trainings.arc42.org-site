@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"arc42-trainings-admin/internal/config"
 	"arc42-trainings-admin/internal/ghfake"
@@ -14,12 +15,25 @@ import (
 	"arc42-trainings-admin/internal/validate"
 )
 
+// testToday is the clock every test server in this package runs on. It is
+// pinned because the list hides past dates by default: with time.Now() the
+// fixture's dates would cross from upcoming to past on a date nobody chose,
+// and half of these tests would silently start asserting about an empty table.
+// Whether a test wants the past date is a decision it states, not an accident
+// of the day the suite runs.
+//
+// Against this clock: msa-b (ends 2025-09-17) is OVER, msa-a (ends 2026-01-02)
+// is still to come. That split is the point — it gives the default view and
+// ?past=show something different to show without a third date.
+var testToday = time.Date(2025, 12, 1, 9, 0, 0, 0, time.UTC)
+
 // The two dates are deliberately unlike each other: msa-a names no trainers
 // and no price (both optional in the file, and the common case — most
 // published dates inherit their trainers from the course), msa-b names both.
 // A view that only ever sees one of the two shapes is a view that has not been
 // tested. msa-b starts earlier than msa-a so that it is never the course's
-// latest date, which is what the new-date form prefills from.
+// latest date, which is what the new-date form prefills from — and, since the
+// list gained a past filter, so that it is the one date the default view hides.
 const fixtureYAML = `courses:
   - id: msa
     short_title: "MSA"
@@ -58,11 +72,18 @@ const fixtureYAML = `courses:
 // the offline demo (cmd/demo) runs the real app against the very same double —
 // one place to keep honest about what GitHub accepts and what it refuses.
 func fakeGitHub(t *testing.T) (*httptest.Server, *ghfake.Fake) {
+	return fakeGitHubWith(t, fixtureYAML)
+}
+
+// fakeGitHubWith is fakeGitHub over a different trainings.yml, for the tests
+// that need a shape the shared fixture deliberately does not have — a second
+// course, an online date, a city nobody has taught in yet.
+func fakeGitHubWith(t *testing.T, yaml string) (*httptest.Server, *ghfake.Fake) {
 	t.Helper()
 	f := ghfake.New(ghfake.Options{
 		Repo: "arc42/site", Login: "gernotstarke", CanPush: true,
 		Files: map[string][]byte{
-			"_data/trainings.yml":       []byte(fixtureYAML),
+			"_data/trainings.yml":       []byte(yaml),
 			"api/trainings.schema.json": []byte(`{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"}`),
 		},
 		OnUnexpected: func(method, path string) { t.Errorf("unexpected %s %s", method, path) },
@@ -80,6 +101,8 @@ func testServer(t *testing.T, apiBase string) *Server {
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
+	// Every test in this package runs on the pinned clock — see testToday.
+	s.now = func() time.Time { return testToday }
 	return s
 }
 
@@ -135,13 +158,18 @@ func TestListShowsDates(t *testing.T) {
 // main amount: alumni and early-bird detail is what the change report is for.
 // A date with no price shows the absent-value dash, because the Ruby validator
 // requires one — the cell is reporting broken data, not a missing feature.
+//
+// ?past=show, because the priced date in the fixture (msa-b) is the one that is
+// over: this is about how a price is rendered, in whichever row it appears, so
+// it asks for both rows rather than being narrowed to whichever half of the
+// fixture the default view happens to keep.
 func TestListShowsThePriceOfEachDate(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
 	rec := httptest.NewRecorder()
-	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/", nil))
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/?past=show", nil))
 	body := rec.Body.String()
 
 	if !strings.Contains(body, "€ 2,100") {
@@ -156,13 +184,17 @@ func TestListShowsThePriceOfEachDate(t *testing.T) {
 // none of their own — so the fallback to the course roster is what the column
 // mostly shows, and it has to be distinguishable from a real assignment
 // without relying on colour.
+//
+// ?past=show for the same reason as the price test: the date with its own
+// trainer (msa-b) is the one the default view hides, and both halves of the
+// comparison have to be on the page at once for it to mean anything.
 func TestListShowsTrainerSurnamesAndMarksInheritedOnes(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
 	rec := httptest.NewRecorder()
-	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/", nil))
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/?past=show", nil))
 	body := rec.Body.String()
 
 	// msa-b names its own trainer: surname alone, in normal ink.
@@ -242,12 +274,20 @@ func TestOnlyTheRecordPagesAskForTheWideMeasure(t *testing.T) {
 // Nothing they are derived from may reach the file the app proposes or the
 // feed the schema is checked against — a display helper that leaked into
 // either would change what is published without anyone reviewing a diff.
+//
+// Filtering joins that list. It is a view concern and nothing else: narrowing
+// the table must not narrow the draft, and a date hidden behind ?course= has
+// to still be in the file the next publish writes. So the filtered requests
+// below go through the same assertions, and the document is compared byte for
+// byte afterwards.
 func TestRenderingTheListPublishesNothing(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
-	s.Routes().ServeHTTP(httptest.NewRecorder(), signedIn(t, s, http.MethodGet, "/", nil))
+	for _, target := range []string{"/", "/?course=msa&past=show", "/?format=online", "/?lang=nonsense"} {
+		s.Routes().ServeHTTP(httptest.NewRecorder(), signedIn(t, s, http.MethodGet, target, nil))
+	}
 
 	d, ok := s.drafts.Get("sid")
 	if !ok {

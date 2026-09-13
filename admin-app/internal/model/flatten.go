@@ -44,6 +44,27 @@ func (r Row) TrainerSurnames() string {
 	return NoValue
 }
 
+// LocationOnline is what Location reports for a date with no city. It is
+// spelled exactly like the format it is derived from, because it also travels
+// in the list's ?where= parameter and a second spelling would be a second
+// thing to keep in step.
+const LocationOnline = "online"
+
+// Location is the "Where" cell of a one-line-per-date view: the city, or
+// "online" for a date that deliberately has none.
+//
+// The schema makes city required unless the format is online, so where a run
+// takes place has exactly one answer per date — which is why the list offers
+// city and online in a single filter rather than pretending an online run has
+// a city somewhere. An empty result means neither: broken data the schema
+// rejects, left visible rather than papered over.
+func (r Row) Location() string {
+	if r.Date.Format == LocationOnline {
+		return LocationOnline
+	}
+	return r.Date.City
+}
+
 // PriceShort is the price cell of a one-line-per-date view: the main amount,
 // without the alumni and early-bird detail.
 //

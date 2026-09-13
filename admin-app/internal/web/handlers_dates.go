@@ -40,19 +40,26 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request, sess Session
 		return
 	}
 	m := d.Doc.Model()
-	today := time.Now().Format("2006-01-02")
-	type listRow struct {
-		model.Row
-		Past bool
-	}
-	var rows []listRow
-	for _, r0 := range m.Rows() {
+	today := s.now().Format("2006-01-02")
+	all := m.Rows()
+	rows := make([]listRow, 0, len(all))
+	for _, r0 := range all {
 		rows = append(rows, listRow{Row: r0, Past: r0.Date.End < today})
 	}
+	// The options are derived from every row in the draft, past ones included:
+	// a course whose runs are all over still has to be reachable with
+	// past=show, and a bar whose lists changed shape as the other controls
+	// moved would be impossible to use.
+	filters := deriveFilters(all, r.URL.Query())
+	shown := filters.apply(rows)
 	s.render(w, "list.gohtml", map[string]any{
 		// Wide: nine columns of record, not prose. At the 75ch reading measure
 		// every "When" cell broke across four lines.
-		"Title": "Training dates", "Rows": rows, "Draft": d, "Login": sess.Login, "Wide": true,
+		"Title": "Training dates", "Rows": shown, "Draft": d, "Login": sess.Login, "Wide": true,
+		// Shown and Total are both rendered: a filtered table must never be
+		// mistakable for the whole file, and hiding past dates by default
+		// means the very first view is already a narrowed one.
+		"Filters": filters, "Shown": len(shown), "Total": len(rows),
 	})
 }
 
@@ -207,7 +214,7 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 	// checked first and independently, so acknowledging a warning can never
 	// carry a genuinely invalid date past the blocking rules.
 	if r.PostFormValue("confirm_warnings") != "1" {
-		today := time.Now().Format("2006-01-02")
+		today := s.now().Format("2006-01-02")
 		if warnings := validate.DateWarnings(nd, courseID, today, isNew); len(warnings) > 0 {
 			reshow("Have a look at these", nil, warnings)
 			return
