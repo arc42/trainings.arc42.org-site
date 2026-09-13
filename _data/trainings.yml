@@ -37,7 +37,7 @@
 # ============================================================================
 courses:
   - id: msa
-    short_title: "Mastering SW Architectures"
+    short_title: "MSA"
     title: "Mastering Software Architectures"
     blurb: >-
       Two expert trainers at all times, highly practical and pragmatic,
