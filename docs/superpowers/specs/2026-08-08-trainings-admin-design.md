@@ -219,7 +219,7 @@ decorative.
 No browser/e2e tests — four screens do not justify the maintenance.
 
 **One double, shared.** The stand-in GitHub lives in `internal/ghfake`, and both
-the handler tests and the offline demo (`cmd/demo`, `make app-demo`) run against
+the handler tests and the offline demo (`cmd/demo`, `make training-app-demo`) run against
 it. Its rule is that it must refuse what GitHub refuses — a duplicate ref is
 422, a commit over a moved blob is 409 — each refusal covered by its own test.
 A double more permissive than the real API is worse than none: the suite then

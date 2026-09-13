@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help dev build stop site check-links clean install update shell logs \
-        app-test app-check app-build app-demo app-stop app-preview check-go \
+        app-test app-check app-build training-app-demo training-app-stop app-preview check-go \
         check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases
 
 # This site's fixed local dev port. Every arc42 site has its own so their dev
@@ -16,8 +16,8 @@ PREVIEW_DIR := preview-out
 help: ## Show this help
 	@printf "\ntrainings.arc42.org — two halves, hosted in two places:\n"
 	@printf "  the site      Jekyll, static, GitHub Pages   → targets below\n"
-	@printf "  the admin app Go, container, fly.io          → app-* and fly-* targets\n\n"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	@printf "  the admin app Go, container, fly.io          → app-*, training-app-* and fly-* targets\n\n"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 	@printf "\n  Both halves normally ship from CI on push to main. 'make fly-deploy' is the\n"
 	@printf "  manual escape hatch for the admin app — see admin-app/README.md.\n\n"
 
@@ -36,7 +36,7 @@ dev: ## Start the local Jekyll dev server with live reload (http://localhost:426
 build: ## Build the Docker dev image from the Gemfile-pinned gems
 	docker compose build
 
-stop: ## Stop and remove the Jekyll dev container (the demo is not a container — see app-stop)
+stop: ## Stop and remove the Jekyll dev container (the demo is not a container — see training-app-stop)
 	docker compose down
 
 site: build ## Generate the static site into _site/
@@ -82,7 +82,7 @@ app-check: check-go ## Run exactly what CI runs before it deploys: tests, vet, g
 	fi
 	@printf "==> tests, vet and gofmt are clean — this is what CI checks\n"
 
-app-demo: check-go ## Run the admin app offline on :8080 against a fake GitHub (nothing is published)
+training-app-demo: check-go ## Run the admin app offline on :8080 against a fake GitHub (nothing is published)
 	@printf "==> The demo reads _data/trainings.yml and never writes it.\n"
 	@printf "==> Publishing writes the proposed file to demo-out/ and opens nothing.\n"
 	cd $(APP_DIR) && go run ./cmd/demo -repo ..
@@ -99,7 +99,7 @@ app-demo: check-go ## Run the admin app offline on :8080 against a fake GitHub (
 # running this recipe, whose command line contains it too — BSD pgrep skips the
 # caller's ancestors, GNU pgrep does not, and this way it does not matter which
 # one is installed.
-app-stop: ## Stop a demo left running in the background (Ctrl-C is enough in the foreground)
+training-app-stop: ## Stop a demo left running in the background (Ctrl-C is enough in the foreground)
 	@pids=$$(pgrep -f '/dem[o] -repo' 2>/dev/null || true); \
 	if [ -z "$$pids" ]; then printf "==> No demo is running.\n"; exit 0; fi; \
 	kill $$pids 2>/dev/null || true; \

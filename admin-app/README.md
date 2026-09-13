@@ -161,8 +161,8 @@ Every target below is run from the **repository root**, not from this directory:
 | `make app-check` | Tests, `go vet` and `gofmt` — the same three checks CI gates the deploy on |
 | `make app-test` | Just the Go test suite, for a tighter loop |
 | `make app-build` | Compile to `admin-app/admin`; a fast compile check, never the deployed binary |
-| `make app-demo` | The offline demo: the real app on <http://localhost:8080> against a fake GitHub — see below |
-| `make app-stop` | Stop a demo left running in the background |
+| `make training-app-demo` | The offline demo: the real app on <http://localhost:8080> against a fake GitHub — see below |
+| `make training-app-stop` | Stop a demo left running in the background |
 | `make app-preview` | Render every page to `preview-out/` as plain HTML files, no server involved |
 | `make fly-deploy` | Deploy **your current working tree** to fly — the manual path, see below |
 | `make fly-status` | The app, its machines and their health checks (`stopped` is the normal resting state) |
@@ -172,7 +172,7 @@ Every target below is run from the **repository root**, not from this directory:
 
 ### The offline demo
 
-`make app-demo` runs **the real app** on <http://localhost:8080>. Only GitHub is
+`make training-app-demo` runs **the real app** on <http://localhost:8080>. Only GitHub is
 different: instead of api.github.com it talks to
 [`internal/ghfake`](internal/ghfake), a stand-in running in the same process.
 
@@ -195,7 +195,7 @@ different: instead of api.github.com it talks to
 Use it to click through a change, to check a form, or to show somebody what the
 app does with no network at all.
 
-Ctrl-C ends it. From the background, `make app-stop` does — the top-level `make
+Ctrl-C ends it. From the background, `make training-app-stop` does — the top-level `make
 stop` is `docker compose down` and the demo is not a container, and killing the
 `go run` leaves the binary it compiled still listening on 8080.
 

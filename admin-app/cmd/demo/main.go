@@ -16,7 +16,7 @@
 //
 // Usage, from the repository root:
 //
-//	make app-demo
+//	make training-app-demo
 package main
 
 import (
@@ -61,7 +61,7 @@ func main() {
 	}
 	data, err := os.ReadFile(filepath.Join(root, dataPath))
 	if err != nil {
-		log.Fatalf("demo: %v\n\nRun this from the repository root (make app-demo), or pass -repo.", err)
+		log.Fatalf("demo: %v\n\nRun this from the repository root (make training-app-demo), or pass -repo.", err)
 	}
 	schema, err := os.ReadFile(filepath.Join(root, schemaPath))
 	if err != nil {
