@@ -92,3 +92,82 @@ func TestDraftsAreIsolatedPerSession(t *testing.T) {
 		t.Error("discard did not remove the draft")
 	}
 }
+
+// Five edits to one date are one before/after pair. Keeping the latest "before"
+// would report the last keystroke and call it the change: edit open → full →
+// waitlist and the report has to say open → waitlist, not full → waitlist.
+func TestCollapsedChangesKeepTheEarliestBefore(t *testing.T) {
+	d := newTestDraft(t)
+	row, _ := d.Doc.Model().FindDate("a")
+	nd := row.Date
+	nd.Status = "full"
+	_ = d.UpdateDate("a", nd)
+	nd.Status = "waitlist"
+	_ = d.UpdateDate("a", nd)
+
+	fields := d.Changes[0].Fields()
+	if len(fields) != 1 || fields[0].Key != "status" {
+		t.Fatalf("fields = %+v", fields)
+	}
+	if fields[0].Before != "open" || fields[0].After != "waitlist" {
+		t.Errorf("status = %q → %q, want open → waitlist", fields[0].Before, fields[0].After)
+	}
+}
+
+// An edit that puts every value back where it started leaves an entry with no
+// rows. It stays in the list rather than vanishing: the file may still differ,
+// and a draft that silently reports itself clean is worse than an empty card.
+func TestAnEditUndoneReportsNoFields(t *testing.T) {
+	d := newTestDraft(t)
+	row, _ := d.Doc.Model().FindDate("a")
+	nd := row.Date
+	nd.Status = "full"
+	_ = d.UpdateDate("a", nd)
+	_ = d.UpdateDate("a", row.Date)
+
+	if len(d.Changes) != 1 {
+		t.Fatalf("Changes = %+v", d.Changes)
+	}
+	if fields := d.Changes[0].Fields(); len(fields) != 0 {
+		t.Errorf("fields = %+v, want none", fields)
+	}
+}
+
+// The report needs the course the date belongs to, which only the pre-edit
+// lookup knows — the form posts a course id, not a title.
+func TestChangesCarryTheCourseIdentity(t *testing.T) {
+	d := newTestDraft(t)
+	row, _ := d.Doc.Model().FindDate("a")
+	nd := row.Date
+	nd.SeatsLimited = true
+	_ = d.UpdateDate("a", nd)
+
+	c := d.Changes[0]
+	if c.CourseID != "msa" || c.CourseShortTitle != "MSA" || c.Code != "A" {
+		t.Errorf("change identity = %+v", c)
+	}
+	if got, want := c.Headline(), "MSA · A · 2026-01-01 to 2026-01-02"; got != want {
+		t.Errorf("Headline = %q, want %q", got, want)
+	}
+}
+
+// A date added and then removed in the same draft keeps the values it had, so
+// the report can still say what was withdrawn.
+func TestARemovalAfterAnAddStillHasValues(t *testing.T) {
+	d := newTestDraft(t)
+	_ = d.AddDate("msa", model.Date{
+		ID: "b", Code: "B", Start: "2026-05-01", End: "2026-05-02",
+		Language: "en", Format: "online", Status: "open",
+	})
+	_ = d.DeleteDate("b")
+
+	if len(d.Changes) != 1 {
+		t.Fatalf("Changes = %+v", d.Changes)
+	}
+	if d.Changes[0].Kind != "removed" {
+		t.Errorf("Kind = %q", d.Changes[0].Kind)
+	}
+	if fields := d.Changes[0].Fields(); len(fields) == 0 {
+		t.Error("the removal reported no fields at all")
+	}
+}

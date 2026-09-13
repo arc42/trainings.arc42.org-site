@@ -52,10 +52,15 @@ need neither a network nor a configuration file.
    polls `/keepalive` every 60 seconds while a draft is dirty, so fly's idle
    timer cannot stop the machine out from under an editing session.
 
-4. **Review.** `GET /propose` re-reads the file from GitHub, renders a unified
-   diff of what you are about to propose, and validates the result against the
-   schema **fetched live from the repository** — so the app cannot drift from
-   what CI will enforce on the pull request.
+4. **Review.** `GET /propose` re-reads the file from GitHub and shows a change
+   report: one card per change, one row per field that actually moved, with the
+   old value beside the new one. The unified YAML diff is still there, one
+   `<details>` further down, because it is the only view that shows collateral
+   damage a field-by-field comparison cannot — a key dropped by a re-render, say.
+   The same screen validates the result against the schema **fetched live from
+   the repository**, so the app cannot drift from what CI will enforce on the
+   pull request. The proposed title and description are prefilled from the same
+   report and stay editable.
 
 5. **Publish.** `POST /propose` re-reads the blob SHA and compares it with the
    one from step 2. Different means somebody else edited the file: you get a
@@ -65,6 +70,29 @@ need neither a network nor a configuration file.
    the head SHA, `PUT /contents/_data/trainings.yml` commits the new content
    onto it, and `POST /pulls` opens the pull request against `main`. Then the
    draft is discarded and you get the PR link.
+
+### What the pull request says
+
+The title names the course, because "Training dates: 1 change" told a reviewer
+nothing the pull request list did not already say:
+
+```
+MSA 26-09 MSA-EN: only few seats left
+MSA 27-02 MSA-EN: new date, 2027-02-22 to 2027-02-25
+MSA 26-09 MSA-EN: date removed
+MSA: 3 changes                          (several changes, one course)
+Training dates: 4 changes (MSA, IMPROVE)
+```
+
+A single-field edit is described by what it means rather than by the field name
+(`only few seats left`, `status full`), which is why
+[`model.FieldChange`](internal/model/diff.go) carries a stable `Key` next to its
+human `Label` — the wording is chosen per field, and switching on prose would
+break the moment a label is reworded. Two or three fields are named; more are
+counted, because past that the title stops being a summary.
+
+The description carries the same before/after report as a Markdown table per
+change, so a reviewer sees which fields moved without opening the Files tab.
 
 ### Where state lives
 
@@ -87,7 +115,7 @@ below.
 | `GET /dates/new`, `GET /dates/{id}`, `POST /dates/{id}` | Add, duplicate (`?from=`) and edit a date |
 | `GET /dates/{id}/delete`, `POST /dates/{id}/delete` | The confirmation page, then the removal — the GET deliberately changes nothing |
 | `GET /courses`, `GET /courses/new`, `GET /courses/{id}`, `POST /courses/…` | The courses. There is no course delete: a course owns its dates, so removing one would silently take them along |
-| `GET /propose`, `POST /propose` | The diff-and-publish screen, and the publish itself |
+| `GET /propose`, `POST /propose` | The change report and publish screen, and the publish itself |
 | `POST /discard` | Throw the draft away |
 | `GET /keepalive` | The draft bar's 60-second htmx ping |
 

@@ -50,3 +50,15 @@ func (t *Trainings) CourseOf(dateID string) (*Course, int, bool) {
 	}
 	return nil, 0, false
 }
+
+// FindCourse returns a course by id. The report needs the course as it was
+// before an edit, which only the caller that has not yet applied the edit can
+// still see.
+func (t Trainings) FindCourse(id string) (Course, bool) {
+	for _, c := range t.Courses {
+		if c.ID == id {
+			return c, true
+		}
+	}
+	return Course{}, false
+}

@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 )
@@ -47,6 +48,23 @@ func TestDumpPreview(t *testing.T) {
 	rec := httptest.NewRecorder()
 	s.renderDenied(rec, "curious-visitor")
 	if err := os.WriteFile(dir+"/denied.html", rec.Body.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Review & propose needs something to review, so it gets its own server
+	// with one edit already made — the "few seats left" case the change report
+	// was built for.
+	s2 := testServer(t, gh.URL)
+	s2.Routes().ServeHTTP(httptest.NewRecorder(),
+		signedIn(t, s2, http.MethodPost, "/dates/msa-a", url.Values{
+			"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
+			"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
+			"country": {"DE"}, "language": {"de"}, "format": {"public"},
+			"status": {"open"}, "seats_limited": {"on"}, "confirm_warnings": {"1"},
+		}))
+	recP := httptest.NewRecorder()
+	s2.Routes().ServeHTTP(recP, signedIn(t, s2, http.MethodGet, "/propose", nil))
+	if err := os.WriteFile(dir+"/propose.html", recP.Body.Bytes(), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
