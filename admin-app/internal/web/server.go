@@ -138,10 +138,11 @@ func (s *Server) authed(next authedFunc) http.Handler {
 						"edits live only for the length of a session, so any draft is gone. " +
 						"Nothing was published and nothing in the repository changed.",
 					"Bare": true,
+					"Repo": s.cfg.GitHubRepo,
 				})
 				return
 			}
-			s.render(w, "login.gohtml", map[string]any{"Title": "Sign in"})
+			s.render(w, "login.gohtml", map[string]any{"Title": "Sign in", "Repo": s.cfg.GitHubRepo})
 			return
 		}
 		owner, name := s.cfg.Repo()

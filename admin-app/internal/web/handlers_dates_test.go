@@ -91,6 +91,18 @@ func TestListRequiresSignIn(t *testing.T) {
 	if !strings.Contains(rec.Body.String(), "Sign in with GitHub") {
 		t.Errorf("anonymous request did not get the sign-in page:\n%s", rec.Body.String())
 	}
+	// Signing out lands here, so the page needs ways out that are not "sign in".
+	for _, want := range []string{
+		`href="https://trainings.arc42.org"`,
+		`href="https://github.com/` + s.cfg.GitHubRepo + `/pulls" target="_blank"`,
+		"crafted with passion in Cologne",
+		`href="https://status.arc42.org"`,
+		`href="https://github.com/` + s.cfg.GitHubRepo + `"`,
+	} {
+		if !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("sign-in page lacks %s", want)
+		}
+	}
 }
 
 func TestListShowsDates(t *testing.T) {

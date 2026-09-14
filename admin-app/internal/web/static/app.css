@@ -469,12 +469,12 @@ ul.courses small { color: var(--ink-muted); margin-left: 0.5rem; } /* 5.60:1 */
 .notice .hint { margin-top: 2.5rem; }
 
 /* Secondary action: the recovery path, subordinate to the primary link out. */
-button.secondary {
+button.secondary, .button.secondary {
   background: var(--paper);
   color: var(--deep);              /* 8.92:1 on --paper */
   border: 1px solid var(--band);   /* 5.59:1 on paper, past the 3:1 UI floor */
 }
-button.secondary:hover {
+button.secondary:hover, .button.secondary:hover {
   background: var(--surface-1);
   color: var(--deep);              /* 8.55:1 on --surface-1 */
   border-color: var(--deep);
@@ -524,6 +524,21 @@ button.secondary:hover {
 .hero h1 { margin: 0 0 0.5rem; }
 .hero .lede { margin-top: 0; }
 .hero .hint { margin-top: 0.75rem; }
+.hero .ways-out { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 2rem; }
+/* A short rule rather than a full-width one: the hero is a narrow column and a
+   long line would read as a section break instead of a sign-off. */
+.hero-footer {
+  margin-top: 3rem;
+  font-size: 0.85em;
+  color: var(--ink-muted);         /* 5.6:1 on paper */
+}
+.hero-footer hr {
+  width: 4rem;
+  margin: 0 0 0.75rem;
+  border: 0;
+  border-top: 1px solid var(--hairline-hover);
+}
+.hero-footer span { margin: 0 0.35rem; color: var(--hairline-hover); }
 
 @media (max-width: 30rem) {
   /* Keep the wordmark readable before the mascot: on a narrow phone the two
