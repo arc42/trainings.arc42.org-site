@@ -22,5 +22,8 @@
      lines inside it. A page that never sets the key gets the zero value from
      the data map and stays at 75ch. */}}
 <main{{if .Wide}} class="wide"{{end}}>{{template "content" .}}</main>
+{{/* Empty unless a page defines it. Only the sign-in page does: signed-in pages
+     leave the bottom of the window to the draft bar. */}}
+{{block "footer" .}}{{end}}
 {{if .Draft}}{{template "draftbar.gohtml" .}}{{end}}
 </body></html>{{end}}

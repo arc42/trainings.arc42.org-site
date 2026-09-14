@@ -140,7 +140,9 @@ func TestListRequiresSignIn(t *testing.T) {
 	for _, want := range []string{
 		`href="https://trainings.arc42.org"`,
 		`href="https://github.com/` + s.cfg.GitHubRepo + `/pulls" target="_blank"`,
-		"crafted with passion in Cologne",
+		"Crafted with passion in Cologne by Gernot Starke",
+		`src="/static/arc42-logo.svg"`,
+		`<footer class="site-footer">`,
 		`href="https://status.arc42.org"`,
 		`href="https://github.com/` + s.cfg.GitHubRepo + `"`,
 	} {
