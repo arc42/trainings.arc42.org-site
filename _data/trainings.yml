@@ -295,7 +295,7 @@ courses:
         format: online
         trainers: ["Wolfgang Reimesch"]
         price:
-          amount: 2200
+          amount: 2100
           currency: EUR
           alumni: 2050
         url: "https://www.arc42.de/termine#req4arc-jun-2027"
