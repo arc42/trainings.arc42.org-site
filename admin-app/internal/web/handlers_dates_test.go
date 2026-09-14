@@ -357,6 +357,51 @@ func TestSaveDateMarksDraftDirty(t *testing.T) {
 	}
 }
 
+// The id and booking code are computed. With scripting off they arrive empty,
+// and the server fills them in rather than rejecting the date.
+func TestSaveNewDateDerivesEmptyIdentifiers(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	form := url.Values{
+		"course_id": {"msa"}, "id": {""}, "code": {""},
+		"start": {"2026-03-03"}, "end": {"2026-03-04"},
+		"language": {"en"}, "format": {"online"}, "status": {"open"},
+		"confirm_warnings": {"1"},
+	}
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/new", form))
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, body:\n%s", rec.Code, rec.Body.String())
+	}
+	d, _ := s.drafts.Get("sid")
+	doc := string(d.Doc.Bytes())
+	for _, want := range []string{"msa-mar-2026-en", "26-03 MSA-EN", "termine#msa-mar-2026-en"} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("saved document lacks %q:\n%s", want, doc)
+		}
+	}
+}
+
+// The identifiers are computed from the first day and the language, so they
+// must come after both in the form — not above them as fields to type.
+func TestIdentifiersFollowWhatTheyAreComputedFrom(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	body := rec.Body.String()
+	last := strings.Index(body, `name="language"`)
+	for _, field := range []string{`name="id"`, `name="code"`} {
+		if i := strings.Index(body, field); i < last {
+			t.Errorf("%s renders before the language select", field)
+		}
+	}
+}
+
 func TestSaveRejectsInvalidDate(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()

@@ -152,6 +152,9 @@ button.link {
   text-decoration: underline;
 }
 button.link:hover { color: var(--band); background: none; } /* 5.59:1 on paper */
+/* Sits under a computed, read-only field (form.js lock). Hint-sized, so it
+   reads as an escape hatch rather than a step in the form. */
+button.link.override { font-size: 0.85rem; margin-top: 0.25rem; }
 button.link.danger { color: var(--danger); }  /* #c22b47 as text on paper: measured 5.53:1 on --paper (#fcfdff), AA-safe for UI text */
 
 /* ---- Forms (family form vocabulary, DESIGN.md §4) ------------------------ */

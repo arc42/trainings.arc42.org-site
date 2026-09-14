@@ -27,19 +27,6 @@
         Changing it moves the date to another course and re-derives the booking
         code.</small>
     </label>
-    <label>Date ID <span class="req" aria-hidden="true">*</span>
-      <input name="id" value="{{.Date.ID}}" required pattern="[a-z0-9-]+"
-             aria-describedby="id-hint" placeholder="{{idMask .CourseID}}">
-      <small id="id-hint" class="hint">Lower-case letters, digits and hyphens. Used
-        in the anchor link on arc42.de, so it never changes once published.</small>
-    </label>
-    <label>Booking code <span class="req" aria-hidden="true">*</span>
-      <input name="code" id="f-code" value="{{.Date.Code}}" required
-             aria-describedby="code-hint" placeholder="{{codeMask .CourseID}}">
-      <small id="code-hint" class="hint">Filled in for you from the course, the
-        start date and the language. Overwrite it if this run needs a different
-        code. Must be unique — a duplicate silently misroutes a registration.</small>
-    </label>
   </fieldset>
 
   <fieldset class="group">
@@ -96,7 +83,7 @@
         </select>
         <small id="language-hint" class="hint">The language the course is taught
           in — not the language of the page it appears on. An English course
-          gets "-EN" in its booking code.</small>
+          gets "-EN" in its booking code and "-en" in its date id.</small>
       </label>
       <label>Booking status <span class="req" aria-hidden="true">*</span>
         <select name="status" required>
@@ -112,6 +99,38 @@
     {{/* No registration URL field: every published date links to the same
          anchored page, so the date id already determines it. The server writes
          https://www.arc42.de/termine#<id> on save. */}}
+  </fieldset>
+
+  {{/* The two identifiers come after everything they are computed from —
+       course, first day, language. They used to sit at the top of the form,
+       where they were two empty required fields nobody could fill in yet and
+       looked like something to type. Not `required`: the server derives
+       either one when it arrives empty (parseDateForm). */}}
+  <fieldset class="group">
+    <legend>Identifiers</legend>
+    <label>Date ID
+      <input name="id" value="{{.Date.ID}}" pattern="[a-z0-9-]+"
+             aria-describedby="id-hint" placeholder="{{idMask .CourseID}}">
+      {{if .IsNew}}<small id="id-hint" class="hint">Computed from the course,
+        the month and year of the first day and the language, e.g. msa-sep-2027,
+        or msa-sep-2027-en for an English run. Month names are English
+        (dec, not dez). It becomes the anchor link on arc42.de, so it must not
+        change once published. Override it only if the computed id is already
+        taken.</small>
+      {{else}}<small id="id-hint" class="hint">The anchor link on arc42.de
+        (termine#{{.Date.ID}}). It is published, so changing it breaks every
+        link and bookmark that points at this date.</small>{{end}}
+    </label>
+    <label>Booking code
+      <input name="code" id="f-code" value="{{.Date.Code}}"
+             aria-describedby="code-hint" placeholder="{{codeMask .CourseID}}">
+      <small id="code-hint" class="hint">Computed from the course, the year and
+        month of the first day and the language ("-EN" for English), e.g.
+        27-09 MSA. It reaches the back office with every registration. Override
+        it only when a run is booked under another month — a course starting
+        30 November that is sold as December. Must be unique: a duplicate
+        silently misroutes a registration.</small>
+    </label>
   </fieldset>
 
   {{template "trainers" dict "Selected" .Date.Trainers "Known" .KnownTrainers "Other" .OtherTrainers}}

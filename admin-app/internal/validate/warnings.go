@@ -89,7 +89,7 @@ func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
 		add("code", "the house convention for this course and date is %q", want)
 	}
 	if isNew {
-		if want := model.DateID(courseID, d.Start); want != "" && d.ID != "" && d.ID != want {
+		if want := model.DateID(courseID, d.Start, d.Language); want != "" && d.ID != "" && d.ID != want {
 			add("id", "ids are usually %q; this one will not match its siblings", want)
 		}
 	}

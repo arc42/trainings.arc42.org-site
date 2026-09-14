@@ -47,18 +47,28 @@ func TestCodeTokenIsExposedForTheForm(t *testing.T) {
 }
 
 func TestDateIDFollowsTheCourseMonthYearConvention(t *testing.T) {
-	cases := []struct{ name, courseID, start, want string }{
-		{"course, month and year", "msa", "2027-02-23", "msa-feb-2027"},
-		{"december is dec, not the german dez", "improve", "2027-12-01", "improve-dec-2027"},
-		{"a course spanning new year takes its start month", "adoc", "2027-11-30", "adoc-nov-2027"},
-		{"without a start there is nothing to derive", "msa", "", ""},
-		{"a malformed start derives nothing", "msa", "2027-2-3", ""},
+	cases := []struct{ name, courseID, start, language, want string }{
+		{"course, month and year", "msa", "2027-02-23", "de", "msa-feb-2027"},
+		{"december is dec, not the german dez", "improve", "2027-12-01", "de", "improve-dec-2027"},
+		{"a course spanning new year takes its start month", "adoc", "2027-11-30", "de", "adoc-nov-2027"},
+		{"an english date carries the -en suffix", "msa", "2027-09-28", "en", "msa-sep-2027-en"},
+		{"without a start there is nothing to derive", "msa", "", "de", ""},
+		{"a malformed start derives nothing", "msa", "2027-2-3", "de", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := DateID(c.courseID, c.start); got != c.want {
-				t.Errorf("DateID(%q, %q) = %q, want %q", c.courseID, c.start, got, c.want)
+			if got := DateID(c.courseID, c.start, c.language); got != c.want {
+				t.Errorf("DateID(%q, %q, %q) = %q, want %q", c.courseID, c.start, c.language, got, c.want)
 			}
 		})
+	}
+}
+
+// A German and an English run in the same month is a real schedule (MSA,
+// September 2027). Their derived ids must differ, or the second is rejected.
+func TestDateIDSeparatesLanguagesInTheSameMonth(t *testing.T) {
+	de, en := DateID("msa", "2027-09-14", "de"), DateID("msa", "2027-09-28", "en")
+	if de == en {
+		t.Errorf("both runs derive %q", de)
 	}
 }

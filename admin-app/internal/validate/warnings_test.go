@@ -20,7 +20,7 @@ func fields(ws []Warning) string {
 func TestDateWarningsFireOnImplausibleEntries(t *testing.T) {
 	// A date that should raise nothing at all, used as the base for each case.
 	ok := model.Date{
-		ID: "msa-feb-2027", Code: "27-02 MSA-EN", Start: "2027-02-23",
+		ID: "msa-feb-2027-en", Code: "27-02 MSA-EN", Start: "2027-02-23",
 		End: "2027-02-25", Language: "en", Format: "online", Status: "open",
 	}
 

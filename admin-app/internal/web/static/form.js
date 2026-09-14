@@ -74,6 +74,31 @@
     return d.toISOString().slice(0, 10);
   }
 
+  // A computed field is shown read-only while it is ours, so it reads as a
+  // result rather than a question. "Override" hands it to the operator for
+  // the rare real exception; a stored value that already differs from the
+  // derivation is theirs from the start and never locked.
+  function lock(el, state, what) {
+    if (!el || !state) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "link override";
+    btn.textContent = "Override";
+    btn.setAttribute("aria-label", "Override the computed " + what);
+    var sync = function () {
+      el.readOnly = !state.manual;
+      btn.hidden = state.manual;
+    };
+    btn.addEventListener("click", function () {
+      state.manual = true;
+      sync();
+      el.focus();
+      el.select();
+    });
+    el.insertAdjacentElement("afterend", btn);
+    sync();
+  }
+
   var MONTHS = ["jan", "feb", "mar", "apr", "may", "jun",
                 "jul", "aug", "sep", "oct", "nov", "dec"];
 
@@ -105,7 +130,8 @@
       if (!course.value || start.value.length !== 10) return "";
       var m = parseInt(start.value.slice(5, 7), 10);
       if (!(m >= 1 && m <= 12)) return "";
-      return course.value + "-" + MONTHS[m - 1] + "-" + start.value.slice(0, 4);
+      return course.value + "-" + MONTHS[m - 1] + "-" + start.value.slice(0, 4) +
+        (language.value === "en" ? "-en" : "");
     };
 
     // Mirrors model.IDMask / model.CodeMask. The server renders these for the
@@ -127,6 +153,8 @@
     // people have bookmarked, so on an edit form it is left strictly alone.
     var isNew = document.querySelector('form.detail').getAttribute("action").indexOf("/dates/new") === 0;
     var idState = isNew ? claim(idField, derivedID) : null;
+    lock(code, codeState, "booking code");
+    lock(idField, idState, "date id");
 
     var city = document.querySelector('input[name="city"]');
     var country = document.querySelector('input[name="country"]');
@@ -148,7 +176,10 @@
       codeState.apply();
       if (idState) idState.apply();
     });
-    language.addEventListener("change", function () { codeState.apply(); });
+    language.addEventListener("change", function () {
+      codeState.apply();
+      if (idState) idState.apply();
+    });
     course.addEventListener("change", function () {
       codeState.apply();
       if (idState) idState.apply();

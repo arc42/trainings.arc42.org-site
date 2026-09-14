@@ -116,8 +116,23 @@ func main() {
 		log.Fatalf("demo: %v", err)
 	}
 
+	// Bind before the banner, not inside ListenAndServe after it. The other
+	// order printed "Open http://localhost:8080" and then died on one easily
+	// missed line when the port was taken — usually by an earlier demo whose
+	// `go run` wrapper was killed and left its child behind — so it read as
+	// started while whatever held the port answered, or nothing did.
+	appLn, err := net.Listen("tcp", *addr)
+	if err != nil {
+		log.Fatalf("demo: cannot listen on %s: %v\n\n"+
+			"Something is already using that port, often a demo still running in the background.\n"+
+			"  stop it     make training-app-stop\n"+
+			"  find it     lsof -nP -iTCP%s -sTCP:LISTEN\n"+
+			"  or move     cd admin-app && go run ./cmd/demo -repo .. -addr :8081",
+			*addr, err, *addr)
+	}
+
 	banner(publicURL, filepath.Join(root, dataPath), outDir)
-	log.Fatal(http.ListenAndServe(*addr, srv.Routes()))
+	log.Fatal(http.Serve(appLn, srv.Routes()))
 }
 
 // save writes a proposal's file next to the others, named after its branch, so
