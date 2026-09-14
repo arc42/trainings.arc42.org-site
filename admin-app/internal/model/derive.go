@@ -12,10 +12,11 @@ import "strings"
 //     mixed case.
 //
 // Typing both by hand is what is redundant, not storing both. The functions
-// here derive Code and URL so the operator states the ID once. Both remain
-// editable: the derivation reproduces 13 of the 14 published codes exactly, and
-// the fourteenth (a course starting 2027-11-30 but booked as "27-12 MSA")
-// is why this prefills a field rather than replacing one.
+// here derive ID, Code and URL from course, first day and language, so the
+// operator types neither. Both remain overridable: the derivation reproduces
+// 17 of the 19 published codes exactly, and one of the other two (a course
+// starting 2027-11-30 but booked as "27-12 MSA") is a genuine exception rather
+// than a typo — which is why the form offers an override instead of no field.
 
 // codeTokens overrides the default upper-cased course id where the published
 // booking codes disagree with it. Like KnownTrainers this is a convenience, not
@@ -59,8 +60,11 @@ var months = [...]string{
 }
 
 // DateID derives the anchor id: "msa-feb-2027", from the course and the month
-// the course starts in.
-func DateID(courseID, start string) string {
+// the course starts in, with "-en" when it is taught in English. The suffix is
+// not decoration: a German and an English run of one course in the same month
+// derived the same id without it, and the second one failed as a duplicate. It
+// mirrors the "-EN" of BookingCode, which never had that collision.
+func DateID(courseID, start, language string) string {
 	if courseID == "" || len(start) != len("YYYY-MM-DD") {
 		return ""
 	}
@@ -68,7 +72,11 @@ func DateID(courseID, start string) string {
 	if m < 1 || m > 12 {
 		return ""
 	}
-	return courseID + "-" + months[m-1] + "-" + start[0:4]
+	id := courseID + "-" + months[m-1] + "-" + start[0:4]
+	if language == "en" {
+		id += "-en"
+	}
+	return id
 }
 
 // RegistrationURL derives the public link for a date. Every published date

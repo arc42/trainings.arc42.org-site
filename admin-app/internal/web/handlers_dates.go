@@ -125,8 +125,9 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 
 // parseDateForm reads the detail form. Empty optional fields stay empty and are
 // omitted from the YAML rather than written as "".
-func parseDateForm(r *http.Request) (model.Date, string) {
+func parseDateForm(r *http.Request, isNew bool) (model.Date, string) {
 	get := func(k string) string { return strings.TrimSpace(r.PostFormValue(k)) }
+	courseID := get("course_id")
 	d := model.Date{
 		ID: get("id"), Code: get("code"), Start: get("start"), End: get("end"),
 		City: get("city"), Country: strings.ToUpper(get("country")),
@@ -134,11 +135,22 @@ func parseDateForm(r *http.Request) (model.Date, string) {
 		Price: parsePrice(get), SeatsLimited: get("seats_limited") != "",
 		Status: get("status"),
 	}
+	// The id and the booking code are computed from course, first day and
+	// language. form.js shows them live, but the server is the one that owes
+	// the value: with scripting off both fields arrive empty, and an operator
+	// should not have to know the convention to add a date. An edit never
+	// re-derives the id — a published id is a bookmarked anchor.
+	if d.Code == "" {
+		d.Code = model.BookingCode(courseID, d.Start, d.Language)
+	}
+	if isNew && d.ID == "" {
+		d.ID = model.DateID(courseID, d.Start, d.Language)
+	}
 	// The form no longer asks for the registration link. Every published date
 	// points at the same anchored page, so the id already determines it.
 	d.URL = model.RegistrationURL(d.ID)
 	d.Trainers = parseTrainers(r)
-	return d, get("course_id")
+	return d, courseID
 }
 
 // parsePrice builds the price from the four number fields. An empty regular
@@ -186,8 +198,8 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 		s.fail(w, "could not read the form", err)
 		return
 	}
-	nd, courseID := parseDateForm(r)
 	isNew := r.PathValue("id") == "new"
+	nd, courseID := parseDateForm(r, isNew)
 
 	// Validate the prospective document before touching the draft, so a
 	// rejected edit leaves no trace.
