@@ -1,23 +1,24 @@
 {
-  "name": "oneflow",
+  "_comment": "Vestigial: inherited from the OneFlow Jekyll theme. Nothing installs from it (no lockfile, no node_modules, and _config.yml excludes it from the build), and 'add-banner' calls a banner.js that is not in this repo. It is kept for the 'uglify' recipe, which documents how assets/js/main.min.js was produced. 'name' is what port-watching dev tools (localdock) label this repo's dev server with, and the only one it starts is the admin app demo on :8080 - hence training-app-demo rather than the repository name. The theme's attribution lives in README.md and LICENSE-theme.txt, not here.",
+  "name": "training-app-demo",
   "private": true,
   "version": "1.0",
-  "description": "OneFlow, One-Pager Websites Jekyll Theme",
+  "description": "arc42 trainings site — Jekyll sources and the trainings admin app",
   "repository": {
     "type": "git",
-    "url": "git://github.com/perstarke-webdev/oneflow-jekyll-theme.git"
+    "url": "git://github.com/arc42/trainings.arc42.org-site.git"
   },
   "keywords": [
-    "jekyll",
-    "theme",
-    "one-pager"
+    "arc42",
+    "trainings",
+    "jekyll"
   ],
-  "author": "Per Starke",
+  "author": "arc42 (Gernot Starke)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/perstarke-webdev/oneflow-jekyll-theme/issues"
+    "url": "https://github.com/arc42/trainings.arc42.org-site/issues"
   },
-  "homepage": "https://perstarke-webdev.de/",
+  "homepage": "https://trainings.arc42.org/",
   "engines": {
     "node": ">= 0.10.0"
   },
