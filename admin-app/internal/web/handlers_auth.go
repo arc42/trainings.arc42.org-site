@@ -33,6 +33,7 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 				"so this happens if you reloaded the page or came back to an old tab. " +
 				"Nothing is wrong — start again.",
 			"Bare": true,
+			"Repo": s.cfg.GitHubRepo,
 		})
 		return
 	}
@@ -48,6 +49,7 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 			"Notice": "You chose not to give the app access to GitHub, so nothing happened " +
 				"and no data was touched. You can start again whenever you like.",
 			"Bare": true,
+			"Repo": s.cfg.GitHubRepo,
 		})
 		return
 	}

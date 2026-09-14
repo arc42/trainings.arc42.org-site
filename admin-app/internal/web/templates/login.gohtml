@@ -13,5 +13,18 @@
   {{end}}
   <p><a class="button" href="/auth/github">Sign in with GitHub</a></p>
   <p class="hint">Requires push access to the trainings repository.</p>
+  {{/* Ways out. This page is where signing out lands, and where every outsider
+       ends up, so it must not be a dead end. The pull-request link opens in a
+       new tab: a maintainer merging the PR they just opened keeps this tab. */}}
+  <p class="ways-out">
+    <a class="button secondary" href="https://trainings.arc42.org">Back to trainings.arc42.org</a>
+    <a class="button secondary" href="https://github.com/{{.Repo}}/pulls" target="_blank" rel="noopener">Pull requests on GitHub ↗</a>
+  </p>
+  <footer class="hero-footer">
+    <hr>
+    crafted with passion in Cologne
+    <span aria-hidden="true">·</span> <a href="https://status.arc42.org">Status</a>
+    <span aria-hidden="true">·</span> <a href="https://github.com/{{.Repo}}">{{.Repo}}</a>
+  </footer>
 </div>
 {{end}}
