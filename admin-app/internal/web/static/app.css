@@ -667,10 +667,8 @@ button.secondary:hover, .button.secondary:hover {
 .hero .lede { margin-top: 0; }
 .hero .hint { margin-top: 0.75rem; }
 .hero .ways-out { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 2rem; }
-/* Site footer, sign-in page only: a full-width band like the one on
-   trainings.arc42.org, pinned to the bottom of the window on short pages.
-   Scoped with :has() so the pages without a footer keep their plain block
-   layout, and the fixed draft bar keeps the bottom edge to itself. */
+/* Site footer, on every page: a full-width band like the one on
+   trainings.arc42.org, pinned to the bottom of the window on short pages. */
 body:has(> .site-footer) {
   min-height: 100vh;
   display: flex;
@@ -698,6 +696,10 @@ body:has(> .site-footer) main { flex: 1 0 auto; width: 100%; box-sizing: border-
 .site-footer-links a { text-decoration: none; }
 .site-footer-links a:hover { text-decoration: underline; }
 .site-footer-links span { margin: 0 0.5rem; color: var(--ink-muted); }
+.site-footer-build { font-size: 0.8em; color: var(--ink-muted); } /* 5.2:1 on --surface-1 */
+/* The draft bar is fixed to the bottom edge; without room below it, it would
+   sit on top of the footer and hide the build line exactly while editing. */
+body:has(> .draftbar) { padding-bottom: 4.5rem; }
 
 @media (max-width: 30rem) {
   /* Keep the wordmark readable before the mascot: on a narrow phone the two

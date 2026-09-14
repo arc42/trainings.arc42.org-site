@@ -168,6 +168,14 @@ func (s *Server) render(w http.ResponseWriter, name string, data any) {
 		http.Error(w, "template missing", http.StatusInternalServerError)
 		return
 	}
+	// The footer in layout.gohtml is on every page, so what it needs is added
+	// here once instead of in every handler's map. A handler's own Repo wins.
+	if m, ok := data.(map[string]any); ok {
+		m["Build"] = currentBuild()
+		if _, set := m["Repo"]; !set {
+			m["Repo"] = s.cfg.GitHubRepo
+		}
+	}
 	// Render into a buffer first. html/template streams, so executing straight
 	// into the ResponseWriter means a mid-render error leaves a half-written
 	// page already committed with a 200 — which is how a broken form silently

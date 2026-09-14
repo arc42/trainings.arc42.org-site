@@ -65,6 +65,9 @@ jobs:
             echo "::notice title=Deploy skipped::FLY_API_TOKEN is not set. Create the fly app and add the secret to enable deployment."
             exit 0
           fi
-          flyctl deploy --remote-only
+          # Commit and time end up in the page footer (see admin-app/Dockerfile).
+          flyctl deploy --remote-only \
+            --build-arg GIT_SHA="$GITHUB_SHA" \
+            --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -19,7 +19,14 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/admin .
+# Shown in the page footer (internal/web/build.go). Passed by the deploy
+# workflow and `make fly-deploy`; a plain `docker build` leaves them empty and
+# the footer says "development build".
+ARG GIT_SHA=""
+ARG BUILD_TIME=""
+RUN CGO_ENABLED=0 go build -trimpath \
+    -ldflags="-s -w -X arc42-trainings-admin/internal/web.buildCommit=${GIT_SHA} -X arc42-trainings-admin/internal/web.buildTime=${BUILD_TIME}" \
+    -o /out/admin .
 
 # Run — scratch, because the app has no state, no shell needs and no Ruby.
 FROM scratch

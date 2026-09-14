@@ -22,8 +22,22 @@
      lines inside it. A page that never sets the key gets the zero value from
      the data map and stays at 75ch. */}}
 <main{{if .Wide}} class="wide"{{end}}>{{template "content" .}}</main>
-{{/* Empty unless a page defines it. Only the sign-in page does: signed-in pages
-     leave the bottom of the window to the draft bar. */}}
-{{block "footer" .}}{{end}}
+{{/* On every page: the build line is what a maintainer checks after a deploy,
+     and they are signed in when they do. .Build and .Repo are added by
+     Server.render, so no handler has to remember them. */}}
+<footer class="site-footer">
+  {{/* The logo is the site's white SVG recoloured to --deep: white disappears
+       on the light footer band. */}}
+  <a class="site-footer-logo" href="https://arc42.org"><img src="/static/arc42-logo.svg" alt="arc42" width="96" height="27"></a>
+  <div>
+    <p class="site-footer-links">
+      <a href="https://trainings.arc42.org">trainings.arc42.org</a>
+      <span aria-hidden="true">·</span> <a href="https://status.arc42.org">Status</a>
+      <span aria-hidden="true">·</span> <a href="https://github.com/{{.Repo}}">GitHub</a>
+    </p>
+    <p>Crafted with passion in Cologne by Gernot Starke.</p>
+    <p class="site-footer-build">{{with .Build}}{{if .Commit}}Build <a href="https://github.com/{{$.Repo}}/commit/{{.Commit}}"><code>{{.Short}}</code></a>{{if .Dirty}} plus uncommitted changes{{end}}{{if .Time}}, deployed {{.Time}}{{end}}{{else}}Development build{{end}}{{end}}</p>
+  </div>
+</footer>
 {{if .Draft}}{{template "draftbar.gohtml" .}}{{end}}
 </body></html>{{end}}

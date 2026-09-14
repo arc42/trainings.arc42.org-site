@@ -148,7 +148,11 @@ fly-deploy: check-flyctl app-check ## Deploy the admin app in the CURRENT workin
 		read -r answer; \
 		[ "$$answer" = "deploy" ] || { printf "==> aborted, nothing was deployed\n"; exit 1; }; \
 	fi
-	cd $(APP_DIR) && flyctl deploy --remote-only
+	@# The same build args CI passes, so the footer names what shipped. "-dirty"
+	@# marks a deploy that includes uncommitted changes the SHA does not contain.
+	cd $(APP_DIR) && flyctl deploy --remote-only \
+		--build-arg GIT_SHA="$$(git rev-parse HEAD)$$(git status --porcelain -- . | grep -q . && echo -dirty)" \
+		--build-arg BUILD_TIME="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 fly-status: check-flyctl ## Show the fly app, its machines and their health checks
 	@# "stopped" machines are the normal resting state: min_machines_running = 0,

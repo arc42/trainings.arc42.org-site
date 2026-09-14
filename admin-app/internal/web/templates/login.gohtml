@@ -20,21 +20,5 @@
     <a class="button secondary" href="https://trainings.arc42.org">Back to trainings.arc42.org</a>
     <a class="button secondary" href="https://github.com/{{.Repo}}/pulls" target="_blank" rel="noopener">Pull requests on GitHub ↗</a>
   </p>
-
 </div>
-{{end}}
-{{define "footer"}}
-<footer class="site-footer">
-  {{/* The logo is the site's white SVG recoloured to --deep: white disappears
-       on the light footer band. */}}
-  <a class="site-footer-logo" href="https://arc42.org"><img src="/static/arc42-logo.svg" alt="arc42" width="96" height="27"></a>
-  <div>
-    <p class="site-footer-links">
-      <a href="https://trainings.arc42.org">trainings.arc42.org</a>
-      <span aria-hidden="true">·</span> <a href="https://status.arc42.org">Status</a>
-      <span aria-hidden="true">·</span> <a href="https://github.com/{{.Repo}}">GitHub</a>
-    </p>
-    <p>Crafted with passion in Cologne by Gernot Starke.</p>
-  </div>
-</footer>
 {{end}}

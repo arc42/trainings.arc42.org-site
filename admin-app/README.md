@@ -327,6 +327,13 @@ with a concurrency group, so two merges cannot ship over each other, and
 [`fly.toml`](fly.toml)'s `/healthz` check gates the new machine before it takes
 traffic.
 
+**To see what is running, look at the footer.** Every page ends with a build
+line: the short commit SHA, linked to GitHub, and the UTC time of the deploy.
+Both deploy paths pass them into the Docker build as `GIT_SHA` and `BUILD_TIME`,
+and the [`Dockerfile`](Dockerfile) links them into the binary
+([`internal/web/build.go`](internal/web/build.go)). A binary built without them,
+by `go run` or a plain `docker build`, says "Development build".
+
 **The manual way is `make fly-deploy`**, which runs the same three checks and
 then `flyctl deploy --remote-only` from your machine. It exists for the two
 cases CI cannot serve: GitHub Actions is unavailable, or you want to try a
