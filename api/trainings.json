@@ -7,7 +7,7 @@ layout: none
 #
 # It used to be exactly that one filter. It stopped being enough when price,
 # credit points and the limited-seats flag became structured data in
-# trainings.yml instead of hand-written German sentences: four consumer sites
+# trainings.yml instead of hand-written German sentences: the consumer sites
 # read `pricing`, `credits` and `few_seats` as STRINGS and render them
 # verbatim, and jsonify would have silently changed their types.
 #
@@ -65,7 +65,7 @@ layout: none
           {%- comment -%}
             price is written out rather than jsonified so that an EXPIRED
             early_bird is omitted here too. Leaving it in would push the
-            expiry decision onto four consumers, which is the arrangement
+            expiry decision onto every consumer, which is the arrangement
             this whole change exists to remove: the producer decides once,
             at build time, and everyone downstream can render what they get
             without a calendar.
