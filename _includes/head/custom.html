@@ -42,4 +42,15 @@
 <link rel="preload" href="/assets/fonts/atkinson-hyperlegible-next-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/libre-caslon-text-700-latin.woff2" as="font" type="font/woff2" crossorigin>
 
+{%- comment -%}
+  Analytics (meta.arc42.org ADR-0005): own Plausible site plus the shared
+  rollup.arc42.com, own host first. Legacy script on purpose: Plausible's new
+  per-site snippet (pa-….js) cannot report into two dashboards, and the rollup
+  is what shows journeys such as arc42.org → docs → trainings as one session
+  and counts a visitor to several arc42 sites once. Features are chosen by the
+  src filename, not by dashboard toggles. Plausible is the family's one
+  declared third-party-script exception (LP-1).
+{%- endcomment -%}
+<script defer data-domain="trainings.arc42.org,rollup.arc42.com" src="https://plausible.io/js/script.outbound-links.file-downloads.js"></script>
+
 <!-- end custom head snippets -->
