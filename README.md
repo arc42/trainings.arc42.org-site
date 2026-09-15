@@ -230,7 +230,7 @@ rendered verbatim on English pages, and `pricing` additionally buried its
 early-bird deadline inside the prose, where no machine could see it — so the
 site advertised an expired early-bird price for weeks before anyone noticed.
 
-They are still published, unchanged in name and type, because four consumers
+They are still published, unchanged in name and type, because consumers
 render them verbatim and [ADR-0004](https://github.com/arc42/meta.arc42.org)
 makes the feed a contract: adding optional fields is free, changing an existing
 one is not. But they are now **generated** on every build rather than stored,
@@ -258,7 +258,7 @@ this; arc42.de and arc42.org are the consumers that show them.
 
 ### Consumers
 
-Four sites render the training dates at build time from this feed. Each pulls
+Five sites render the training dates at build time from this feed. Each pulls
 it weekly via its own `.github/workflows/refresh-trainings.yml` and commits an
 expiry-filtered `_data/trainings.json` into its own repository:
 
@@ -266,6 +266,12 @@ expiry-filtered `_data/trainings.json` into its own repository:
 - docs.arc42.org-site
 - faq.arc42.org-site
 - arc42.org-site
+- examples.arc42.org-site
+
+This list and the `for repo in ...` loop in
+[`notify-consumers.yml`](/.github/workflows/notify-consumers.yml) are the two
+places that have to name a new consumer. Both, or the site refreshes only on
+its weekly cron.
 
 Because the dates are baked into the consumers' HTML at build time, a failing
 refresh workflow means "dates at most one week stale" — never a broken page.
@@ -273,10 +279,10 @@ refresh workflow means "dates at most one week stale" — never a broken page.
 In addition, every push to `main` that touches `_data/trainings.yml` triggers
 [`notify-consumers.yml`](/.github/workflows/notify-consumers.yml): it waits for
 GitHub Pages to republish the feed, then sends a `repository_dispatch` event
-(`trainings-updated`) to all four consumer repos, so they refresh within
-minutes instead of waiting for their weekly cron. It authenticates with the
-repo secret `CONSUMER_DISPATCH_TOKEN` — a fine-grained PAT that needs
-**Contents: read and write** on each of the four consumer repos. If the secret
+(`trainings-updated`) to every consumer repo listed above, so they refresh
+within minutes instead of waiting for their weekly cron. It authenticates with
+the repo secret `CONSUMER_DISPATCH_TOKEN` — a fine-grained PAT that needs
+**Contents: read and write** on each of those repos. If the secret
 is absent the workflow exits gracefully; if a dispatch to one repo fails, the
 others are still notified, a warning names the failed repo, and the run ends
 red as a signal to fix the token's access. Test the fan-out manually (without

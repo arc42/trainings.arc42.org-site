@@ -197,7 +197,7 @@ func prBody(changes []Change, login string) string {
 	}
 	b.WriteString("CI validates this against `api/trainings.schema.json` and " +
 		"`scripts/validate_trainings.rb`. Merging republishes the feed and " +
-		"notifies the four consumer sites.\n")
+		"notifies the consumer sites.\n")
 	return b.String()
 }
 

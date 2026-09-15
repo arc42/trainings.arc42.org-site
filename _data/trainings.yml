@@ -24,7 +24,7 @@
 # EVERY bookable date carries a price. Four card templates used to hold a
 # hardcoded bilingual sentence instead ("Normalpreis: € 2200 (für unsere
 # Alumni € 2050)"), which meant the price never reached /api/trainings.json,
-# the four consumer sites showed none, and the booking summary on the
+# the consumer sites showed none, and the booking summary on the
 # registration page disagreed with the card next to it.
 #
 # early_bird.until is compared against the build date by

@@ -20,7 +20,7 @@
           "certification": { "type": ["string", "null"] },
           "credits": {
             "type": ["string", "null"],
-            "description": "DEPRECATED, German prose, generated. Kept because four consumer sites render it verbatim. Read credit_points instead and render it in your own language."
+            "description": "DEPRECATED, German prose, generated. Kept because consumer sites render it verbatim. Read credit_points instead and render it in your own language."
           },
           "credit_points": {
             "type": "object",

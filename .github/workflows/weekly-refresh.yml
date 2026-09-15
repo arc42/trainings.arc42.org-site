@@ -10,7 +10,7 @@ name: Weekly Pages rebuild
 # directly instead of as a side effect of a bot commit. Same guarantee, no
 # generated artifact and no synthetic commit in the history.
 #
-# The four consumer sites do NOT depend on this: they filter expired dates
+# The consumer sites do NOT depend on this: they filter expired dates
 # themselves when their own refresh-trainings.yml pulls the feed.
 on:
   schedule:

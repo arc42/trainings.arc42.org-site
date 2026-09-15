@@ -48,8 +48,13 @@ jobs:
           # so collect failures and report them all at the end. A failed repo
           # still updates via its weekly schedule; a red run here means the
           # token is missing access to that repo and should be fixed.
+          # This list and README's Consumers section are the only places that
+          # name the consumer repos. A site that builds its own
+          # refresh-trainings.yml but never gets added here still shows correct
+          # dates, it just waits for its weekly cron instead of refreshing
+          # within minutes: examples.arc42.org did exactly that until 2026-09.
           failed=""
-          for repo in arc42.de-site docs.arc42.org-site faq.arc42.org-site arc42.org-site; do
+          for repo in arc42.de-site docs.arc42.org-site faq.arc42.org-site arc42.org-site examples.arc42.org-site; do
             if curl --fail -X POST \
                  -H "Accept: application/vnd.github+json" \
                  -H "Authorization: Bearer $TOKEN" \
