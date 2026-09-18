@@ -191,7 +191,7 @@ courses:
     trainers: ["Carola Lilienthal", "Gernot Starke"]
     dates:
       - id: improve-nov-2026
-        code: "26-11 IMPROVE"   # was "26-09 IMPROVE" on arc42.de - corrected, see report
+        code: "26-11 IMPROVE"
         start: "2026-11-24"
         end: "2026-11-26"
         city: "Hamburg"
@@ -202,6 +202,7 @@ courses:
           amount: 2200
           currency: EUR
           alumni: 2050
+        seats_limited: true
         url: "https://www.arc42.de/termine#improve-nov-2026"
         status: open
       - id: improve-jun-2027
