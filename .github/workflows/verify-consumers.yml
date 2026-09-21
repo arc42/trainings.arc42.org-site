@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check the four consumer sites against the feed
+      - name: Check every consumer site against the feed
         # The consumers refresh and rebuild on their own schedule once notified:
         # a few seconds for the commit, up to a minute or two for Pages. Retry
         # rather than sleeping a fixed pessimistic amount, and give the slowest

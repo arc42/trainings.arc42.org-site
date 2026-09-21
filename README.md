@@ -268,18 +268,20 @@ expiry-filtered `_data/trainings.json` into its own repository:
 - arc42.org-site
 - examples.arc42.org-site
 
-This list and the `for repo in ...` loop in
-[`notify-consumers.yml`](/.github/workflows/notify-consumers.yml) are the two
-places that have to name a new consumer. Both, or the site refreshes only on
-its weekly cron.
+This list, the `for repo in ...` loop in
+[`notify-consumers.yml`](/.github/workflows/notify-consumers.yml) and the
+`SITES` list in [`scripts/verify_consumers.sh`](/scripts/verify_consumers.sh)
+are the three places that have to name a new consumer. Miss the second and the
+site refreshes only on its weekly cron; miss the third and nothing ever checks
+that its pages actually show the dates.
 
 Because the dates are baked into the consumers' HTML at build time, a failing
 refresh workflow means "dates at most one week stale" — never a broken page.
 
 That guarantee has a condition worth spelling out: committing is not
 publishing, and something has to rebuild the consumer afterwards. A repo on
-GitHub's legacy Pages builder rebuilds on any push, a bot's included, so three
-of the four need nothing. A repo that builds Pages from its own Actions
+GitHub's legacy Pages builder rebuilds on any push, a bot's included, so four
+of the five need nothing. A repo that builds Pages from its own Actions
 workflow does not, because a push made with `GITHUB_TOKEN` fires no `on: push`
 trigger. faq.arc42.org-site is the one built that way, so its
 `refresh-trainings.yml` starts the deploy explicitly as its last step. Before

@@ -45,7 +45,7 @@ site: build ## Generate the static site into _site/
 check-links: site ## Validate internal links, images, and HTML in the built _site (html-proofer)
 	docker compose run --rm jekyll bundle exec htmlproofer ./_site --disable-external --allow-hash-href
 
-check-consumers: ## Check that the four consumer sites really serve the current feed (live HTTP, no Docker)
+check-consumers: ## Check that every consumer site really serves the current feed (live HTTP, no Docker)
 	@# Reads the published pages, not this repo: it answers "did the change reach
 	@# the sites", which a green build here does not. CI runs it after every
 	@# notify-consumers run; this is the same check on demand.

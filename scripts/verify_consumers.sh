@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Are the four consumer sites actually SHOWING the current feed?
+# Are the consumer sites actually SHOWING the current feed?
 #
 # Every other check in this chain stops at "the data is committed". That is not
 # the same as "the page says so", and the gap is silent: in September 2026
@@ -8,8 +8,8 @@
 # _data/trainings.json was already correct, every workflow involved was green,
 # and nothing anywhere was red. The cause then was that a push made with
 # GITHUB_TOKEN fires no `on: push` trigger, so a workflow-built consumer never
-# rebuilt. This script does not care about the cause: it reads the four
-# published pages and compares them against the feed, so any reason a site stops
+# rebuilt. This script does not care about the cause: it reads the published
+# pages and compares them against the feed, so any reason a site stops
 # republishing shows up as a failure here.
 #
 # How a page is checked, without needing to know how it is built: each consumer
@@ -17,14 +17,30 @@
 # anchors (`termine#msa-dez-2026`) or as the anchors themselves (`id="..."`).
 # So for every consumer:
 #
-#   · every date id on the page must still be published by the feed
+#   · every date id on the page must still exist in the feed
 #     -> catches a page serving a withdrawn, expired or edited date
-#   · the earliest few published dates must appear on the page
+#   · the earliest few dates the site is meant to show must appear on it
 #     -> catches a page that never picked up a newly added date
 #
-# The second check is deliberately shallow. Three of the four consumers cap the
-# block at the next 8 dates, so only the earliest handful are guaranteed to be
-# on every page; $LEAD stays well under that cap.
+# The first check compares against EVERY id in the feed, not only the bookable
+# ones. arc42.de/termine renders the whole schedule, so a date going to
+# "cancelled" or "full" would otherwise fail a site that is perfectly current.
+# A date that is withdrawn or has ended leaves the feed altogether, so nothing
+# real is lost by being tolerant here.
+#
+# The second check has to respect what each site renders, which is not the same
+# rule everywhere, so $SITES carries it per site:
+#
+#   chrono      the next 8 dates across all courses, in date order
+#               (faq, docs, arc42.org; arc42.de shows all of them, uncapped)
+#   per-course  one row per course, its earliest upcoming date
+#               (examples.arc42.org)
+#
+# The distinction is not pedantry. examples.arc42.org shows four rows for four
+# courses, so the three globally earliest dates are the right expectation only
+# while they happen to belong to three different courses. Two MSA dates in a row
+# and a chronological check would fail a site that is rendering exactly what it
+# is designed to render, and a guard that cries wolf gets switched off.
 #
 # Usage:  scripts/verify_consumers.sh          one pass, for a local check
 #         ATTEMPTS=8 scripts/verify_consumers.sh   retry, for CI right after a change
@@ -35,12 +51,19 @@ ATTEMPTS="${ATTEMPTS:-1}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-60}"
 LEAD="${LEAD:-3}"
 
-# One page per consumer that renders the block. Not the home pages: faq's and
-# docs' are redirect stubs, and docs only carries the block on content pages.
-SITES="faq.arc42.org|https://faq.arc42.org/questions/A-3/
-docs.arc42.org|https://docs.arc42.org/section-1/
-arc42.org|https://arc42.org/
-www.arc42.de|https://www.arc42.de/termine"
+# One page per consumer that renders the block. Not always the home page: faq's
+# and docs' are redirect stubs, and docs carries the block only on content pages.
+#
+# This list is the third place a new consumer has to be named, after README's
+# Consumers section and the dispatch loop in notify-consumers.yml. A consumer
+# missing here is not checked at all, which is the failure this script exists to
+# prevent, so add it when you add the other two.
+# name | rendering rule (chrono or per-course) | page to read
+SITES="faq.arc42.org|chrono|https://faq.arc42.org/questions/A-3/
+docs.arc42.org|chrono|https://docs.arc42.org/section-1/
+arc42.org|chrono|https://arc42.org/
+examples.arc42.org|per-course|https://examples.arc42.org/
+www.arc42.de|chrono|https://www.arc42.de/termine"
 
 # Ids that begin with a course id but are not dates. Empty today: every such id
 # on all four sites is a date. If a consumer ever adds one (say id="msa-intro"),
@@ -62,13 +85,27 @@ published=$(printf '%s' "$feed" | jq -r --arg t "$today" '
   | sort_by(.start) | .[].id')
 course_ids=$(printf '%s' "$feed" | jq -r '.courses[].id')
 
+# Every id the feed knows about, bookable or not: what a page is allowed to show.
+all_ids=$(printf '%s' "$feed" | jq -r '.courses[].dates[].id')
+
+# The earliest bookable date of each course, in date order: what a per-course
+# consumer renders.
+per_course=$(printf '%s' "$feed" | jq -r --arg t "$today" '
+  [ .courses[]
+    | [ (.dates // [])[] | select(.end >= $t and .status != "cancelled" and .status != "full") ]
+    | sort_by(.start) | .[0] // empty ]
+  | sort_by(.start) | .[].id')
+
 if [ -z "$published" ]; then
   problem "the feed publishes no bookable dates at all - checking the consumers would be meaningless"
   exit 1
 fi
 
-lead=$(printf '%s\n' "$published" | head -"$LEAD")
-note "feed: $(printf '%s\n' "$published" | wc -l | tr -d ' ') bookable dates, earliest $(printf '%s' "$lead" | tr '\n' ' ')"
+lead_chrono=$(printf '%s\n' "$published" | head -"$LEAD")
+lead_per_course=$(printf '%s\n' "$per_course" | head -"$LEAD")
+note "feed: $(printf '%s\n' "$published" | wc -l | tr -d ' ') bookable dates"
+note "  chrono sites must show:     $(printf '%s' "$lead_chrono" | tr '\n' ' ')"
+note "  per-course sites must show: $(printf '%s' "$lead_per_course" | tr '\n' ' ')"
 
 # Every id on the page that looks like a date id, i.e. starts with a course id.
 page_date_ids() {
@@ -84,8 +121,12 @@ page_date_ids() {
 
 check_all() {
   failures=0
-  printf '%s\n' "$SITES" | while IFS='|' read -r name url; do
+  printf '%s\n' "$SITES" | while IFS='|' read -r name rule url; do
     [ -n "$name" ] || continue
+    case "$rule" in
+      per-course) expect="$lead_per_course" ;;
+      *)          expect="$lead_chrono" ;;
+    esac
     if ! html=$(curl --fail --silent --show-error --location "$url"); then
       problem "$name: could not fetch $url"
       printf 'x' >> "$tally"; continue
@@ -99,19 +140,19 @@ check_all() {
     bad=""
     for id in $ids; do
       printf '%s\n' "$ALLOWLIST" | grep -Fxq "$id" && continue
-      printf '%s\n' "$published" | grep -Fxq "$id" || bad="$bad $id"
+      printf '%s\n' "$all_ids" | grep -Fxq "$id" || bad="$bad $id"
     done
     gone=""
-    for id in $lead; do
+    for id in $expect; do
       printf '%s\n' "$ids" | grep -Fxq "$id" || gone="$gone $id"
     done
 
     if [ -n "$bad" ]; then
-      problem "$name: shows date(s) the feed no longer publishes:$bad - the site has not rebuilt since they changed ($url)"
+      problem "$name: shows date(s) the feed no longer has:$bad - the site has not rebuilt since they changed ($url)"
       printf 'x' >> "$tally"
     fi
     if [ -n "$gone" ]; then
-      problem "$name: missing the earliest published date(s):$gone - the site has not picked up the current feed ($url)"
+      problem "$name: missing the date(s) it should show first:$gone - the site has not picked up the current feed ($url)"
       printf 'x' >> "$tally"
     fi
     if [ -z "$bad" ] && [ -z "$gone" ]; then
@@ -129,7 +170,7 @@ attempt=1
 while : ; do
   : > "$tally"
   if check_all; then
-    note "all four consumer sites are serving the current feed"
+    note "every consumer site is serving the current feed"
     exit 0
   fi
   if [ "$attempt" -ge "$ATTEMPTS" ]; then
