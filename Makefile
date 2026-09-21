@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help dev build stop site check-links clean install update shell logs \
+.PHONY: help dev build stop site check-links check-consumers clean install update shell logs \
         app-test app-check app-build training-app-demo training-app-stop app-preview check-go \
         check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases
 
@@ -44,6 +44,12 @@ site: build ## Generate the static site into _site/
 
 check-links: site ## Validate internal links, images, and HTML in the built _site (html-proofer)
 	docker compose run --rm jekyll bundle exec htmlproofer ./_site --disable-external --allow-hash-href
+
+check-consumers: ## Check that the four consumer sites really serve the current feed (live HTTP, no Docker)
+	@# Reads the published pages, not this repo: it answers "did the change reach
+	@# the sites", which a green build here does not. CI runs it after every
+	@# notify-consumers run; this is the same check on demand.
+	scripts/verify_consumers.sh
 
 clean: ## Remove generated _site, Docker volumes, the admin binary and demo/preview output
 	rm -rf _site .sass-cache .jekyll-cache .jekyll-metadata

@@ -1,0 +1,31 @@
+name: Verify consumer sites
+# The last link in the chain, and the only one that looks at a published page.
+# notify-consumers.yml ends at "the dispatch was accepted"; each consumer's own
+# refresh ends at "the data is committed". Neither means the site shows it: a
+# consumer that stops rebuilding keeps serving old dates with every workflow
+# green, which is exactly how faq.arc42.org advertised a withdrawn Req4Arc date
+# for a week in September 2026. This run is the alarm for that, whatever the
+# cause. See scripts/verify_consumers.sh for what it compares.
+on:
+  workflow_run:
+    workflows: ["Notify consumer sites"]
+    types: [completed]
+  schedule:
+    - cron: "0 7 * * 1"   # Mondays 07:00 UTC, after the last consumer's weekly refresh (05:17)
+  workflow_dispatch:
+jobs:
+  verify:
+    if: github.repository == 'arc42/trainings.arc42.org-site'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the four consumer sites against the feed
+        # The consumers refresh and rebuild on their own schedule once notified:
+        # a few seconds for the commit, up to a minute or two for Pages. Retry
+        # rather than sleeping a fixed pessimistic amount, and give the slowest
+        # path room - a red run here means a site is genuinely not republishing,
+        # so it must not be able to go red merely for being early.
+        env:
+          ATTEMPTS: "10"
+          SLEEP_SECONDS: "60"
+        run: scripts/verify_consumers.sh

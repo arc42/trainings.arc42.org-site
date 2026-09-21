@@ -276,6 +276,17 @@ its weekly cron.
 Because the dates are baked into the consumers' HTML at build time, a failing
 refresh workflow means "dates at most one week stale" — never a broken page.
 
+That guarantee has a condition worth spelling out: committing is not
+publishing, and something has to rebuild the consumer afterwards. A repo on
+GitHub's legacy Pages builder rebuilds on any push, a bot's included, so three
+of the four need nothing. A repo that builds Pages from its own Actions
+workflow does not, because a push made with `GITHUB_TOKEN` fires no `on: push`
+trigger. faq.arc42.org-site is the one built that way, so its
+`refresh-trainings.yml` starts the deploy explicitly as its last step. Before
+it did, faq.arc42.org served a withdrawn Req4Arc date for a week in September
+2026 while its committed `_data/trainings.json` was already correct and every
+workflow in the chain was green.
+
 In addition, every push to `main` that touches `_data/trainings.yml` triggers
 [`notify-consumers.yml`](/.github/workflows/notify-consumers.yml): it waits for
 GitHub Pages to republish the feed, then sends a `repository_dispatch` event
@@ -293,6 +304,15 @@ The dispatch is an accelerator, never a dependency
 ([ADR-0006](https://github.com/arc42/meta.arc42.org/blob/main/adr/0006-training-dates-single-source.md)):
 the weekly pull alone keeps consumers correct, so worst-case staleness without
 any dispatch is one week.
+
+Nothing above looks at a published page, and that is the gap the September 2026
+incident fell through.
+[`verify-consumers.yml`](/.github/workflows/verify-consumers.yml) closes it: it
+runs after every notify run and weekly on Mondays, fetches one page per
+consumer, and asserts that every training date id on the page is still
+published by the feed and that the earliest published dates appear. It needs no
+knowledge of how each site is built, so it catches any reason a consumer stops
+republishing. Run the same check locally with `make check-consumers`.
 
 ## Frontend Integration
 
