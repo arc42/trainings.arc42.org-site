@@ -371,6 +371,6 @@ computed at startup for exactly this reason.
   [`…/2026-08-09-admin-app-site-integration-design.md`](/docs/superpowers/specs/2026-08-09-admin-app-site-integration-design.md)
   — how the site links to it. `docs/` is excluded from the Jekyll build
   (`_config.yml`), so these are repository documents and are never published.
-- [meta.arc42.org/training-dates.md](https://github.com/arc42/meta.arc42.org/blob/main/training-dates.md) —
+- [meta.arc42.org `raw/review/training-dates.md`](https://github.com/arc42/meta.arc42.org/blob/main/raw/review/training-dates.md) —
   the training-dates contract shared by this site and its consumers,
   including §6 on how dates are edited.

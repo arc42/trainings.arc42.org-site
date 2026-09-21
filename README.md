@@ -130,13 +130,13 @@ How this site looks is **not** decided in this repository. It follows the arc42
 family design system, which lives in
 [meta.arc42.org](https://github.com/arc42/meta.arc42.org):
 
-- [`BRAND.md`](https://github.com/arc42/meta.arc42.org/blob/main/BRAND.md) — the
+- [`wiki/concepts/brand.md`](https://github.com/arc42/meta.arc42.org/blob/main/wiki/concepts/brand.md) — the
   hue registry. The signature hue of trainings.arc42.org is the **softened dusty
   rose `#a04c5e`** (deep variant `#743442`), a low-chroma relative of the family
   coral `#ff5c7c`. White on that band measures 5.69:1. It is deliberately *not*
   the shared error token `#c22b47`: a colour sized for a button and an error
   message reads as an alarm when it is stretched across a full-width masthead.
-- [`DESIGN.md`](https://github.com/arc42/meta.arc42.org/blob/main/DESIGN.md) —
+- [`wiki/concepts/design-system.md`](https://github.com/arc42/meta.arc42.org/blob/main/wiki/concepts/design-system.md) —
   the family constants (§2): Libre Caslon Text for headings and Atkinson
   Hyperlegible Next for body/UI, both self-hosted with no third typeface; a
   solid masthead band in the signature hue with light text; flat near-white
@@ -155,7 +155,7 @@ Three rules that bite in practice:
   `android-chrome-192x192`, `android-chrome-512x512`) — a half-updated set shows
   the old icon in whichever slot was missed.
 - Contrast is measured, never eyeballed
-  ([ADR-0002](https://github.com/arc42/meta.arc42.org/blob/main/adr/0002-measured-accessibility.md)).
+  ([ADR-0002](https://github.com/arc42/meta.arc42.org/blob/main/raw/review/0002-measured-accessibility.md)).
   Every new foreground/background pair gets its measured ratio stated before it
   ships; body text ≥ 4.5:1, and the on-band secondary tint is `#f6edef`
   (4.95:1) — not `rgba(255,255,255,.82)`, which fails at 4.41:1.
@@ -231,7 +231,7 @@ early-bird deadline inside the prose, where no machine could see it — so the
 site advertised an expired early-bird price for weeks before anyone noticed.
 
 They are still published, unchanged in name and type, because consumers
-render them verbatim and [ADR-0004](https://github.com/arc42/meta.arc42.org)
+render them verbatim and [ADR-0004](https://github.com/arc42/meta.arc42.org/blob/main/raw/review/0004-trainings-feed-is-a-contract.md)
 makes the feed a contract: adding optional fields is free, changing an existing
 one is not. But they are now **generated** on every build rather than stored,
 so they can no longer go stale. Nothing downstream had to change; consumers
@@ -303,7 +303,7 @@ touching the data) via `gh workflow run notify-consumers.yml` — a manual run
 skips the Pages poll.
 
 The dispatch is an accelerator, never a dependency
-([ADR-0006](https://github.com/arc42/meta.arc42.org/blob/main/adr/0006-training-dates-single-source.md)):
+([ADR-0006](https://github.com/arc42/meta.arc42.org/blob/main/raw/review/0006-training-dates-single-source.md)):
 the weekly pull alone keeps consumers correct, so worst-case staleness without
 any dispatch is one week.
 
