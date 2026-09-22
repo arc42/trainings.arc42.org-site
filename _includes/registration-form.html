@@ -250,6 +250,24 @@ In case you register more than one person, please state their names in the comme
 <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true" />
 <input type="text" name="company_website" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true" />
 <input type="hidden" name="form_source" value="{{ page.url | absolute_url }}" />
+{%- comment -%}
+  via: which arc42 site the registrant came from. Since arc42.de's own
+  registration form was retired, every submission's form_source says
+  trainings.arc42.org, so that field can no longer answer "did this booking
+  start on arc42.de or here?". This one can.
+
+  Default is this site. The script below overwrites it from ?via=<host> when
+  the link carried one (arc42.de's course buttons do), or else from
+  document.referrer, so a link that was missed still counts correctly. Only
+  hosts in KNOWN_SOURCES are accepted: like every field it is
+  attacker-controlled, and an allow-list keeps arbitrary text from being
+  echoed into the notification email.
+
+  No leading underscore, for the same reason as form_source: Formspark strips
+  "_"-prefixed fields from the email, and this one is only useful if it shows
+  up there.
+{%- endcomment -%}
+<input type="hidden" name="via" id="registration-via" value="trainings.arc42.org" />
 
 <input type="hidden" name="_source" value="trainings.arc42.org" />
 <input type="hidden" name="_redirect" value="{% if include.lang == "de" %}{{ '/anmeldung-erfolg/' | absolute_url }}{% else %}{{ '/registration-success/' | absolute_url }}{% endif %}" />
@@ -273,7 +291,8 @@ In case you register more than one person, please state their names in the comme
 <script type="text/javascript">
 document.getElementById("main_body").style.display="block";
 
-/* Two jobs, both about keeping the decision the visitor already made.
+/* Three jobs. The first two are about keeping the decision the visitor
+   already made; the third records where that decision started.
 
    1. Preselect the course from ?kurs=<date-id>. The timeline cards on both
       home pages link here as /anmeldung/?kurs=msa-online-sep-2026, passing the
@@ -285,6 +304,10 @@ document.getElementById("main_body").style.display="block";
    2. Render the summary panel from whichever option is selected: on arrival,
       and again on every change. The dropdown does not show the price, so this
       is the only place the full commitment is stated before the submit button.
+
+   3. Fill the hidden `via` field from ?via= or the referrer, so the
+      notification email says whether the registration started on arc42.de or
+      here. See the field's own comment above.
 
    Both ported from arc42.de-site/assets/js/arc42-anmeldung.js when that site's
    /anmeldung/ and /anmeldungEN/ were redirected here, so the redirect did not
@@ -305,6 +328,36 @@ document.getElementById("main_body").style.display="block";
 
   var select = document.getElementById("kurs");
   var panel = document.getElementById("kurs-summary");
+  var via = document.getElementById("registration-via");
+
+  /* Hosts whose name we are willing to put into the notification email.
+     www. is stripped before the comparison. */
+  var KNOWN_SOURCES = ["arc42.de", "trainings.arc42.org"];
+
+  /* Third job, independent of the two above and of the dropdown: record which
+     site sent this registrant here, for the statistics. Runs before the early
+     return, because it is worth knowing even on a page without the select. */
+  function provenance() {
+    var claimed;
+
+    if (!via) { return; }
+
+    try {
+      claimed = new URLSearchParams(window.location.search).get("via");
+
+      if (!claimed && document.referrer) {
+        claimed = new URL(document.referrer).hostname.replace(/^www\./, "");
+      }
+    } catch (e) {
+      return; // very old browser, or an unparsable referrer: keep the default
+    }
+
+    if (KNOWN_SOURCES.indexOf(claimed) !== -1) {
+      via.value = claimed;
+    }
+  }
+
+  provenance();
 
   if (!select) { return; }
 
