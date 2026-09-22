@@ -73,6 +73,7 @@ courses:
           early_bird:
             amount: 2690
             until: "2026-08-08"
+        seats_limited: true
         url: "https://www.arc42.de/termine#msa-dez-2026"
         status: open
       - id: msa-mar-2027
