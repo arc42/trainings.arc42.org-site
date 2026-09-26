@@ -69,6 +69,10 @@ from the confirmation mail.
 
 ## 3. Components
 
+The whole flow, regular path and edge cases, as a diagram:
+[`docs/registration-flow/registration-flow.svg`](../../registration-flow/registration-flow.svg),
+and as three slides (text and diagram) in `registration-flow.pptx` next to it.
+
 ```
 trainings.arc42.org (GitHub Pages)          arc42-registration (fly.io, ams)
   /anmeldung/, /registration/   --POST-->   /submit
