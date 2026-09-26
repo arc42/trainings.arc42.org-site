@@ -1122,7 +1122,7 @@ git commit -m "feat(registration): sealed 5-day confirmation token"
 - Consumes: `feed.Entry`, `feed.Result` (Task 3).
 - Produces: `intake.Registration` (fields `ID, Lang, LastName, FirstName, Email string; Emails []string; Code, ParticipantLast, ParticipantFirst, ParticipantEmail, Billing, Comments, Via, FormSource string`); `intake.Other = "sonstige"`; `intake.Outcome` constants `Accept, Drop, Reject`; `intake.Decision{Outcome; Reason string; Reg Registration; Entry feed.Entry; Found bool; Hints []string}`; `intake.Input{Form url.Values; Origin, IP string}`; `intake.Lookuper` interface; `intake.Checker{Feed Lookuper; Limiter *Limiter; AllowedOrigins []string}` with `Check(ctx, Input) Decision`; `intake.NewLimiter(max int, window time.Duration, now func() time.Time) *Limiter` with `Allow(key string) bool`; `intake.NewID() string`; hint keys `HintGmailDots, HintURLInName, HintOddCase, HintSeveralEmails, HintClosed, HintFeedDown`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/intake/intake_test.go`:
 
@@ -1318,12 +1318,12 @@ func has(list []string, s string) bool {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/intake`
 Expected: FAIL, undefined identifiers.
 
-- [ ] **Step 3: Implement the rate limiter**
+- [x] **Step 3: Implement the rate limiter**
 
 `registration-app/internal/intake/ratelimit.go`:
 
@@ -1377,7 +1377,7 @@ func (l *Limiter) Allow(key string) bool {
 }
 ```
 
-- [ ] **Step 4: Implement the hints**
+- [x] **Step 4: Implement the hints**
 
 `registration-app/internal/intake/hints.go`:
 
@@ -1452,7 +1452,7 @@ func oddCase(s string) bool {
 }
 ```
 
-- [ ] **Step 5: Implement the checker**
+- [x] **Step 5: Implement the checker**
 
 `registration-app/internal/intake/intake.go`:
 
@@ -1678,12 +1678,12 @@ func NewID() string {
 }
 ```
 
-- [ ] **Step 6: Run to verify it passes**
+- [x] **Step 6: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/intake -v`
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add registration-app/internal/intake
