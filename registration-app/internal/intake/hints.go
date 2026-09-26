@@ -14,6 +14,7 @@ const (
 	HintSeveralEmails = "several-emails" // the Email field held more than one address
 	HintClosed        = "closed"         // the date was closed after the page was loaded
 	HintFeedDown      = "feed-down"      // the course list could not be read; code not checked
+	HintRecipientCap  = "recipient-cap"  // the confirmation mail was withheld: too many to this address today
 )
 
 func hintsFor(r Registration) []string {

@@ -46,13 +46,13 @@ const confirmURL = "https://register.arc42.org/confirm?t=TOKEN"
 
 func TestRegistrantMails(t *testing.T) {
 	for _, l := range []string{"de", "en"} {
-		r, err := Registrant(l, FactsFor(dez, l), confirmURL)
+		r, err := Registrant(l, FactsFor(dez, l), false, confirmURL)
 		if err != nil {
 			t.Fatal(err)
 		}
 		golden(t, "registrant_"+l+".txt", r.Subject+"\n\n"+r.Text)
 		golden(t, "registrant_"+l+".html", r.HTML)
-		other, err := Registrant(l, nil, confirmURL)
+		other, err := Registrant(l, nil, true, confirmURL)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -90,7 +90,7 @@ func TestBackofficeMails(t *testing.T) {
 // language.
 func TestRegistrantMailEchoesNothingTyped(t *testing.T) {
 	for _, l := range []string{"de", "en"} {
-		r, _ := Registrant(l, FactsFor(dez, l), confirmURL)
+		r, _ := Registrant(l, FactsFor(dez, l), false, confirmURL)
 		for _, typed := range []string{"Müller", "Anna", "Firma X", "Straße 1"} {
 			if strings.Contains(r.Text, typed) || strings.Contains(r.HTML, typed) || strings.Contains(r.Subject, typed) {
 				t.Errorf("%s registrant mail contains typed text %q", l, typed)
@@ -101,7 +101,7 @@ func TestRegistrantMailEchoesNothingTyped(t *testing.T) {
 
 func TestNoEarlyBirdOrAlumniInTheRegistrantMail(t *testing.T) {
 	for _, l := range []string{"de", "en"} {
-		r, _ := Registrant(l, FactsFor(dez, l), confirmURL)
+		r, _ := Registrant(l, FactsFor(dez, l), false, confirmURL)
 		low := strings.ToLower(r.Text + r.HTML)
 		for _, banned := range []string{"früh", "early", "alumni", "2.690", "2,690"} {
 			if strings.Contains(low, banned) {
@@ -122,8 +122,26 @@ func TestOnlineDateSaysOnline(t *testing.T) {
 func TestHTMLEscapesFacts(t *testing.T) {
 	e := dez
 	e.CourseTitle = `<script>alert(1)</script>`
-	r, _ := Registrant("en", FactsFor(e, "en"), confirmURL)
+	r, _ := Registrant("en", FactsFor(e, "en"), false, confirmURL)
 	if strings.Contains(r.HTML, "<script>") {
 		t.Error("HTML part did not escape a course title")
+	}
+}
+
+// When the course list could not be read, a real booking has no facts. It
+// must not be told it chose "Sonstige"/"other".
+func TestRegistrantWithoutFactsIsNotOther(t *testing.T) {
+	for _, l := range []string{"de", "en"} {
+		r, err := Registrant(l, nil, false, confirmURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		all := r.Subject + r.Text + r.HTML
+		if strings.Contains(all, "Sonstige") || strings.Contains(all, `"other"`) || strings.Contains(r.Subject, "Anfrage") || strings.Contains(r.Subject, "request") {
+			t.Errorf("%s: a booking without facts reads like 'other':\n%s\n%s", l, r.Subject, r.Text)
+		}
+		if !strings.Contains(r.Text, confirmURL) {
+			t.Errorf("%s: confirm link missing", l)
+		}
 	}
 }

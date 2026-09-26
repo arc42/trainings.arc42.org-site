@@ -31,6 +31,10 @@ type Deps struct {
 	Sender  send.Sender
 	NewID   func() string
 	Log     *log.Logger
+	// RecipientLimiter caps confirmation mails per registrant address, so a
+	// script rotating IPs cannot make the service mail one inbox without
+	// end. nil means no cap. The back office still gets every submission.
+	RecipientLimiter *intake.Limiter
 }
 
 type Server struct{ d Deps }

@@ -2,6 +2,7 @@ package intake
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -73,6 +74,7 @@ func TestOutcomes(t *testing.T) {
 	}{
 		{"foreign origin", func(f url.Values, in *Input) { in.Origin = "https://evil.example" }, Drop, "origin"},
 		{"no origin header is fine", func(f url.Values, in *Input) { in.Origin = "" }, Accept, ""},
+		{"Origin null from a no-referrer page is fine", func(f url.Values, in *Input) { in.Origin = "null" }, Accept, ""},
 		{"gotcha honeypot", func(f url.Values, in *Input) { f.Set("_gotcha", "x") }, Drop, "honeypot"},
 		{"custom honeypot", func(f url.Values, in *Input) { f.Set("company_website", "http://x") }, Drop, "honeypot"},
 		{"unknown code", func(f url.Values, in *Input) { f.Set("Kurs", "99-99 FAKE") }, Drop, "unknown code"},
@@ -186,4 +188,22 @@ func has(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// An IPv6 client usually controls a whole /64; counting each address
+// separately would give it billions of budgets.
+func TestIPv6AddressesShareTheirSlash64Budget(t *testing.T) {
+	c := checker()
+	for i := 1; i <= 5; i++ {
+		ip := fmt.Sprintf("2001:db8:1:2::%d", i)
+		if d := c.Check(context.Background(), Input{Form: germanForm(), IP: ip}); d.Outcome != Accept {
+			t.Fatalf("submission %d from %s: %v %s", i, ip, d.Outcome, d.Reason)
+		}
+	}
+	if d := c.Check(context.Background(), Input{Form: germanForm(), IP: "2001:db8:1:2::99"}); d.Outcome != Drop {
+		t.Errorf("sixth from the same /64: %v, want Drop", d.Outcome)
+	}
+	if d := c.Check(context.Background(), Input{Form: germanForm(), IP: "2001:db8:1:3::1"}); d.Outcome != Accept {
+		t.Errorf("another /64: %v, want Accept", d.Outcome)
+	}
 }

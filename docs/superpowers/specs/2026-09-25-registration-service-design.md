@@ -25,7 +25,7 @@ template cannot look up what was booked, so it cannot say "MSA, 1 to 4 December,
 Munich, 2.890 €". Its "recap of the submitted data" is worse than nothing: it
 mails text typed by a stranger to an address typed by the same stranger, from
 arc42's name. The spam log already shows the pattern bots use to probe for
-exactly that (a dotted Gmail address, `a.b.c.d.e1@gmail.com`).
+exactly that (a Gmail address with many dots in its local part).
 
 **The spam that matters is plausible.** About one submission a week has a real
 course selected and a believable person, so someone has to judge whether it is

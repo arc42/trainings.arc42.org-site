@@ -39,6 +39,11 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 		facts = mail.FactsFor(dec.Entry, reg.Lang)
 	}
 
+	mailRegistrant := s.d.RecipientLimiter == nil || s.d.RecipientLimiter.Allow(reg.Emails[0])
+	if !mailRegistrant {
+		dec.Hints = append(dec.Hints, intake.HintRecipientCap)
+	}
+
 	// Back office first: if this fails, the registration reached nobody and
 	// the person has to know.
 	bo, err := mail.Backoffice(reg, facts, dec.Hints)
@@ -53,11 +58,16 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 
 	// The registrant mail. If it fails the back office already has the
 	// registration and follows up, so the person still sees success.
+	if !mailRegistrant {
+		s.d.Log.Printf("submit %s: accepted %s (%s), registrant mail withheld (per-address cap) hints=%v", reg.ID, reg.Code, reg.Lang, dec.Hints)
+		s.redirect(w, r, "success", reg.Lang)
+		return
+	}
 	tok, err := s.d.Sealer.Seal(token.Claims{ID: reg.ID, Code: reg.Code, Email: reg.Emails[0], LastName: reg.LastName, Lang: reg.Lang})
 	if err == nil {
 		confirmURL := s.d.Cfg.PublicURL + "/confirm?t=" + url.QueryEscape(tok)
 		var rm mail.Rendered
-		if rm, err = mail.Registrant(reg.Lang, facts, confirmURL); err == nil {
+		if rm, err = mail.Registrant(reg.Lang, facts, reg.Code == intake.Other, confirmURL); err == nil {
 			err = s.send(r.Context(), send.Message{To: []string{reg.Emails[0]}, ReplyTo: s.d.Cfg.ReplyTo, Subject: rm.Subject, Text: rm.Text, HTML: rm.HTML, CustomID: reg.ID})
 		}
 	}

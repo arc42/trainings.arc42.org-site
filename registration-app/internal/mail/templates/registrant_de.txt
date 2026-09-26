@@ -1,11 +1,11 @@
 Guten Tag,
 
-vielen Dank für Ihre {{if .Facts}}Anmeldung{{else}}Anfrage{{end}} bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen:
+vielen Dank für Ihre {{if .Other}}Anfrage{{else}}Anmeldung{{end}} bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen:
 
 {{.ConfirmURL}}
 
 Der Link ist 5 Tage gültig.
-{{with .Facts}}
+{{if .Facts}}{{with .Facts}}
 Ihre Auswahl
   Kurs:          {{.Title}}
   Termin:        {{.Dates}}
@@ -15,8 +15,10 @@ Ihre Auswahl
 {{- if .Price}}
   Preis:         {{.Price}}{{end}}
   Buchungscode:  {{.Code}}
-{{else}}
+{{end}}{{else if .Other}}
 Sie haben "Sonstige" gewählt. Wir melden uns persönlich bei Ihnen.
+{{else}}
+Die Einzelheiten zu Ihrem Termin bestätigen wir Ihnen persönlich.
 {{end}}
 Wir bearbeiten Anmeldungen von Hand und melden uns persönlich, meist innerhalb von ein bis zwei Werktagen.
 

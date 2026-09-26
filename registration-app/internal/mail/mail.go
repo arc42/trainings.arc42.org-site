@@ -77,6 +77,7 @@ var text = map[string]map[string]string{
 		"Button":     "Anmeldung bestätigen", "Valid": "Der Link ist 5 Tage gültig.",
 		"Course": "Kurs", "Dates": "Termin", "Where": "Ort", "Trainers": "Trainer", "Price": "Preis", "Code": "Buchungscode",
 		"Other":     `Sie haben "Sonstige" gewählt. Wir melden uns persönlich bei Ihnen.`,
+		"NoFacts":   "Die Einzelheiten zu Ihrem Termin bestätigen wir Ihnen persönlich.",
 		"ByHand":    "Wir bearbeiten Anmeldungen von Hand und melden uns persönlich, meist innerhalb von ein bis zwei Werktagen.",
 		"NotYou":    "Sie haben sich nicht angemeldet? Dann ignorieren Sie diese Mail einfach. Ohne Bestätigung geschieht nichts.",
 		"Questions": "Fragen? Antworten Sie einfach auf diese Mail.",
@@ -88,6 +89,7 @@ var text = map[string]map[string]string{
 		"Button":     "Confirm registration", "Valid": "The link is valid for 5 days.",
 		"Course": "Course", "Dates": "Dates", "Where": "Location", "Trainers": "Trainers", "Price": "Price", "Code": "Booking code",
 		"Other":     `You chose "other". We will get in touch with you personally.`,
+		"NoFacts":   "We will confirm the details of your date personally.",
 		"ByHand":    "We process registrations by hand and will get back to you personally, usually within one or two business days.",
 		"NotYou":    "You did not register? Then simply ignore this mail. Nothing happens without confirmation.",
 		"Questions": "Questions? Just reply to this mail.",
@@ -102,6 +104,7 @@ var hintText = map[string]map[string]string{
 		intake.HintSeveralEmails: "Mehrere E-Mail-Adressen; die Bestätigung ging nur an die erste",
 		intake.HintClosed:        "Termin war beim Absenden nicht mehr offen (ausgebucht, abgesagt oder vorbei)",
 		intake.HintFeedDown:      "Kursliste nicht verfügbar, Buchungscode ungeprüft",
+		intake.HintRecipientCap:  "Bestätigungsmail an den Anmeldenden nicht verschickt: zu viele Anmeldungen an diese Adresse in 24 Stunden",
 	},
 	"en": {
 		intake.HintGmailDots:     "Gmail address with many dots (a spam-probing pattern)",
@@ -110,6 +113,7 @@ var hintText = map[string]map[string]string{
 		intake.HintSeveralEmails: "Several e-mail addresses; only the first received the confirmation request",
 		intake.HintClosed:        "Date was no longer open when submitted (full, cancelled or past)",
 		intake.HintFeedDown:      "Course list unavailable, booking code not checked",
+		intake.HintRecipientCap:  "Confirmation mail to the registrant not sent: too many registrations to this address within 24 hours",
 	},
 }
 
@@ -120,10 +124,12 @@ func lang(l string) string {
 	return "de"
 }
 
-// Registrant renders the confirmation request. facts is nil for "Sonstige".
-func Registrant(l string, facts *Facts, confirmURL string) (Rendered, error) {
+// Registrant renders the confirmation request. other says the registrant
+// chose "Sonstige"/"other"; facts is nil then, and also when the course list
+// could not be read, which must not read like "other".
+func Registrant(l string, facts *Facts, other bool, confirmURL string) (Rendered, error) {
 	l = lang(l)
-	data := map[string]any{"Lang": l, "Facts": facts, "ConfirmURL": confirmURL, "T": text[l]}
+	data := map[string]any{"Lang": l, "Facts": facts, "Other": other, "ConfirmURL": confirmURL, "T": text[l]}
 	var t, h bytes.Buffer
 	if err := textT.ExecuteTemplate(&t, "registrant_"+l+".txt", data); err != nil {
 		return Rendered{}, err
@@ -132,9 +138,11 @@ func Registrant(l string, facts *Facts, confirmURL string) (Rendered, error) {
 		return Rendered{}, err
 	}
 	subject := text[l]["Title"]
-	if facts == nil {
+	switch {
+	case other:
 		subject = map[string]string{"de": "Bitte bestätigen Sie Ihre Anfrage", "en": "Please confirm your request"}[l]
-	} else {
+	case facts == nil:
+	default:
 		subject += ": " + facts.ShortTitle + ", " + facts.Dates
 	}
 	return Rendered{Subject: subject, Text: t.String(), HTML: h.String()}, nil

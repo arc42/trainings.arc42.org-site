@@ -53,6 +53,9 @@ func main() {
 		Sealer: sealer,
 		Sender: sender,
 		Log:    logger,
+		// Three confirmation requests per address and day are plenty for a
+		// person who mistyped twice; more is someone using us as a mailer.
+		RecipientLimiter: intake.NewLimiter(3, 24*time.Hour, time.Now),
 	})
 
 	hs := &http.Server{

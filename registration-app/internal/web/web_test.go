@@ -67,8 +67,9 @@ func newEnv(t *testing.T) *env {
 		Checker: &intake.Checker{Feed: ff, Limiter: intake.NewLimiter(100, time.Hour, time.Now),
 			AllowedOrigins: []string{"https://trainings.arc42.org"}},
 		Feed: ff, Sealer: sealer, Sender: e.sender,
-		NewID: func() string { return "R-TEST1" },
-		Log:   log.New(e.logs, "", 0),
+		RecipientLimiter: intake.NewLimiter(3, 24*time.Hour, time.Now),
+		NewID:            func() string { return "R-TEST1" },
+		Log:              log.New(e.logs, "", 0),
 	}).Routes()
 	return e
 }
@@ -229,5 +230,29 @@ func TestBadTokens(t *testing.T) {
 	}
 	if len(e.sender.got) != 2 {
 		t.Error("an expired token sent a confirmation")
+	}
+}
+
+// The registrant mail goes to an address a stranger typed. However many IPs a
+// script uses, one address gets at most three confirmation requests a day;
+// the back office still sees every submission, marked.
+func TestConfirmationMailsPerAddressAreCapped(t *testing.T) {
+	e := newEnv(t)
+	for i := 0; i < 4; i++ {
+		e.post("/submit", form("de"))
+	}
+	var toOffice, toRegistrant []send.Message
+	for _, m := range e.sender.got {
+		if m.To[0] == "office@example.org" {
+			toOffice = append(toOffice, m)
+		} else {
+			toRegistrant = append(toRegistrant, m)
+		}
+	}
+	if len(toOffice) != 4 || len(toRegistrant) != 3 {
+		t.Fatalf("office %d, registrant %d; want 4 and 3", len(toOffice), len(toRegistrant))
+	}
+	if !strings.Contains(toOffice[3].Text, "nicht verschickt") {
+		t.Errorf("the fourth back-office mail does not say the confirmation was withheld:\n%s", toOffice[3].Text)
 	}
 }

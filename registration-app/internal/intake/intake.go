@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"net/mail"
+	"net/netip"
 	"net/url"
 	"strings"
 
@@ -128,13 +129,16 @@ func (c *Checker) Check(ctx context.Context, in Input) Decision {
 			return reject("too long: " + key)
 		}
 	}
-	if in.Origin != "" && !contains(c.AllowedOrigins, strings.ToLower(in.Origin)) {
+	// "null" is what a browser sends from a page with referrer policy
+	// no-referrer (privacy extensions, hardened browsers). Dropping it would
+	// lose real registrations and stop no script, which can omit the header.
+	if in.Origin != "" && in.Origin != "null" && !contains(c.AllowedOrigins, strings.ToLower(in.Origin)) {
 		return drop("origin " + in.Origin)
 	}
 	if f.Get("_gotcha") != "" || f.Get("company_website") != "" {
 		return drop("honeypot")
 	}
-	if c.Limiter != nil && !c.Limiter.Allow(in.IP) {
+	if c.Limiter != nil && !c.Limiter.Allow(ipKey(in.IP)) {
 		return drop("rate limit")
 	}
 	if r.LastName == "" || r.Email == "" || r.Code == "" || r.Billing == "" {
@@ -184,6 +188,21 @@ func parseEmails(s string) ([]string, bool) {
 		out = append(out, strings.ToLower(a.Address))
 	}
 	return out, len(out) > 0
+}
+
+// ipKey is the rate-limit key for a client address: the address itself for
+// IPv4, its /64 prefix for IPv6, because one IPv6 client typically controls a
+// whole /64.
+func ipKey(ip string) string {
+	addr, err := netip.ParseAddr(ip)
+	if err != nil || addr.Is4() || addr.Is4In6() {
+		return ip
+	}
+	p, err := addr.Prefix(64)
+	if err != nil {
+		return ip
+	}
+	return p.String()
 }
 
 func contains(list []string, s string) bool {
