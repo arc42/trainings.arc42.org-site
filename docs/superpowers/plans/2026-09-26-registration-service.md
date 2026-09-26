@@ -2446,7 +2446,7 @@ git commit -m "feat(registration): mails in the registration's language, nothing
 **Interfaces:**
 - Produces: `send.Message{To []string; ReplyTo, Subject, Text, HTML, CustomID string}`; `send.Sender` interface `Send(ctx, Message) error`; `send.Mailjet{Public, Private, From, FromName string; Sandbox bool; Client *http.Client; Endpoint string}`; `send.NewAllowList(next Sender, allowed []string, logger *log.Logger) *AllowList`; `send.LogSender{W io.Writer}`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/send/send_test.go`:
 
@@ -2550,12 +2550,12 @@ func TestMailjetSandboxAgainstTheRealAPI(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/send`
 Expected: FAIL, undefined identifiers.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `registration-app/internal/send/send.go`:
 
@@ -2758,12 +2758,12 @@ func (m *Mailjet) post(ctx context.Context, payload []byte) error {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/send -v`
 Expected: PASS; `TestMailjetSandboxAgainstTheRealAPI` is SKIPPED unless the Mailjet keys are in the environment. When Gernot has finished the Mailjet Todoist tasks, run it once with the keys exported: it must PASS, which proves the key pair and the sender `trainings@arc42.org` are accepted without delivering anything.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/send
