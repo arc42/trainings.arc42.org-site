@@ -7,17 +7,20 @@ disagree, the README wins — and fix this file.
 
 ## What is here
 
-Two programs, two lifecycles: **the site** (Jekyll, static, GitHub Pages) and
-**the admin app** (Go, one container on fly.io, source under `admin-app/`).
-[`admin-app/README.md`](/admin-app/README.md#how-it-works) covers the second.
+Three programs, three lifecycles: **the site** (Jekyll, static, GitHub Pages),
+**the admin app** (Go, one container on fly.io, source under `admin-app/`), and
+**the registration service** (Go, its own fly app `arc42-registration`, source
+under `registration-app/`, in test mode until the go-live).
+[`admin-app/README.md`](/admin-app/README.md#how-it-works) and
+[`registration-app/README.md`](/registration-app/README.md) cover the two apps.
 
 ## Building and checking
 
 Everything runs in Docker — no local Ruby needed. `make help` lists every
 target; [README §Local development](/README.md#local-development) explains them.
-The four that matter: `make dev` (server on :4260), `make site`, `make
-check-links` (html-proofer), `make app-check` (the Go tests, vet and gofmt that
-CI gates the deploy on).
+The five that matter: `make dev` (server on :4260), `make site`, `make
+check-links` (html-proofer), `make app-check` and `make reg-check` (the Go
+tests, vet and gofmt that CI gates each app's deploy on).
 
 There is **no unit-test suite for the site**. Verification is `make site` plus
 assertions against the built HTML in `_site/`, and `make check-links`. When you
@@ -87,8 +90,14 @@ and is wrong anyway.
   [README §Languages](/README.md#languages). `_pages/home.html` and
   `_pages/home-de.html` are structural twins — change one, change the other.
 - **The `exclude:` list in `_config.yml` is load-bearing, not cosmetic.**
-  Without the `admin-app` entry, the Go source is served publicly. Anything not
-  excluded is copied into `_site/` and published.
+  Without the `admin-app` and `registration-app` entries, the Go source is
+  served publicly. Anything not excluded is copied into `_site/` and published.
+- **The registration service reads `/api/trainings.json`** to decide which
+  booking codes it accepts (`registration-app/internal/feed`). A code missing
+  from the feed is dropped silently; an empty feed counts as unavailable, not
+  as "every code unknown". It is a feed consumer under ADR-0004 like the other
+  sites. Its mail addresses (`BACKOFFICE_TO`, `TEST_RECIPIENTS`) are fly
+  secrets, never `fly.toml`: this repository is public.
 
 ## House style
 

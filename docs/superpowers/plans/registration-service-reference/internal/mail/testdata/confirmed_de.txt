@@ -1,9 +1,0 @@
-[trainings.arc42.org] ANMELDUNG R-7F3KQ 26-12 MSA (BESTÄTIGT)
-
-Anmeldung R-7F3KQ wurde vom Anmeldenden bestätigt.
-
-Kurs:       26-12 MSA
-Nachname:   Müller
-E-Mail:     anna@example.org
-
-Alle Angaben stehen in der Mail "ANMELDUNG R-7F3KQ ... (UNBESTÄTIGT)".

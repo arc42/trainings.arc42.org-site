@@ -24,7 +24,7 @@
 - **A registrant with JavaScript off**: after Task 1 the form works without JavaScript for the first time; the `<noscript>` block and the `display:none` wrapper must be gone, and the preselect/summary script must still only enhance. Pinned in Task 1, step 6 (curl the built page, submit with a plain POST).
 - **A registrant whose confirmation mail never arrives**: the success page must tell them to check spam and whom to write to, otherwise the first sign of a quarantined mail is a phone call weeks later. Pinned in Task 1, step 3 (page copy) and step 7 (grep).
 - **An old tab or cached page still posting to Formspark after the switch**: Formspark keeps receiving for weeks; the back office must know such a notification is still real. Pinned in Task 2, step 3 (checklist item) and Task 5 (only retire after the Formspark log is quiet).
-- **arc42.de's `?kurs=` links with stale ids** (`msa-06-2027` vs the feed's `msa-jun-2027`): preselection silently fails. Pinned in Task 4, step 1.
+- **arc42.de's `?kurs=` links**: every id arc42.de links to must exist as a `data-id` on the form, including ids off the naming convention such as `msa-06-2027` (a real date: 27-06 MSA-EN, online), or preselection silently fails. Pinned in Task 4, step 1.
 - **Rollback after the service went production**: reverting the site PR sends the forms back to Formspark, but the service still accepts posts from any cached new page; that is fine and must not be "fixed" by stopping the service. Pinned in Task 2, step 4.
 
 ---
@@ -152,9 +152,9 @@ Precondition: Task 3 closed with "continue".
 
 **Files (arc42.de-site):** `_pages/anmeldung.md`, `_pages/anmeldungEN.md`, `_includes/head/custom.html` (Botpoison block), the `test-theme` target in its `Makefile`, `README.md`, and the data file behind its `/termine` page.
 
-- [ ] **Step 1: Stale ids first**
+- [ ] **Step 1: Every linked id exists**
 
-In arc42.de-site, find why `/termine` links `?kurs=msa-06-2027` while the feed id is `msa-jun-2027`: `grep -rn 'msa-06-2027' .` and check the workflow that refreshes its copy of `trainings.json`. Fix it so every `?kurs=` value on arc42.de exists as a `data-id` on `https://trainings.arc42.org/anmeldung/`. Verify with:
+Before stubbing anything, confirm that every `?kurs=` value on arc42.de exists as a `data-id` on `https://trainings.arc42.org/anmeldung/`. (An earlier note suspected `msa-06-2027` was stale; it is not, it is a separate date with an off-convention id. If a real mismatch shows up, check arc42.de's workflow that refreshes its copy of `trainings.json`.) Verify with:
 
 ```bash
 curl -s https://trainings.arc42.org/anmeldung/ | grep -o 'data-id="[^"]*"' | sort -u > /tmp/ids

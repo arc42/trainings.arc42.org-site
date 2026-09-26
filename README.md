@@ -124,6 +124,28 @@ Normally you never need `make fly-deploy`: pushing to `main` with changes under
 when Actions is down, or for trying a branch on the real app — with the caveats
 in [How a change reaches production](/admin-app/README.md#how-a-change-reaches-production).
 
+### The registration service
+
+A third program, in test mode until the go-live: it will receive the
+registration form instead of Formspark, send a specific confirmation mail from
+`trainings@arc42.org` through Mailjet, and confirm a registration when the
+registrant presses a button reached from that mail. Stateless, own fly app
+(`arc42-registration`). [`registration-app/README.md`](/registration-app/README.md)
+explains it; the design is in
+[the spec](/docs/superpowers/specs/2026-09-25-registration-service-design.md),
+the flow in [`docs/registration-flow/`](/docs/registration-flow/).
+
+| Target | What it does |
+| --- | --- |
+| `make reg-check` | Tests, `go vet` and `gofmt`, what CI gates on |
+| `make reg-run` | Run it on <http://localhost:8099>; mails are printed, not sent |
+| `make reg-deploy` | Deploy the current working tree to fly.io (asks first) |
+| `make reg-status` / `make reg-logs` | Machines and health checks / production logs |
+
+Until the go-live the real forms still post to Formspark; only the hidden test
+pages `/anmeldung-test-8r4tqz/` and `/registration-test-8r4tqz/` post to the
+service.
+
 ## Design
 
 How this site looks is **not** decided in this repository. It follows the arc42

@@ -3787,14 +3787,14 @@ Tell Gernot the test pages are live at `https://trainings.arc42.org/anmeldung-te
 **Files:**
 - Modify: `CLAUDE.md` ("What is here", "Building and checking", "Contracts that break silently"), `README.md` (overview and local development)
 
-- [ ] **Step 1: CLAUDE.md**
+- [x] **Step 1: CLAUDE.md**
 
 - "What is here": "Two programs" becomes three: add **the registration service** (Go, own fly app `arc42-registration`, source under `registration-app/`, see `registration-app/README.md`).
 - "Building and checking": add `make reg-check` next to `make app-check`.
 - "Contracts that break silently", add one bullet: *The registration service reads `/api/trainings.json`* to decide which booking codes it accepts; a code that disappears from the feed is dropped silently, and an empty feed is treated as unavailable. It is a feed consumer under ADR-0004 like the other sites. Also: `registration-app` in `exclude:` is load-bearing, like `admin-app`.
 - Do **not** touch the Formspark bullets yet: production still posts to Formspark until the go-live plan.
 
-- [ ] **Step 2: README.md**
+- [x] **Step 2: README.md**
 
 Add a short "Registration service" subsection under the overview, linking `registration-app/README.md`, the spec, and `docs/registration-flow/`.
 
