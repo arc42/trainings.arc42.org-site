@@ -49,7 +49,7 @@
 **Interfaces:**
 - Produces: `config.Config` (fields `Addr, Environment, Mailer, MailjetPublic, MailjetPrivate, TokenKey []byte, MailFrom, MailFromName, BackofficeTo, ReplyTo, FeedURL, SiteURL, PublicURL, AllowedOrigins []string, TestRecipients []string`), `config.Load() (Config, error)`, `Config.TestMode() bool`.
 
-- [ ] **Step 1: Exclude the directory from the site first**
+- [x] **Step 1: Exclude the directory from the site first**
 
 In `_config.yml`, directly under `  - admin-app`, add:
 
@@ -59,7 +59,7 @@ In `_config.yml`, directly under `  - admin-app`, add:
   - registration-app
 ```
 
-- [ ] **Step 2: Create the module and the failing test**
+- [x] **Step 2: Create the module and the failing test**
 
 `registration-app/go.mod`:
 
@@ -162,12 +162,12 @@ func TestLogMailerNeedsNoKeysAndNoAllowList(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: Run it to verify it fails**
+- [x] **Step 3: Run it to verify it fails**
 
 Run: `cd registration-app && go test ./internal/config`
 Expected: FAIL, `undefined: Load`.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 `registration-app/internal/config/config.go`:
 
@@ -280,12 +280,12 @@ func list(s string) []string {
 }
 ```
 
-- [ ] **Step 5: Run it to verify it passes**
+- [x] **Step 5: Run it to verify it passes**
 
 Run: `cd registration-app && go test ./internal/config -v`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 6: Makefile targets**
+- [x] **Step 6: Makefile targets**
 
 In `Makefile`: below `APP_DIR     := admin-app` add
 
@@ -323,7 +323,7 @@ reg-run: check-go ## Run the registration service on :8099; mails are printed, n
 		TOKEN_KEY=$$(openssl rand -base64 32) go run .
 ```
 
-- [ ] **Step 7: CI workflow (tests only for now; Task 9 adds the deploy job)**
+- [x] **Step 7: CI workflow (tests only for now; Task 9 adds the deploy job)**
 
 `.github/workflows/registration-app.yml`:
 
@@ -365,7 +365,7 @@ jobs:
           fi
 ```
 
-- [ ] **Step 8: Verify and commit**
+- [x] **Step 8: Verify and commit**
 
 Run: `make reg-check && make site && test ! -e _site/registration-app && echo excluded`
 Expected: `registration service: tests, vet and gofmt are clean` and `excluded`.
