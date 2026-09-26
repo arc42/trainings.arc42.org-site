@@ -1288,3 +1288,26 @@ func TestTheIdAndCodePlaceholdersFollowTheCourse(t *testing.T) {
 		})
 	}
 }
+
+// The dropdown used to show four bare tokens and a hint that still talked
+// about arc42.de's retired form. It must say what each status does.
+func TestStatusDropdownExplainsEachStatus(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	body := rec.Body.String()
+	for _, want := range []string{
+		`<option value="waitlist"`,
+		`waitlist: fully booked, waiting list available</option>`,
+		`full: fully booked, no waiting list</option>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("status dropdown lacks %q", want)
+		}
+	}
+	if strings.Contains(body, "registration form on arc42.de") {
+		t.Error("status hint still refers to arc42.de's retired form")
+	}
+}

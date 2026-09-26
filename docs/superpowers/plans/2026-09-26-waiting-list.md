@@ -43,7 +43,7 @@
 **Interfaces:**
 - Produces: `model.StatusLabel(status string) string`; template func `statusLabel`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `admin-app/internal/model/model_test.go` (create the file with `package model` and `import "testing"` if it does not exist):
 
@@ -90,12 +90,12 @@ func TestStatusDropdownExplainsEachStatus(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd admin-app && go test ./internal/model ./internal/web -run 'TestEveryStatusHasALabel|TestStatusDropdownExplainsEachStatus' -v`
 Expected: FAIL, `undefined: StatusLabel`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `admin-app/internal/model/model.go`, directly below the `var ( Formats ... Statuses ... )` block:
 
@@ -144,12 +144,12 @@ In `admin-app/internal/web/templates/dateform.gohtml`, replace the status `<sele
       </label>
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd admin-app && go test ./internal/model ./internal/web -v -run 'TestEveryStatusHasALabel|TestStatusDropdownExplainsEachStatus|TestDateForm'`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add admin-app/internal/model admin-app/internal/web

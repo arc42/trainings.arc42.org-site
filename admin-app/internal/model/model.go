@@ -146,3 +146,22 @@ var (
 	Languages = []string{"de", "en"}
 	Statuses  = []string{"open", "waitlist", "full", "cancelled"}
 )
+
+// statusLabels says what a status does on the site, in the words the
+// operator thinks in. The card and form wording (DE/EN) lives in the Liquid
+// includes; this is only the admin app's own explanation.
+var statusLabels = map[string]string{
+	"open":      "open for registration",
+	"waitlist":  "fully booked, waiting list available",
+	"full":      "fully booked, no waiting list",
+	"cancelled": "cancelled, hidden everywhere",
+}
+
+// StatusLabel returns the explanation for a status, or the status itself if
+// there is none, so an unexpected value still renders as something.
+func StatusLabel(status string) string {
+	if l, ok := statusLabels[status]; ok {
+		return l
+	}
+	return status
+}

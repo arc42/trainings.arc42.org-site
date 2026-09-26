@@ -210,6 +210,8 @@ func templateFuncs() template.FuncMap {
 		// nil — and a strictly-typed helper turns that omission into a
 		// mid-render abort rather than an empty comparison.
 		"eqStr": func(a, b any) bool { return fmt.Sprint(a) == fmt.Sprint(b) },
+		// statusLabel explains a status in the dropdown and the list badges.
+		"statusLabel": func(s any) string { return model.StatusLabel(fmt.Sprint(s)) },
 		// codeToken travels with each course option so the browser can derive
 		// the booking code without a round trip.
 		"codeToken": func(courseID any) string { return model.CodeToken(fmt.Sprint(courseID)) },
