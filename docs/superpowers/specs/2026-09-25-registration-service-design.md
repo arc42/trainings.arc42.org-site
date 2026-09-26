@@ -107,8 +107,9 @@ Units, each testable alone:
 
 The money and date formatting rules of `_includes/money.html` and
 `training-date-label.html` are re-implemented in Go (`2.890 €` / `€2,890`,
-German month names). A golden test renders the same values through both and
-compares, so the site and the mail cannot drift apart. `price-label.html` is
+German month names). The test table is copied from the built site's output,
+so a format change on the site shows up as a failing Go test once the table
+is refreshed in the same PR. `price-label.html` is
 deliberately not ported: what it adds over `money.html` is the early-bird
 sentence and the alumni clause, and neither belongs in the mails. The service reads
 `price.amount` and `price.currency` and ignores `price.early_bird`.
@@ -248,12 +249,12 @@ here would reject real bookings because of a GitHub Pages outage.
 | `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` | yes | Mailjet key pair |
 | `TOKEN_KEY` | yes | 32 bytes, base64 |
 | `MAIL_FROM` | no | `trainings@arc42.org` |
-| `BACKOFFICE_TO` | no | where UNBESTÄTIGT/BESTÄTIGT go |
+| `BACKOFFICE_TO` | yes (personal address, public repo) | where UNBESTÄTIGT/BESTÄTIGT go |
 | `REPLY_TO` | no | `info@arc42.de` |
 | `FEED_URL` | no | `https://trainings.arc42.org/api/trainings.json` |
 | `SITE_URL` | no | base for redirects |
 | `ALLOWED_ORIGINS` | no | comma list |
-| `TEST_RECIPIENTS` | no | if set: test mode. Registrant mail only to these addresses, every subject prefixed `[TEST]` |
+| `TEST_RECIPIENTS` | yes (personal addresses, public repo) | if set: test mode. Registrant mail only to these addresses, every subject prefixed `[TEST]` |
 
 The service refuses to start with `TEST_RECIPIENTS` empty unless
 `ENVIRONMENT=PRODUCTION`, so a test deployment cannot accidentally mail the
@@ -318,9 +319,11 @@ one PR.
    migration). Not deleted: GitHub Pages cannot redirect, and a deleted page
    is a plain 404. From here on nothing posts to Formspark from a page we
    publish.
-8. **Formspark retired**, a few weeks after stage 7: the Formspark ids, the
-   "one form per language" sections in CLAUDE.md and README, the Botpoison
-   projects and the Formspark subscription go.
+8. **Formspark retired**, a few weeks after stage 7: the Formspark forms,
+   the Botpoison projects and the Formspark subscription go. (This repo's
+   Formspark ids, Botpoison script and the "one form per language" sections
+   in CLAUDE.md and README already went in stage 5, because from then on
+   they describe something this repo no longer does.)
 
 ## 8. Waiting list
 
