@@ -1,0 +1,7 @@
+Registration {{.ID}} was confirmed by the registrant.
+
+Course:     {{.Code}}
+Last name:  {{.LastName}}
+E-mail:     {{.Email}}
+
+All details are in the mail "REGISTRATION {{.ID}} ... (UNCONFIRMED)".

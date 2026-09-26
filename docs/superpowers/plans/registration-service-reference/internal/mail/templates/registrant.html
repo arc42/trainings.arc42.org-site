@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="{{.Lang}}"><head><meta charset="utf-8"><title>{{.T.Title}}</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#222;max-width:560px">
+<p>{{.T.Hello}}</p>
+<p>{{if .Facts}}{{.T.Intro}}{{else}}{{.T.IntroOther}}{{end}}</p>
+<p><a href="{{.ConfirmURL}}" style="display:inline-block;padding:10px 18px;background:#1f4e79;color:#ffffff;text-decoration:none;border-radius:4px">{{.T.Button}}</a></p>
+<p style="font-size:13px;color:#555">{{.T.Valid}}<br>{{.ConfirmURL}}</p>
+{{with .Facts}}
+<table style="border-collapse:collapse;font-size:15px">
+<tr><td style="padding:2px 12px 2px 0;color:#555">{{$.T.Course}}</td><td>{{.Title}}</td></tr>
+<tr><td style="padding:2px 12px 2px 0;color:#555">{{$.T.Dates}}</td><td>{{.Dates}}</td></tr>
+<tr><td style="padding:2px 12px 2px 0;color:#555">{{$.T.Where}}</td><td>{{.Where}}</td></tr>
+{{if .Trainers}}<tr><td style="padding:2px 12px 2px 0;color:#555">{{$.T.Trainers}}</td><td>{{.Trainers}}</td></tr>{{end}}
+{{if .Price}}<tr><td style="padding:2px 12px 2px 0;color:#555">{{$.T.Price}}</td><td>{{.Price}}</td></tr>{{end}}
+<tr><td style="padding:2px 12px 2px 0;color:#555">{{$.T.Code}}</td><td>{{.Code}}</td></tr>
+</table>
+{{else}}<p>{{.T.Other}}</p>{{end}}
+<p>{{.T.ByHand}}</p>
+<p>{{.T.NotYou}}</p>
+<p>{{.T.Questions}}</p>
+<p>arc42 Trainings<br><a href="https://trainings.arc42.org">trainings.arc42.org</a></p>
+</body></html>

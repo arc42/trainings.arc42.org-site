@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-25-registration-service-design.md` (read sections 2 to 7). This plan covers rollout stages 3 and 4 (section 7.2). Stage 5 onwards is `docs/superpowers/plans/2026-09-26-registration-go-live.md`.
 
+**Native execution:** do not read this whole file. Follow `docs/superpowers/plans/2026-09-26-execution.md`: read one task at a time by line range, and copy each task's files from `docs/superpowers/plans/registration-service-reference/` (byte-identical to the code blocks here) instead of retyping them.
+
 **Reference implementation:** every file in this plan was compiled and its tests run (`go test ./...`, `go vet`, `gofmt`) before the plan was written, with Go 1.27 in module mode `go 1.23.0`. Copy the code as given; if you change it, keep the tests green.
 
 ## Global Constraints
@@ -3802,5 +3804,14 @@ Add a short "Registration service" subsection under the overview, linking `regis
 git add CLAUDE.md README.md
 git commit -m "docs: the registration service as the repository's third program"
 ```
+
+Remove the reference copy now that `registration-app/` exists, so two copies cannot drift:
+
+```bash
+diff -r docs/superpowers/plans/registration-service-reference registration-app -x README.md -x '*.golden' | grep -v '^Only in registration-app' ; git rm -r -q docs/superpowers/plans/registration-service-reference
+git commit -m "docs: drop the registration service reference copy, registration-app/ is the source now"
+```
+
+The `diff` must print nothing except files that exist only in `registration-app/` (README, HTML goldens).
 
 Open a PR titled `Registration service in test mode`. The description names the five Review Focus items, the test pages, and states plainly that production forms still post to Formspark.
