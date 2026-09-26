@@ -1,7 +1,7 @@
 # Registration service: specific confirmations and a confirm click
 
 **Date:** 2026-09-25
-**Status:** design, awaiting review
+**Status:** approved 2026-09-26
 **Scope:** a new Go service `registration-app/` (fly.io app `arc42-registration`),
 `_includes/registration-form.html`, the registration and success pages, a
 hidden test page, and later the removal of Formspark and Botpoison from this
@@ -53,7 +53,8 @@ from the confirmation mail.
   when invoicing; a price computed by the website would contradict them. The
   home-page cards keep advertising early-bird prices as before.
 - The **back office** keeps receiving an email, as today, in two stages:
-  `UNBESTÄTIGT` at once, `BESTÄTIGT` when the registrant confirms. Rule for the
+  `UNBESTÄTIGT` at once, `BESTÄTIGT` when the registrant confirms (for an
+  English registration: `UNCONFIRMED` and `CONFIRMED`; see 4.2). Rule for the
   back office: book on BESTÄTIGT; after a few days, follow up on an
   UNBESTÄTIGT that looks like a real company. Nothing is lost when a corporate
   filter swallows the confirmation mail, and a fake stays visibly unconfirmed.
@@ -156,10 +157,15 @@ never used to drop.
 
 1. Generate a registration id, `R-` plus 5 characters from an unambiguous
    alphabet (e.g. `R-7F3KQ`), for the back office to match the two mails.
-2. **Back office first**, `UNBESTÄTIGT`. Subject
-   `[trainings.arc42.org] ANMELDUNG R-7F3KQ 26-12 MSA (UNBESTÄTIGT)`. Body: every
-   submitted field under fixed German labels regardless of form language, plus
-   `Sprache`, `via`, `form_source` and `Hinweise`. No price: the back office
+2. **Back office first**, in the **language of the registration**, as today:
+   a German registration arrives with German labels, an English one with
+   English labels.
+   - DE subject `[trainings.arc42.org] ANMELDUNG R-7F3KQ 26-12 MSA (UNBESTÄTIGT)`
+   - EN subject `[trainings.arc42.org] REGISTRATION R-7F3KQ 26-09 MSA-EN (UNCONFIRMED)`
+
+   Body: every submitted field under the labels of that language's form, plus
+   language, `via`, `form_source` and the suspicion hints (`Hinweise` /
+   `Notes`). A mail filter for the unconfirmed ones has to match both tags. No price: the back office
    invoices from its own terms.
    Reply-To is the registrant, so answering the mail reaches them.
 3. **Registrant**, in their language. Course facts from the feed only. No
@@ -179,7 +185,9 @@ never used to drop.
 The token carries only what the `BESTÄTIGT` mail needs: registration id,
 booking code, registrant email, last name, language, issue time. Sealed with
 AES-256-GCM under `TOKEN_KEY` (32 random bytes, fly secret), base64url, well
-under 300 characters. Valid 14 days.
+under 300 characters. **Valid 5 days**: long enough for a weekend and for
+the back office's follow-up after 2 to 3 working days, short enough that an
+old link in a forwarded mail is useless.
 
 Deliberately not the whole registration: the full data is already in the
 `UNBESTÄTIGT` mail, a short link survives mail clients that wrap or truncate
@@ -197,8 +205,8 @@ nothing.** Corporate link scanners (Microsoft Safe Links, Mimecast, Proofpoint)
 fetch every link in incoming mail; if a GET confirmed, every fake sent to a
 company address would confirm itself.
 
-`POST /confirm` with the token sends the `BESTÄTIGT` mail (same subject with
-`(BESTÄTIGT)`, same id, so mail clients thread the two) and redirects to
+`POST /confirm` with the token sends the `BESTÄTIGT` / `CONFIRMED` mail (same
+subject with the status tag swapped, same id, so mail clients thread the two) and redirects to
 `/anmeldung-bestaetigt/` or `/registration-confirmed/`, two new pages on the
 site.
 
@@ -211,7 +219,7 @@ cannot be detected, and a duplicate is harmless.
 Fetched at start and refreshed at most every 5 minutes, on demand. If a
 refresh fails, the last good copy is used. If there has never been a good copy
 (cold start while the site is down), the code check is skipped and every
-back-office mail carries a `Hinweis: Kursliste nicht verfügbar`; failing closed
+back-office mail carries a `Hinweis: Kursliste nicht verfügbar` (EN: `Note: course list unavailable`); failing closed
 here would reject real bookings because of a GitHub Pages outage.
 
 ## 5. Mailjet
@@ -253,35 +261,66 @@ world.
 
 ## 7. Testing and rollout
 
-Production is untouched until the last step. Until then the real forms keep
-posting to Formspark.
+### 7.1 Why `register.arc42.org` and not the fly.dev address
 
-1. **Mailjet by hand.** Sender and key set up, one curl send to a private and
-   a corporate Outlook address, SPF/DKIM/DMARC checked in the headers.
-2. **Local.** Unit tests per unit; handler tests with a fake feed and a fake
-   mailer; golden tests for all mails in both languages; the price/date
-   cross-check against the Jekyll output. `make reg-check` mirrors
-   `make app-check`, and CI gates on it.
-3. **Deployed in test mode** as `arc42-registration`, reachable only at
-   `arc42-registration.fly.dev`, `BACKOFFICE_TO` = Gernot, `TEST_RECIPIENTS`
-   set.
-4. **Test page** on the live site at an unguessable path, `noindex`,
-   `sitemap: false`, outside the nav, using the real `registration-form.html`
-   with a new `endpoint` parameter. The repository is public, so the path is
-   not secret; the allow-list is what makes that harmless.
-5. **End-to-end:** DE and EN registration, confirm, double confirm, expired
-   and tampered token, honeypot hit, unknown code, closed-but-real code,
-   cold-start time, and a mail to a corporate Outlook inbox to prove the link
-   scanner does not confirm.
-6. **Switch-over, separate PR:** `register.arc42.org` (CNAME at GoDaddy, fly
-   certificate), real forms point there, `BACKOFFICE_TO` real,
-   `TEST_RECIPIENTS` removed, success pages reworded, new confirmed pages,
-   privacy policy names Mailjet and fly.io, back office briefed. Botpoison
-   script and page flag removed.
-7. **Formspark stays** until arc42.de's own forms are stubs (phase 2 of the
-   migration) and a few weeks of clean operation have passed, so going back is
-   one revert. Only then do the Formspark ids, the "one form per language"
-   sections in CLAUDE.md and README, and the Formspark subscription go.
+The service works at `arc42-registration.fly.dev` without any DNS; that is how
+it runs during testing. For production it gets its own name on arc42.org, for
+one reason above all: **the confirm link in the registrant mail.** A mail from
+`trainings@arc42.org` whose only link points to `arc42-registration.fly.dev`
+has exactly the domain mismatch that corporate filters and careful readers
+treat as phishing, on the one mail whose click we depend on. With
+`register.arc42.org` the sender and the link share a domain.
+
+Two smaller reasons: the form's `action` and every link already sent stay
+valid if the service ever moves off fly.io (a DNS change instead of a site
+change), and "arc42.org" in the address bar of the confirm page reassures
+where "fly.dev" puzzles. The cost is one CNAME at GoDaddy and one fly
+certificate. It cannot be `trainings.arc42.org/...`: that host is GitHub
+Pages, which serves files and cannot route a POST to fly.io.
+
+### 7.2 Stages
+
+Production is untouched until stage 5. Each stage is reversible by reverting
+one PR.
+
+1. **Waiting list** (section 8). Independent of the service, ships first,
+   works with Formspark.
+2. **Mailjet by hand.** Domain validated, key created, one curl send to a
+   private and a corporate Outlook address, SPF/DKIM/DMARC checked in the
+   headers.
+3. **Service built and tested locally.** Unit tests per unit; handler tests
+   with a fake feed and a fake mailer; golden tests for all mails in both
+   languages; the money/date cross-check against the Jekyll output.
+   `make reg-check` mirrors `make app-check`, and CI gates on it.
+4. **Deployed in test mode** at `arc42-registration.fly.dev`, `BACKOFFICE_TO`
+   = Gernot, `TEST_RECIPIENTS` set, plus a **test page** on the live site at an
+   unguessable path, `noindex`, `sitemap: false`, outside the nav, using the
+   real `registration-form.html` with a new `endpoint` parameter. The
+   repository is public, so the path is not secret; the allow-list is what
+   makes that harmless. End-to-end: DE and EN registration, confirm, double
+   confirm, expired and tampered token, honeypot hit, unknown code,
+   closed-but-real code, cold-start time, and a mail to a corporate Outlook
+   inbox to prove the link scanner does not confirm.
+5. **trainings.arc42.org goes live.** `register.arc42.org` set up (CNAME,
+   certificate), then one PR: both real forms point there, success pages
+   reworded, new confirmed pages, privacy policy names Mailjet and fly.io,
+   Botpoison script and page flag removed. Deploy with `BACKOFFICE_TO` real
+   and `TEST_RECIPIENTS` removed. Back office briefed beforehand. Rollback:
+   revert the PR, and the forms post to Formspark again.
+6. **A few weeks of observation.** Every booking now starts on
+   trainings.arc42.org, because arc42.de has linked there since its PR #99
+   (merged 2026-09-22). Watch UNBESTÄTIGT/BESTÄTIGT ratios, spam hints,
+   spam-folder reports.
+7. **arc42.de.** Its old form pages `/anmeldung/` and `/anmeldungEN/` are no
+   longer linked but still live and still post to Formspark; bookmarks, old
+   course PDFs and bots reach them. They become one-line stubs with a button
+   to `trainings.arc42.org/anmeldung/?via=arc42.de` (phase 2 of the arc42.de
+   migration). Not deleted: GitHub Pages cannot redirect, and a deleted page
+   is a plain 404. From here on nothing posts to Formspark from a page we
+   publish.
+8. **Formspark retired**, a few weeks after stage 7: the Formspark ids, the
+   "one form per language" sections in CLAUDE.md and README, the Botpoison
+   projects and the Formspark subscription go.
 
 ## 8. Waiting list
 
@@ -331,7 +370,9 @@ selectable in the current form.
   server-side in `intake` without touching anything else.
 - arc42.de. Its remaining forms post to Formspark until they are removed.
 
-## 10. Open points for review
+## 10. Decisions taken in review
 
-- Back-office mail in German with fixed labels, regardless of form language.
-  Today an English registration arrives with English labels.
+- Back-office mails in the language of the registration, as today.
+- No early-bird and no alumni prices anywhere in the registration process.
+- Confirmation token valid 5 days.
+- arc42.de migrates after trainings.arc42.org has run a few weeks.
