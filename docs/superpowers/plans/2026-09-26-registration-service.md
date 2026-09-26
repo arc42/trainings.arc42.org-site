@@ -897,7 +897,7 @@ git commit -m "feat(registration): course feed client with Berlin-time bookabili
 **Interfaces:**
 - Produces: `token.Claims{ID, Code, Email, LastName, Lang string; Issued int64}`; `token.NewSealer(key []byte, ttl time.Duration, now func() time.Time) (*Sealer, error)`; `(*Sealer).Seal(Claims) (string, error)`; `(*Sealer).Open(string) (Claims, error)`; `token.ErrInvalid`, `token.ErrExpired`; `token.Valid = 5 * 24 * time.Hour`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/token/token_test.go`:
 
@@ -992,12 +992,12 @@ func TestAnotherKeyCannotOpen(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/token`
 Expected: FAIL, `undefined: NewSealer`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `registration-app/internal/token/token.go`:
 
@@ -1099,12 +1099,12 @@ func (s *Sealer) Open(tok string) (Claims, error) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/token -v`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/token
