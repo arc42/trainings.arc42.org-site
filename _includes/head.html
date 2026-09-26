@@ -3,6 +3,13 @@
 {% include seo.html %}
 
 {%- comment -%}
+  noindex: front-matter flag for pages that must be reachable but not found,
+  such as the registration service's test pages. sitemap: false keeps them out
+  of sitemap.xml; this keeps them out of search results.
+{%- endcomment -%}
+{% if page.noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
+
+{%- comment -%}
   hreflang pairs. Only emitted for pages that declare both halves of the
   front-matter contract (lang + translation_url). x-default is the English page,
   always.

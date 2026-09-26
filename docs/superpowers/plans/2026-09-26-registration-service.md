@@ -3594,7 +3594,7 @@ git commit -m "feat(registration): main, container, fly app and deploy plumbing"
 - Modify: `_includes/registration-form.html` (the `<form>` tag), `_includes/head.html` (noindex)
 - Create: `_pages/anmeldung-bestaetigt.md`, `_pages/registration-confirmed.md`, `_pages/anmeldung-test-8r4tqz.md`, `_pages/registration-test-8r4tqz.md`
 
-- [ ] **Step 1: The endpoint parameter**
+- [x] **Step 1: The endpoint parameter**
 
 In `_includes/registration-form.html`, replace
 
@@ -3625,7 +3625,7 @@ with
 
 (`method="post"` only with an endpoint: the service accepts POST only, and a form without `method` submits as GET. The production Formspark form keeps its exact current attributes, so this task changes nothing for real registrants.)
 
-- [ ] **Step 2: noindex support**
+- [x] **Step 2: noindex support**
 
 In `_includes/head.html`, directly after `{% include seo.html %}`:
 
@@ -3638,7 +3638,7 @@ In `_includes/head.html`, directly after `{% include seo.html %}`:
 {% if page.noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
 ```
 
-- [ ] **Step 3: The confirmed pages**
+- [x] **Step 3: The confirmed pages**
 
 `_pages/anmeldung-bestaetigt.md`:
 
@@ -3690,7 +3690,7 @@ We process registrations _by hand_ and will get back to you personally, usually 
 <a class="btn btn--inverse" href="/">Take me<br>home</a>
 ```
 
-- [ ] **Step 4: The test pages**
+- [x] **Step 4: The test pages**
 
 `_pages/anmeldung-test-8r4tqz.md`:
 
@@ -3722,7 +3722,7 @@ sitemap: false
 
 `_pages/registration-test-8r4tqz.md`: the same with `title: "Registration (test)"`, `permalink: /registration-test-8r4tqz/`, `lang: en`, no `locale` line, `translation_url: /anmeldung-test-8r4tqz/`, the notice text `**Test page.** This registration goes to the new registration service in test mode. Nothing here is a real booking.`, and `lang="en"` in the include.
 
-- [ ] **Step 5: Verify the built pages**
+- [x] **Step 5: Verify the built pages**
 
 ```bash
 make site
@@ -3736,7 +3736,7 @@ make check-links
 
 Expected: the test pages post to `https://arc42-registration.fly.dev/submit`, the production pages still to `https://submit-form.com/AIKiYyJP` and `.../Tq1M7LqmX`; botpoison counts `0` for the test page and `1` for `/anmeldung/`; noindex counts `1` for the test page and `0` for `/anmeldung/`; the sitemap count is `0`; `confirmed-pages`; the link check passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add _includes/registration-form.html _includes/head.html _pages/anmeldung-bestaetigt.md _pages/registration-confirmed.md _pages/anmeldung-test-8r4tqz.md _pages/registration-test-8r4tqz.md

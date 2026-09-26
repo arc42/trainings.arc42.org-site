@@ -50,8 +50,23 @@ activate JavaScript and reload this page.
 
 <div id="main_body" style="display: none;">
 
-<form action="https://submit-form.com/{{ formspark_id }}"
-      data-botpoison-public-key="{{ botpoison_key }}"
+{%- comment -%}
+  include.endpoint: where the form posts when it is NOT Formspark. Set only by
+  the hidden test pages while the registration service runs in test mode
+  (spec 2026-09-25, section 7.2 stage 4); the go-live PR makes it the default.
+  With an endpoint there is no Botpoison attribute: the service does its own
+  checks, and the Botpoison script would otherwise try to attach a challenge
+  the service never verifies. method="post" only with an endpoint: the
+  service accepts POST only, and the production Formspark form keeps its
+  exact current attributes. rf_ prefix: includes share the caller's scope.
+{%- endcomment -%}
+{%- if include.endpoint -%}
+  {%- assign rf_action = include.endpoint -%}
+{%- else -%}
+  {%- capture rf_action -%}https://submit-form.com/{{ formspark_id }}{%- endcapture -%}
+{%- endif -%}
+<form action="{{ rf_action }}"
+      {% if include.endpoint %}method="post"{% else %}data-botpoison-public-key="{{ botpoison_key }}"{% endif %}
       class="registration-form"
       id="arc42anmeldung">
 
