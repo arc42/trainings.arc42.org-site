@@ -958,7 +958,7 @@ func TestWarningsGateTheFirstSaveThenLetItThrough(t *testing.T) {
 	if !ok || !d.Dirty() {
 		t.Fatalf("the acknowledged save did not apply; status %d body:\n%s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(string(d.Doc.Bytes()), "status: waitlist") {
+	if !strings.Contains(string(d.Doc.Bytes()), "status: full") {
 		t.Error("the acknowledged edit did not reach the document")
 	}
 }
