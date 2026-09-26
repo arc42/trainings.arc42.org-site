@@ -560,7 +560,7 @@ git commit -m "feat(registration): money and date labels in the site's format"
 **Interfaces:**
 - Produces: `feed.New(url string, client *http.Client, now func() time.Time) *Feed`; `(*Feed).Lookup(ctx, code string) (feed.Entry, feed.Result)`; `feed.Result` constants `Bookable, Closed, Unknown, Unavailable`; `feed.Entry{CourseTitle, CourseShortTitle string; Date}`; `feed.Date{ID, Code, Start, End, City, Format, Language, Status string; Trainers []string; Price *Price}`; `feed.Price{Amount int; Currency string}`; constants `TTL`, `RetryPause`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/feed/feed_test.go`:
 
@@ -706,12 +706,12 @@ func TestAnEmptyFeedIsNotTrusted(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/feed`
 Expected: FAIL, `undefined: New`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `registration-app/internal/feed/feed.go`:
 
@@ -875,12 +875,12 @@ func (f *Feed) fetch(ctx context.Context) (map[string]Entry, error) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/feed -v`
 Expected: PASS, 6 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/feed
