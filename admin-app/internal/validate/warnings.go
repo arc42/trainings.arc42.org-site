@@ -69,12 +69,16 @@ func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
 	}
 
 	// The rule that caused the 23-25 February 2027 date to be published
-	// unbookable: anything but "open" is filtered out of the registration
-	// dropdown on arc42.de, silently.
-	if d.Status != "" && d.Status != "open" {
-		add("status", "%q keeps this date out of the registration form on arc42.de — nobody can book it", d.Status)
+	// unbookable. Only open and waitlist dates are listed in the registration
+	// form on trainings.arc42.org; waitlist registrations go through the same
+	// form and the back office tells them it is a waiting-list place.
+	switch d.Status {
+	case "full":
+		add("status", "%q keeps this date out of the registration form on trainings.arc42.org, and its card has no button; nobody can register or join a waiting list", d.Status)
+	case "cancelled":
+		add("status", "%q hides this date everywhere; nobody can register", d.Status)
 	}
-	if d.SeatsLimited && (d.Status == "full" || d.Status == "cancelled") {
+	if d.SeatsLimited && (d.Status == "waitlist" || d.Status == "full" || d.Status == "cancelled") {
 		add("seats_limited", "seats are advertised on a date whose status is %q", d.Status)
 	}
 

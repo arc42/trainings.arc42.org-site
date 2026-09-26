@@ -34,7 +34,9 @@ func TestDateWarningsFireOnImplausibleEntries(t *testing.T) {
 		{"a course that starts and ends the same day", func(d *model.Date) { d.End = d.Start }, "end"},
 		{"a course running longer than a working week", func(d *model.Date) { d.End = "2027-03-08" }, "end"},
 		{"an online date carrying a city", func(d *model.Date) { d.City = "München" }, "city"},
-		{"a status that hides the date from booking", func(d *model.Date) { d.Status = "waitlist" }, "status"},
+		{"a full date cannot be registered for", func(d *model.Date) { d.Status = "full" }, "status"},
+		{"a waitlist date is still registrable and warns about nothing", func(d *model.Date) { d.Status = "waitlist" }, ""},
+		{"few seats on a waitlist date contradicts itself", func(d *model.Date) { d.Status, d.SeatsLimited = "waitlist", true }, "seats_limited"},
 		{"a booking code off the house convention", func(d *model.Date) { d.Code = "27-02-MSA-online" }, "code"},
 		{"an id off the naming convention", func(d *model.Date) { d.ID = "msa-27-02-online" }, "id"},
 	}
@@ -221,5 +223,16 @@ func TestUnknownCourseWarnsAboutMissingCards(t *testing.T) {
 	got := fields(CourseWarnings(c))
 	if !strings.Contains(got, "id") {
 		t.Errorf("expected an id warning about missing card templates, got %q", got)
+	}
+}
+
+// The old message named arc42.de's form, which no longer takes registrations.
+func TestStatusWarningNamesTheRightSite(t *testing.T) {
+	d := model.Date{ID: "msa-feb-2027-en", Code: "27-02 MSA-EN", Start: "2027-02-23",
+		End: "2027-02-25", Language: "en", Format: "online", Status: "full"}
+	for _, w := range DateWarnings(d, "msa", "2026-08-16", false) {
+		if w.Field == "status" && strings.Contains(w.Message, "arc42.de") {
+			t.Errorf("status warning still mentions arc42.de: %q", w.Message)
+		}
 	}
 }

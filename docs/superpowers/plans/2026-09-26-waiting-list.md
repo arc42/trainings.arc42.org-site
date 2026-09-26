@@ -167,7 +167,7 @@ git commit -m "feat(admin): explain each booking status in the date form"
 **Interfaces:**
 - Consumes: nothing new. `DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning` keeps its signature.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `warnings_test.go`, replace the case on line 37
 
@@ -200,12 +200,12 @@ func TestStatusWarningNamesTheRightSite(t *testing.T) {
 
 Check that the test at line 130 (`Status: "waitlist"` on a past date) still states what it means after this change: it asserts on its own field, read it and adjust only if it asserted a `status` warning.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd admin-app && go test ./internal/validate -v`
 Expected: FAIL on "a waitlist date is still registrable", "few seats on a waitlist date", and the arc42.de test.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Replace lines 71-79 of `warnings.go` with:
 
@@ -225,12 +225,12 @@ Replace lines 71-79 of `warnings.go` with:
 	}
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd admin-app && go test ./... && go vet ./...`
 Expected: PASS. If a web test posts `status=full` with `confirm_warnings=1` it keeps passing; if one posts `status=waitlist` expecting a warning, change its comment and expectation to match the new rule.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add admin-app/internal/validate

@@ -933,13 +933,13 @@ func TestWarningsGateTheFirstSaveThenLetItThrough(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"status": {"waitlist"}, // hides the date from the registration form
+		"status": {"full"}, // hides the date from the registration form
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
 	body := rec.Body.String()
 
-	if !strings.Contains(body, "nobody can book it") {
+	if !strings.Contains(body, "nobody can register") {
 		t.Errorf("the status warning was not shown:\n%s", body)
 	}
 	if !strings.Contains(body, "Save anyway") {
