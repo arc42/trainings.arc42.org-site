@@ -47,18 +47,6 @@ courses:
     url_en: "https://trainings.arc42.org/courses/msa/"
     trainers: ["Peter Hruschka", "Gernot Starke"]
     dates:
-      - id: msa-online-sep-2026
-        code: "26-09 MSA-EN"
-        start: "2026-09-29"
-        end: "2026-10-01"
-        language: en
-        format: online
-        trainers: ["Wolfgang Reimesch"]
-        price:
-          amount: 2100
-          currency: EUR
-        url: "https://www.arc42.de/termine#msa-online-sep-2026"
-        status: open
       - id: msa-dez-2026
         code: "26-12 MSA"
         start: "2026-12-01"
@@ -96,7 +84,7 @@ courses:
         code: "27-06 MSA"
         start: "2027-06-08"
         end: "2027-06-11"
-        city: "Mannheim / Frankfurt (t.b.d.)"
+        city: "Mannheim"
         country: "DE"
         language: de
         format: public
@@ -112,7 +100,7 @@ courses:
         code: "27-09 MSA"
         start: "2027-09-14"
         end: "2027-09-17"
-        city: "Mannheim / Frankfurt (t.b.d.)"
+        city: "Frankfurt/Main"
         country: "DE"
         language: de
         format: public
@@ -277,7 +265,7 @@ courses:
         code: "27-09 Req4Arc"
         start: "2027-09-21"
         end: "2027-09-23"
-        city: "Mannheim / Frankfurt (t.b.d.)"
+        city: "Frankfurt/Main"
         country: "DE"
         language: de
         format: public
@@ -334,7 +322,7 @@ courses:
         code: "27-06 ADOC"
         start: "2027-06-02"
         end: "2027-06-03"
-        city: "Mannheim / Frankfurt (t.b.d.)"
+        city: "Mannheim"
         country: "DE"
         language: de
         format: public
