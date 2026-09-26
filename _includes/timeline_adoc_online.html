@@ -10,13 +10,11 @@
 
 {%- if include.page_lang == "de" -%}
   {%- assign blurb = "Effektive und sparsame Architekturdokumentation (mit Schwerpunkt arc42)" -%}
-  {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
   {%- assign info_label = "Mehr Info" -%}
   {%- assign register_label = "Anmeldung" -%}
   {%- assign register_url = "/anmeldung/" -%}
 {%- else -%}
   {%- assign blurb = "Effective and lean architecture documentation (with a focus on arc42)" -%}
-  {%- assign sold_out_text = "(sold out — waitlist only)" -%}
   {%- assign info_label = "More info (in German)" -%}
   {%- assign register_label = "Register" -%}
   {%- assign register_url = "/registration/" -%}
@@ -60,8 +58,8 @@
         </p>
         {% endif %}
 
-        {% if sold_out %}
-            <p class="timeline-sold-out">{{ sold_out_text }}</p>
+        {% if sold_out and include.status_note %}
+            <p class="timeline-sold-out">({{ include.status_note }})</p>
         {% endif %}
 
         {% if include.few_seats %}
@@ -75,8 +73,8 @@
         {% endif %}
 
         <a class="button buttonAdoc" href="https://www.arc42.de/info-adoc/" hreflang="de">{{ info_label }}</a>
-        {% unless sold_out %}
-            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ register_label }}</a>
+        {% unless include.hide_register %}
+            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ include.waitlist_label | default: register_label }}</a>
         {% endunless %}
     </div>
 </div>

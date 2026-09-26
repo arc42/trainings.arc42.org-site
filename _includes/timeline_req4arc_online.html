@@ -28,7 +28,6 @@
   {%- capture terms_line -%}
     Bitte beachten Sie unsere <a href="https://www.arc42.de/terms/">Allgemeinen Geschäftsbedingungen</a>.
   {%- endcapture -%}
-  {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
   {%- assign info_label = "Mehr Info" -%}
   {%- assign register_label = "Anmeldung" -%}
   {%- assign register_url = "/anmeldung/" -%}
@@ -37,7 +36,6 @@
   {%- capture terms_line -%}
     Please see our <a href="https://www.arc42.de/terms-en/">terms and conditions</a>.
   {%- endcapture -%}
-  {%- assign sold_out_text = "(sold out — waitlist only)" -%}
   {%- assign info_label = "More info (in German)" -%}
   {%- assign register_label = "Register" -%}
   {%- assign register_url = "/registration/" -%}
@@ -64,8 +62,8 @@
         <p>{{ blurb }}</p>
         {{ terms_line }}
 
-        {% if sold_out %}
-            <p class="timeline-sold-out">{{ sold_out_text }}</p>
+        {% if sold_out and include.status_note %}
+            <p class="timeline-sold-out">({{ include.status_note }})</p>
         {% endif %}
 
         {% if include.few_seats %}
@@ -87,8 +85,8 @@
         {% endif %}
 
         <a class="button buttonReq4Arc" href="https://www.arc42.de/info-req4arc/" hreflang="de">{{ info_label }}</a>
-        {% unless sold_out %}
-            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ register_label }}</a>
+        {% unless include.hide_register %}
+            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ include.waitlist_label | default: register_label }}</a>
         {% endunless %}
     </div>
 </div>

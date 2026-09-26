@@ -316,12 +316,12 @@ git commit -m "feat(admin): PR titles describe status changes in words"
 **Interfaces:**
 - Produces: three new include parameters on every card template: `status_note` (string or nil), `waitlist_label` (string or nil), `hide_register` (bool). `sold_out` keeps its meaning "grey the card and show the note" and is now true for both `waitlist` and `full`.
 
-- [ ] **Step 1: Record the current output as the baseline**
+- [x] **Step 1: Record the current output as the baseline**
 
 Run: `make site && grep -c 'timeline-sold-out' _site/index.html _site/de/index.html`
 Expected: `0` for both (no date is currently waitlist or full; if not 0, note the number).
 
-- [ ] **Step 2: Compute the wording once in `timeline_auto.html`**
+- [x] **Step 2: Compute the wording once in `timeline_auto.html`**
 
 Replace lines 45-46
 
@@ -374,7 +374,7 @@ In the `{% include timeline_course.html ... %}` call further down, add three par
      hide_register=ta_hide_register
 ```
 
-- [ ] **Step 3: Forward them in `timeline_course.html`**
+- [x] **Step 3: Forward them in `timeline_course.html`**
 
 On each of the eight `{% include timeline_*.html ... %}` lines (24, 26, 28, 30, 32, 34, 36, 38), insert directly after `sold_out=include.sold_out`:
 
@@ -384,7 +384,7 @@ On each of the eight `{% include timeline_*.html ... %}` lines (24, 26, 28, 30, 
 
 (CLAUDE.md: `timeline_course.html` must forward to every template; three of six once did not forward `pricing=`. Count afterwards: `grep -c 'hide_register=include.hide_register' _includes/timeline_course.html` must print `8`.)
 
-- [ ] **Step 4: Use them in all eight card templates**
+- [x] **Step 4: Use them in all eight card templates**
 
 In each of the eight files:
 
@@ -423,7 +423,7 @@ with
 
 Check each file after editing: `grep -c 'sold_out_text' _includes/timeline_*.html` must print `0` for every file, and `grep -c 'include.hide_register' _includes/timeline_*.html` must print `1` for each of the eight card templates.
 
-- [ ] **Step 5: Verify with temporary statuses, then revert them**
+- [x] **Step 5: Verify with temporary statuses, then revert them**
 
 Pick two adjacent dates in `_data/trainings.yml` (for example the first two `msa` dates, currently `msa-online-sep-2026` and `msa-dez-2026`). Temporarily set the first to `status: waitlist` and the second to `status: full`, and a third date of another course to `status: waitlist`. Then:
 
@@ -446,7 +446,7 @@ Expected:
 
 Finally `git status --short _data/` must print nothing.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add _includes/timeline_auto.html _includes/timeline_course.html _includes/timeline_*.html
