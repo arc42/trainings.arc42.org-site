@@ -1,0 +1,20 @@
+Please confirm your request
+
+Hello,
+
+thank you for your request with arc42. It is only complete once you confirm it:
+
+https://register.arc42.org/confirm?t=TOKEN
+
+The link is valid for 5 days.
+
+You chose "other". We will get in touch with you personally.
+
+We process registrations by hand and will get back to you personally, usually within one or two business days.
+
+You did not register? Then simply ignore this mail. Nothing happens without confirmation.
+
+Questions? Just reply to this mail.
+
+arc42 Trainings
+https://trainings.arc42.org

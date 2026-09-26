@@ -1701,7 +1701,7 @@ git commit -m "feat(registration): intake checks, rate limit and spam hints"
 - Consumes: `feed.Entry` (Task 3), `intake.Registration` and hint keys (Task 5), `token.Claims` (Task 4), `labels` (Task 2).
 - Produces: `mail.Facts{Title, ShortTitle, Code, Dates, Where, Trainers, Price string}`; `mail.FactsFor(feed.Entry, lang string) *Facts`; `mail.Rendered{Subject, Text, HTML string}`; `mail.Registrant(lang string, facts *Facts, confirmURL string) (Rendered, error)` (facts nil for "Sonstige"); `mail.Backoffice(reg intake.Registration, facts *Facts, hints []string) (Rendered, error)`; `mail.Confirmed(token.Claims) (Rendered, error)`.
 
-- [ ] **Step 1: Write the test and the expected output**
+- [x] **Step 1: Write the test and the expected output**
 
 `registration-app/internal/mail/mail_test.go`:
 
@@ -2047,12 +2047,12 @@ All details are in the mail "REGISTRATION R-7F3KQ ... (UNCONFIRMED)".
 
 The two HTML goldens (`registrant_de.html`, `registrant_en.html`) are generated in Step 4 with `-update` and then read by a person, because hand-typing escaped HTML is where typos hide.
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/mail`
 Expected: FAIL, undefined identifiers.
 
-- [ ] **Step 3: Implement the templates and the renderer**
+- [x] **Step 3: Implement the templates and the renderer**
 
 `templates/registrant_de.txt`:
 
@@ -2424,12 +2424,12 @@ func indent(s string) string {
 }
 ```
 
-- [ ] **Step 4: Generate the HTML goldens and read them**
+- [x] **Step 4: Generate the HTML goldens and read them**
 
 Run: `cd registration-app && go test ./internal/mail -run TestRegistrantMails -update && go test ./internal/mail -v`
 Expected: PASS. Then open `internal/mail/testdata/registrant_de.html` in a browser and check: one blue button "Anmeldung bestätigen", the confirm URL printed under it, the table with Kurs, Termin, Ort, Trainer, Preis `2.890 €`, Buchungscode, and no name or address anywhere. `git diff --stat internal/mail/testdata` must show only the two `.html` files as new; if a `.txt` golden changed, the templates differ from this plan.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/mail
