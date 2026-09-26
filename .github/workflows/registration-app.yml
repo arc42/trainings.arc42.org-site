@@ -33,3 +33,27 @@ jobs:
           if [ -n "$unformatted" ]; then
             echo "::error::gofmt would rewrite:"; echo "$unformatted"; exit 1
           fi
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-registration-app
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        working-directory: registration-app
+        # A deploy token is scoped to one fly app, so this is a separate
+        # secret from the admin app's FLY_API_TOKEN. Skips cleanly until it
+        # exists, like deploy-admin-app.yml.
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::notice title=Deploy skipped::FLY_REGISTRATION_API_TOKEN is not set."
+            exit 0
+          fi
+          flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_REGISTRATION_API_TOKEN }}

@@ -3367,7 +3367,7 @@ git commit -m "feat(registration): submit, two-step confirm, bilingual error pag
 - Create: `registration-app/main.go`, `registration-app/Dockerfile`, `registration-app/fly.toml`, `registration-app/README.md`
 - Modify: `Makefile` (deploy targets), `.github/workflows/registration-app.yml` (deploy job)
 
-- [ ] **Step 1: Write `main.go`**
+- [x] **Step 1: Write `main.go`**
 
 ```go
 // Command arc42-registration receives the trainings.arc42.org registration
@@ -3439,7 +3439,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 2: Local smoke run against the live feed**
+- [x] **Step 2: Local smoke run against the live feed**
 
 Run in one terminal: `make reg-run`. In another:
 
@@ -3454,7 +3454,7 @@ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" -X POST http://localhos
 
 Expected: both print `303 https://trainings.arc42.org/anmeldung-erfolg/`. The first terminal prints two mails (`(UNBESTÄTIGT)` to `office@example.invalid`, the registrant mail with a `http://localhost:8099/confirm?t=...` link) and, for the second request, `submit: dropped (unknown code 99 FAKE)`. Open the confirm link in a browser: a page with the course and one button; pressing it prints the `(BESTÄTIGT)` mail and redirects to `/anmeldung-bestaetigt/` (a 404 until Task 10 is deployed; that is expected here).
 
-- [ ] **Step 3: Container and fly config**
+- [x] **Step 3: Container and fly config**
 
 `registration-app/Dockerfile`:
 
@@ -3517,7 +3517,7 @@ primary_region = "ams"
   path = "/healthz"
 ```
 
-- [ ] **Step 4: Prove the image works, including the time zone**
+- [x] **Step 4: Prove the image works, including the time zone**
 
 ```bash
 cd registration-app && docker build -t arc42-registration:local . && \
@@ -3527,7 +3527,7 @@ docker run --rm -p 8099:8080 -e MAILER=log -e PUBLIC_URL=http://localhost:8099 \
 
 Expected: `listening on :8080`, no panic (a missing zone database would panic at start in `feed.mustBerlin`). `curl -s localhost:8099/healthz` prints `ok`. Stop with Ctrl-C.
 
-- [ ] **Step 5: Deploy targets and CI deploy job**
+- [x] **Step 5: Deploy targets and CI deploy job**
 
 Add to the registration section of the `Makefile`:
 
@@ -3575,11 +3575,11 @@ Append to `.github/workflows/registration-app.yml`:
           FLY_API_TOKEN: ${{ secrets.FLY_REGISTRATION_API_TOKEN }}
 ```
 
-- [ ] **Step 6: README**
+- [x] **Step 6: README**
 
 `registration-app/README.md`, covering, in this order and briefly: what it does (one paragraph, link to the spec and to `docs/registration-flow/registration-flow.svg`); the four endpoints; the configuration table from spec section 6 plus `PUBLIC_URL` and `MAILER`, marking which are fly secrets and why (`BACKOFFICE_TO` and `TEST_RECIPIENTS` are personal addresses, the repo is public); test mode and the start-up refusal; `make reg-run` / `reg-check` / `reg-deploy` / `reg-logs`; what the log lines mean (`dropped (reason)`, `rejected (reason)`, `accepted`, `confirmed`); rotating `TOKEN_KEY` invalidates open links.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add registration-app Makefile .github/workflows/registration-app.yml

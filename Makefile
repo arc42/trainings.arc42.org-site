@@ -211,3 +211,17 @@ reg-run: check-go ## Run the registration service on :8099; mails are printed, n
 	cd $(REG_DIR) && MAILER=log PORT=8099 PUBLIC_URL=http://localhost:8099 \
 		BACKOFFICE_TO=office@example.invalid ALLOWED_ORIGINS=http://localhost:4260 \
 		TOKEN_KEY=$$(openssl rand -base64 32) go run .
+
+reg-deploy: check-flyctl reg-check ## Deploy the registration service in the CURRENT working tree to fly.io
+	@printf "==> Deploying $(REG_DIR)/ to fly app $(REG_APP)\n"
+	@if [ "$(YES)" != "1" ]; then \
+		printf "==> Type 'deploy' to continue (or YES=1 make reg-deploy): "; \
+		read -r answer; [ "$$answer" = "deploy" ] || { printf "==> aborted\n"; exit 1; }; \
+	fi
+	cd $(REG_DIR) && flyctl deploy --remote-only -a $(REG_APP)
+
+reg-status: check-flyctl ## Show the registration service's machines and health checks
+	cd $(REG_DIR) && flyctl status -a $(REG_APP)
+
+reg-logs: check-flyctl ## Tail the registration service's logs (drops, rejects, sends)
+	cd $(REG_DIR) && flyctl logs -a $(REG_APP)
