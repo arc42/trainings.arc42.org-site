@@ -460,7 +460,7 @@ git commit -m "feat: waitlist cards keep a join button, full cards stop promisin
 **Files:**
 - Modify: `_includes/registration-form.html` (the two status filters at lines 95 and 111, the `langhint`/label capture, the `pricelabel` capture, and the comment block above the counting loop)
 
-- [ ] **Step 1: Widen the bookable filter**
+- [x] **Step 1: Widen the bookable filter**
 
 Replace both occurrences of
 
@@ -476,7 +476,7 @@ with
 
 and in the comment above the counting loop change `(status "open", not past)` to `(status "open" or "waitlist", not past; a waitlist registration goes through the same form and the back office tells the registrant it is a waiting-list place)`.
 
-- [ ] **Step 2: Add the waitlist suffix to the label**
+- [x] **Step 2: Add the waitlist suffix to the label**
 
 Directly after the `{%- capture langhint -%}...{%- endcapture -%}` line, add:
 
@@ -486,7 +486,7 @@ Directly after the `{%- capture langhint -%}...{%- endcapture -%}` line, add:
 
 and at the end of the `<option ...>` label, change `{{ langhint }}</option>` to `{{ langhint }}{{ waithint }}</option>`. Also append it to the summary panel's location line: change the `wherelabel` capture's `{{ langhint }}` to `{{ langhint }}{{ waithint }}`, so the "Your selection" panel says it too.
 
-- [ ] **Step 3: Regular price only in the summary**
+- [x] **Step 3: Regular price only in the summary**
 
 Replace
 
@@ -507,7 +507,7 @@ with
       {%- capture pricelabel -%}{% if d.price.amount %}{% include money.html amount=d.price.amount currency=d.price.currency lang=include.lang %}{% endif %}{%- endcapture -%}
 ```
 
-- [ ] **Step 4: Verify with temporary statuses, then revert**
+- [x] **Step 4: Verify with temporary statuses, then revert**
 
 Temporarily set `msa-mar-2027` (it has an early-bird price) to `status: waitlist` in `_data/trainings.yml`, and `msa-dez-2026` to `status: full`. Then:
 
@@ -529,12 +529,12 @@ Expected:
 
 Then, in a browser against `make dev` (http://localhost:4260/registration/?kurs=msa-dez-2026 with `msa-dez-2026` still set to `full` before reverting): the dropdown stays on the empty option and the summary panel stays hidden. Revert with `git checkout -- _data/trainings.yml` and confirm `git status --short _data/` is empty.
 
-- [ ] **Step 5: Run the link check**
+- [x] **Step 5: Run the link check**
 
 Run: `make check-links`
 Expected: passes as before.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add _includes/registration-form.html

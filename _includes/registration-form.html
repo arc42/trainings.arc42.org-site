@@ -83,7 +83,9 @@ activate JavaScript and reload this page.
   nothing meaningful in it.
 {%- endcomment -%}
 {%- comment -%}
-  Both forms list the SAME set of bookable dates (status "open", not past).
+  Both forms list the SAME set of bookable dates (status "open" or "waitlist", not past; a waitlist registration goes
+  through the same form and the back office tells the registrant it is a
+  waiting-list place).
   A date whose delivery language differs from the form's language is NOT
   hidden — it gets a delivery hint appended to its visible label instead.
   (Hiding them made /registration/ a dead end for 14 of 15 advertised
@@ -92,7 +94,7 @@ activate JavaScript and reload this page.
 {%- assign bookable_count = 0 -%}
 {%- for course in site.data.trainings.courses -%}
   {%- for d in course.dates -%}
-    {%- if d.status != "open" -%}{%- continue -%}{%- endif -%}
+    {%- unless d.status == "open" or d.status == "waitlist" -%}{%- continue -%}{%- endunless -%}
     {%- if d.end < today -%}{%- continue -%}{%- endif -%}
     {%- assign bookable_count = bookable_count | plus: 1 -%}
   {%- endfor -%}
@@ -108,7 +110,7 @@ activate JavaScript and reload this page.
   <option value=""></option>
   {%- for course in site.data.trainings.courses -%}
     {%- for d in course.dates -%}
-      {%- if d.status != "open" -%}{%- continue -%}{%- endif -%}
+      {%- unless d.status == "open" or d.status == "waitlist" -%}{%- continue -%}{%- endunless -%}
       {%- if d.end < today -%}{%- continue -%}{%- endif -%}
       {%- comment -%}
         value = the Formspark booking code, byte-for-byte. Never decorate it.
@@ -123,10 +125,18 @@ activate JavaScript and reload this page.
       {%- endcomment -%}
       {%- capture datelabel -%}{% include training-date-label.html date=d lang=include.lang style="short" %}{%- endcapture -%}
       {%- capture langhint -%}{% if include.lang == "en" and d.language == "de" %} (held in German){% elsif include.lang == "de" and d.language == "en" %} (auf Englisch){% endif %}{%- endcapture -%}
+      {%- capture waithint -%}{% if d.status == "waitlist" %}{% if include.lang == "de" %} (Warteliste){% else %} (waiting list){% endif %}{% endif %}{%- endcapture -%}
       {%- assign trainerlist = d.trainers | default: course.trainers -%}
       {%- if include.lang == "de" -%}{%- assign trainer_join = " und " -%}{%- else -%}{%- assign trainer_join = " and " -%}{%- endif -%}
-      {%- capture wherelabel -%}{% if d.format == "online" %}Online{% else %}{{ d.city }}{% endif %}{{ langhint }}{%- endcapture -%}
-      {%- capture pricelabel -%}{% include price-label.html price=d.price lang=include.lang %}{%- endcapture -%}
+      {%- capture wherelabel -%}{% if d.format == "online" %}Online{% else %}{{ d.city }}{% endif %}{{ langhint }}{{ waithint }}{%- endcapture -%}
+      {%- comment -%}
+        Regular amount only. Early-bird and alumni prices, and the special
+        agreements many clients have, are applied by hand when invoicing
+        (spec 2026-09-25, section 2). price-label.html would state them here
+        and contradict the invoice; money.html states the list price and
+        nothing else. The timeline cards still advertise early bird.
+      {%- endcomment -%}
+      {%- capture pricelabel -%}{% if d.price.amount %}{% include money.html amount=d.price.amount currency=d.price.currency lang=include.lang %}{% endif %}{%- endcapture -%}
       {%- assign pricelabel = pricelabel | strip -%}
       {%- capture creditlabel -%}{% include credits-label.html credits=course.credit_points lang=include.lang %}{%- endcapture -%}
       {%- assign creditlabel = creditlabel | strip -%}
@@ -137,7 +147,7 @@ activate JavaScript and reload this page.
           data-where="{{ wherelabel | strip | escape }}"
           {% if trainerlist %}data-trainers="{{ trainerlist | join: trainer_join | escape }}"{% endif %}
           {% if creditlabel != "" %}data-credits="{{ creditlabel | escape }}"{% endif %}
-          {% if pricelabel != "" %}data-price="{{ pricelabel | escape }}"{% endif %}>{{ course.short_title }}, {{ datelabel }}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{{ langhint }}</option>
+          {% if pricelabel != "" %}data-price="{{ pricelabel | escape }}"{% endif %}>{{ course.short_title }}, {{ datelabel }}{% if d.city %}, {{ d.city }}{% endif %}{% if d.format == "online" %} (online){% endif %}{% if d.trainers %} ({{ d.trainers | join: ", " }}){% endif %}{{ langhint }}{{ waithint }}</option>
     {%- endfor -%}
   {%- endfor -%}
   <option value="sonstige">{% if include.lang == "de" %}Sonstige{% else %}other{% endif %}</option>
