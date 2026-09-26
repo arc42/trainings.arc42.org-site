@@ -45,9 +45,13 @@ registration is only confirmed once the registrant clicks a button reached
 from the confirmation mail.
 
 - The **registrant** gets a mail in the form's language that states course,
-  dates, location, trainers, the price that applies on the day of
-  registration and the booking code, all looked up from the feed, and a link
-  to confirm.
+  dates, location, trainers, the regular price and the booking code, all
+  looked up from the feed, and a link to confirm.
+- **No early bird anywhere in the registration process**, in either language:
+  not in the mails, not in the booking summary on the form. Early-bird
+  prices and the frequent special agreements with clients are applied by hand
+  when invoicing; a price computed by the website would contradict them. The
+  home-page cards keep advertising early-bird prices as before.
 - The **back office** keeps receiving an email, as today, in two stages:
   `UNBESTÄTIGT` at once, `BESTÄTIGT` when the registrant confirms. Rule for the
   back office: book on BESTÄTIGT; after a few days, follow up on an
@@ -96,10 +100,19 @@ Units, each testable alone:
 | `mailjet` | send one message via Mailjet Send API v3.1, sandbox switch, allow-list in test mode | HTTP |
 | `web` | the four handlers and the confirm page | all of the above |
 
-The price and date formatting rules of `_includes/money.html`,
-`price-label.html` and `training-date-label.html` are re-implemented in Go
-(`2.890 €` / `€2,890`, German month names). A golden test renders the same
-dates through both and compares, so the site and the mail cannot drift apart.
+The money and date formatting rules of `_includes/money.html` and
+`training-date-label.html` are re-implemented in Go (`2.890 €` / `€2,890`,
+German month names). A golden test renders the same values through both and
+compares, so the site and the mail cannot drift apart. `price-label.html` is
+deliberately not ported: what it adds over `money.html` is the early-bird
+sentence and the alumni clause, and neither belongs in the mails. The service reads
+`price.amount` and `price.currency` and ignores `price.early_bird`.
+
+**Site change on the form:** the booking summary under the course select
+(`data-price` in `_includes/registration-form.html`) switches from
+`price-label.html` to `money.html` with the regular amount, so the form and
+the mail state the same price. The alumni clause goes with it; alumni terms
+are agreed by hand like early bird.
 
 ## 4. Flow in detail
 
@@ -142,7 +155,8 @@ never used to drop.
 2. **Back office first**, `UNBESTÄTIGT`. Subject
    `[trainings.arc42.org] ANMELDUNG R-7F3KQ 26-12 MSA (UNBESTÄTIGT)`. Body: every
    submitted field under fixed German labels regardless of form language, plus
-   `Sprache`, `via`, `form_source`, the applicable price, and `Hinweise`.
+   `Sprache`, `via`, `form_source` and `Hinweise`. No price: the back office
+   invoices from its own terms.
    Reply-To is the registrant, so answering the mail reaches them.
 3. **Registrant**, in their language. Course facts from the feed only. No
    submitted free text appears: not the name, not the comments, not the
@@ -278,6 +292,3 @@ posting to Formspark.
 
 - Back-office mail in German with fixed labels, regardless of form language.
   Today an English registration arrives with English labels.
-- The price stated in the mail is the one that applies on the registration
-  date (early bird decided by that date). The back office must agree that this
-  is binding.
