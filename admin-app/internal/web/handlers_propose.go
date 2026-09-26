@@ -112,6 +112,16 @@ func phrase(f model.FieldChange) string {
 		}
 		return "no longer short of seats"
 	case "status":
+		switch f.After {
+		case "open":
+			return "open for registration again"
+		case "waitlist":
+			return "fully booked, waiting list"
+		case "full":
+			return "fully booked"
+		case "cancelled":
+			return "cancelled"
+		}
 		return "status " + f.After
 	case "start", "end":
 		return "moved to " + f.After

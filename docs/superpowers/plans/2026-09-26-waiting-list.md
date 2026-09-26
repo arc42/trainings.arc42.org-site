@@ -246,7 +246,7 @@ git commit -m "feat(admin): waitlist dates are registrable, warn only on full an
 - Modify: `admin-app/internal/web/handlers_propose_test.go:196-197`
 - Modify: `admin-app/README.md:88` (the example `status full`)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `handlers_propose_test.go`, replace
 
@@ -266,12 +266,12 @@ with
 			[]Change{statusChange("open")}, "MSA 26-09 MSA-EN: open for registration again"},
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd admin-app && go test ./internal/web -run TestPRTitleNamesTheCourse -v`
 Expected: FAIL, got `status full`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `phrase`, replace `case "status": return "status " + f.After` with:
 
@@ -292,12 +292,12 @@ In `phrase`, replace `case "status": return "status " + f.After` with:
 
 In `admin-app/README.md` line 88, change the example `` `status full` `` to `` `fully booked` ``.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `make app-check`
 Expected: `==> tests, vet and gofmt are clean`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add admin-app
