@@ -91,7 +91,12 @@ frontmatter behaviour (course-default trainers stay baked into the templates).
   {%- assign creditline = creditline | strip -%}
   {%- if creditline == "" -%}{%- assign creditline = nil -%}{%- endif -%}
   {%- assign few_seats = nil -%}
-  {%- if d.seats_limited -%}
+  {%- comment -%}
+    Never on a greyed card: "fully booked" and "only a few seats" contradict
+    each other. The admin app warns about that combination, but a warning can
+    be saved anyway, and a hand edit skips it.
+  {%- endcomment -%}
+  {%- if d.seats_limited and sold_out == false -%}
     {%- if page_lang == "de" -%}
       {%- assign few_seats = "Nur noch wenige Plätze verfügbar" -%}
     {%- else -%}
