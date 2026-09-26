@@ -127,7 +127,7 @@ Checks, in this order. The first failure decides.
 | honeypots `_gotcha` and `company_website` empty | silent drop |
 | rate limit: 5 submissions per IP per hour, in memory | silent drop |
 | required fields present, email syntactically valid | redirect to fail page |
-| `Kurs` is a currently bookable code, or `sonstige` | silent drop |
+| `Kurs` is a currently bookable code (status `open` or `waitlist`, not past), or `sonstige` | silent drop |
 
 "Silent drop" means: log the reason, send no mail, answer with the normal
 redirect to the success page. A bot learns nothing about which check it
@@ -279,7 +279,46 @@ posting to Formspark.
    one revert. Only then do the Formspark ids, the "one form per language"
    sections in CLAUDE.md and README, and the Formspark subscription go.
 
-## 8. Explicitly out of scope
+## 8. Waiting list
+
+The status values `open`, `waitlist`, `full` and `cancelled` already exist in
+`_data/trainings.yml`, the feed schema and the admin app. What was wrong is
+how the site used them: every card template showed `waitlist` **and** `full`
+as "(Ausgebucht, nur noch Warteliste)" / "(sold out, waitlist only)" and hid the
+registration button, and the form listed only `open` dates. So a `full` date
+promised a waiting list that does not exist, and a `waitlist` date promised
+one that nobody could join.
+
+| Status | Card (DE / EN) | Button | In the form |
+|---|---|---|---|
+| `open` | as today | "Anmeldung" / "Register" (as today) | yes |
+| `waitlist` | "Ausgebucht, Warteliste verfügbar" / "Fully booked, waiting list available" | "Auf die Warteliste" / "Join waiting list", same form | yes, label suffix "(Warteliste)" / "(waiting list)" |
+| `full` | "Ausgebucht" / "Fully booked" | none | no |
+| `cancelled` | not shown | none | no |
+
+A waiting-list registration goes through **exactly the same process**:
+same checks, same two back-office mails, same registrant mail, same confirm
+click. The mails say nothing about the waiting list; the back office tells
+the registrant in its personal reply. Keeping the service ignorant of the
+status (beyond "is it bookable") is deliberate.
+
+Status changes are manual, as today. Nothing flips a date to `waitlist` or
+`full`, and nothing removes a full date: some stay up for marketing, others
+are removed in the admin app.
+
+**Admin app:** the status dropdown shows a label next to each value
+(`waitlist: fully booked, waiting list available`, `full: fully booked, no
+waiting list`, ...). The hint and the warning under it still say "the
+registration form on arc42.de"; they are rewritten to match the table above,
+and `waitlist` no longer triggers "nobody can book it". `seats_limited` on a
+`waitlist` date gets the same contradiction warning `full` already gets. PR
+titles describe the change in words ("fully booked, waiting list").
+
+**Rollout:** this part does not depend on the service. It ships first, as
+its own PR, and works with Formspark too: a `waitlist` date simply becomes
+selectable in the current form.
+
+## 9. Explicitly out of scope
 
 - Storing registrations anywhere. The back-office inbox remains the record.
 - Reminder mails for unconfirmed registrations (would need state).
@@ -288,7 +327,7 @@ posting to Formspark.
   server-side in `intake` without touching anything else.
 - arc42.de. Its remaining forms post to Formspark until they are removed.
 
-## 9. Open points for review
+## 10. Open points for review
 
 - Back-office mail in German with fixed labels, regardless of form language.
   Today an English registration arrives with English labels.
