@@ -2781,7 +2781,7 @@ git commit -m "feat(registration): Mailjet sender with tracking off, test-mode a
 - Consumes: everything from Tasks 1 to 7.
 - Produces: `web.Deps{Cfg config.Config; Checker *intake.Checker; Feed intake.Lookuper; Sealer *token.Sealer; Sender send.Sender; NewID func() string; Log *log.Logger}`; `web.New(Deps) *Server`; `(*Server).Routes() http.Handler` with `GET /healthz`, `POST /submit`, `GET /confirm`, `POST /confirm`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/web/web_test.go`:
 
@@ -3021,12 +3021,12 @@ func TestBadTokens(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/web`
 Expected: FAIL, undefined identifiers.
 
-- [ ] **Step 3: Implement the pages**
+- [x] **Step 3: Implement the pages**
 
 `pages/confirm.html`:
 
@@ -3077,7 +3077,7 @@ button{font-size:17px;padding:10px 20px;background:#1f4e79;color:#fff;border:0;b
 </body></html>
 ```
 
-- [ ] **Step 4: Implement the server, submit and confirm handlers**
+- [x] **Step 4: Implement the server, submit and confirm handlers**
 
 `server.go`:
 
@@ -3347,12 +3347,12 @@ func (s *Server) errorPage(w http.ResponseWriter, err error) {
 }
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `make reg-check`
 Expected: `registration service: tests, vet and gofmt are clean`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add registration-app/internal/web
