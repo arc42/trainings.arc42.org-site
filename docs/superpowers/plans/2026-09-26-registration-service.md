@@ -385,7 +385,7 @@ git commit -m "feat(registration): module skeleton, configuration and build plum
 **Interfaces:**
 - Produces: `labels.Money(amount int, currency, lang string) string`, `labels.DateRange(start, end, lang string) string` (long style).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 The expected strings are the site's: check them against the built site before relying on them (`make site`, then `grep -o 'data-date="[^"]*"' _site/anmeldung/index.html` shows the short style; the long style is documented at the top of `_includes/training-date-label.html`, the money style at the top of `_includes/money.html`).
 
@@ -441,12 +441,12 @@ func TestDateRangeMatchesTheSite(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/labels`
 Expected: FAIL, `undefined: Money`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `registration-app/internal/labels/labels.go`:
 
@@ -538,12 +538,12 @@ func DateRange(start, end, lang string) string {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/labels -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/labels
