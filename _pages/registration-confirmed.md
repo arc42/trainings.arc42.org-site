@@ -7,6 +7,8 @@ translation_url: /anmeldung-bestaetigt/
 sitemap: false
 ---
 
+{% include registration-steps.html lang="en" %}
+
 <div class="form-outcome form-outcome--success" markdown="1">
 ### Thank you, your registration is confirmed.
 

@@ -1,0 +1,23 @@
+{%- comment -%}
+  The last frame of the registration progress bar: all three steps done.
+  Steps 1 and 2 are drawn by the registration service on register.arc42.org
+  (registration-app/internal/web/pages/_frame.html, "steps"); after the
+  confirm click the registrant lands here, on the site, so the same bar
+  closes the loop. Keep the labels in step with chromeText in the service's
+  server.go. Usage: {% include registration-steps.html lang="de" %}
+  Variables are prefixed rs_ because includes share the caller's scope.
+{%- endcomment -%}
+{%- if include.lang == "de" -%}
+  {%- assign rs_label = "Fortschritt der Anmeldung" -%}
+  {%- assign rs_steps = "Formular|E-Mail bestätigen|Angemeldet" | split: "|" -%}
+  {%- assign rs_done = "erledigt" -%}
+{%- else -%}
+  {%- assign rs_label = "Registration progress" -%}
+  {%- assign rs_steps = "Form|Confirm e-mail|Registered" | split: "|" -%}
+  {%- assign rs_done = "done" -%}
+{%- endif -%}
+<ol class="reg-steps" aria-label="{{ rs_label }}">
+{%- for rs_step in rs_steps %}
+  <li class="reg-steps__done"{% if forloop.last %} aria-current="step"{% endif %}><span class="reg-steps__mark" aria-hidden="true">✓</span>{{ rs_step }}<span class="visually-hidden"> ({{ rs_done }})</span></li>
+{%- endfor %}
+</ol>
