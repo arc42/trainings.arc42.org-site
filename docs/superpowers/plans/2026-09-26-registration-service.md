@@ -3749,12 +3749,12 @@ git commit -m "feat: confirmed pages, hidden test pages and an endpoint option f
 
 Prerequisites (Gernot, Todoist section "Registration service"): the Mailjet domain, key and curl tasks are done; the fly app exists and its secrets are imported, including `BACKOFFICE_TO` and `TEST_RECIPIENTS`.
 
-- [ ] **Step 1: Deploy**
+- [x] **Step 1: Deploy**
 
 Run: `make reg-deploy` (type `deploy`), then `make reg-status`.
 Expected: one machine, check passing. `curl -s https://arc42-registration.fly.dev/healthz` prints `ok`.
 
-- [ ] **Step 2: Automated cases against the deployed service**
+- [x] **Step 2: Automated cases against the deployed service**
 
 ```bash
 B=https://arc42-registration.fly.dev
@@ -3772,9 +3772,29 @@ curl -s -o /dev/null -w "badtoken %{http_code}\n" "$B/confirm?t=garbage"
 
 Expected: the first three redirect to `.../anmeldung-erfolg/`, `missing` to `.../registration-fail/`, `badtoken 400`. `make reg-logs` shows `dropped (honeypot)`, `dropped (unknown code 99 FAKE)`, `dropped (origin https://evil.example)`, `rejected (required field missing)`, and no send.
 
-- [ ] **Step 3: Rate limit**
+- [x] **Step 3: Rate limit**
 
 Send the `unknown` request six more times from one machine within a minute. Expected: the log shows `dropped (rate limit)` at the latest from the sixth request on. The limiter counts every submission that got past the origin and honeypot checks, so the `unknown` and `missing` requests from Step 2 already count.
+
+**Result, 27 Sep 2026** (deployed from `feat/registration-service` with
+`MAILER=log`, before Mailjet approved the account):
+- fly created two machines on the first deploy ("high availability"). Scaled
+  to **one** (`fly scale count 1`): the rate limit and the per-address cap
+  are in memory, so two machines would each count separately.
+- Step 2 differs from the text above as the service changed after this plan
+  was written: drops answer **200 with the normal sent page**, not a
+  redirect (bots learn nothing). Logged reasons as expected: honeypot,
+  unknown code, origin, control character in code (new), rejected (required
+  field missing), `badtoken 400`.
+- A full registration (R-TZSTX, example.org registrant) was accepted; the
+  back-office mail was logged with `[TEST]` in the subject, the registrant
+  mail was withheld by the allow-list.
+- Step 3: fifth submission processed, sixth and seventh `dropped (rate limit)`.
+- **Open question from the review answered:** a forged `Fly-Client-IP` (and
+  `X-Forwarded-For`) header from a rate-limited client was still dropped,
+  so fly's proxy overwrites it.
+- `register.arc42.org`: CNAME in place, `fly certs add` issued a Let's
+  Encrypt certificate at once, `https://register.arc42.org/healthz` is 200.
 
 - [ ] **Step 4: Hand over**
 
