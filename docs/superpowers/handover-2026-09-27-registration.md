@@ -153,13 +153,14 @@ Rulings (decisions taken without asking, each with its cost if wrong):
 - Out of scope as the spec decided: other feed consumers may still list only
   open dates.
 
-Deferred minors (not fixed, known):
-- 32 KB body cap hit before the character limits for non-Latin text; plain 413.
+Deferred minors. Fixed on 27 Sep 2026 (commit "review leftovers" and admin
+PR #49): the 32 KB body cap (now derived from the field limits), control
+characters in a booking code (dropped), the cancelled feed fetch (detached
+from the request), and the three comment/doc items.
+
+Still open, waiting for Gernot's decision (fix or accept):
 - An extreme name plus address can make a confirm token too long to open.
-- Control characters in a booking code can reach the back-office subject, only while the feed is down.
-- A cancelled request during a feed fetch can skip the code check for 30 s on a cold machine.
 - After a correction, the old confirm link (to the mistyped address) still works; the correction notice mitigates.
-- `timeline_course.html` usage docs lack the three new parameters; a comment in the admin `server.go` overstates where `statusLabel` is used; one badly wrapped comment in `registration-form.html`.
 
 Open decision: a back-office UI for registrations. Recommendation on record:
 not now; if wanted after the observation weeks, a PII-free event log shown in
