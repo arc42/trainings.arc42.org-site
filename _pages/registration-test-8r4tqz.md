@@ -19,4 +19,4 @@ sitemap: false
 **Test page.** This registration goes to the new registration service in test mode. Nothing here is a real booking.
 </div>
 
-{% include registration-form.html lang="en" endpoint="https://arc42-registration.fly.dev/submit" %}
+{% include registration-form.html lang="en" endpoint=site.registration_test_endpoint %}

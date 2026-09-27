@@ -3,7 +3,7 @@
 .PHONY: help dev build stop site check-links check-consumers clean install update shell logs \
         app-test app-check app-build training-app-demo training-app-stop app-preview check-go \
         check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases \
-        reg-test reg-check reg-run reg-deploy reg-status reg-logs
+        reg-test reg-check reg-run reg-demo reg-deploy reg-status reg-logs
 
 # This site's fixed local dev port. Every arc42 site has its own so their dev
 # servers can run side by side; see raw/port-assignment.md in meta.arc42.org.
@@ -211,6 +211,26 @@ reg-run: check-go ## Run the registration service on :8099; mails are printed, n
 	cd $(REG_DIR) && MAILER=log PORT=8099 PUBLIC_URL=http://localhost:8099 \
 		BACKOFFICE_TO=office@example.invalid ALLOWED_ORIGINS=http://localhost:4260 \
 		TOKEN_KEY=$$(openssl rand -base64 32) go run .
+
+reg-demo: check-go ## Try the whole registration flow locally: test form on :4260, mails printed here
+	@# The site runs detached in Docker with _config.regdemo.yml, so its test
+	@# pages post to the service on :8099; the service runs in the foreground,
+	@# printing every mail. Redirects go to the local site, so the success and
+	@# confirmed pages are the ones in this checkout. Nothing is sent anywhere.
+	@docker compose down --remove-orphans >/dev/null 2>&1 || true
+	@docker rm -f trainings-regdemo >/dev/null 2>&1 || true
+	docker compose run -d --name trainings-regdemo --service-ports jekyll \
+		bundle exec jekyll serve --host 0.0.0.0 --port $(SITE_PORT) --force_polling --config _config.yml,_config.regdemo.yml
+	@printf "\n==> Form (DE): http://localhost:$(SITE_PORT)/anmeldung-test-8r4tqz/\n"
+	@printf "==> Form (EN): http://localhost:$(SITE_PORT)/registration-test-8r4tqz/\n"
+	@printf "==> The site needs ~20 s to build. Mails appear below; open the confirm link from there.\n"
+	@printf "==> Ctrl-C stops the service; 'docker rm -f trainings-regdemo' stops the site.\n\n"
+	@# FEED_URL is the local site's feed, so the courses the service accepts are
+	@# exactly the ones this checkout's form offers (the live feed may differ).
+	cd $(REG_DIR) && MAILER=log PORT=8099 PUBLIC_URL=http://localhost:8099 \
+		SITE_URL=http://localhost:$(SITE_PORT) FEED_URL=http://localhost:$(SITE_PORT)/api/trainings.json \
+		BACKOFFICE_TO=office@example.invalid \
+		ALLOWED_ORIGINS=http://localhost:$(SITE_PORT) TOKEN_KEY=$$(openssl rand -base64 32) go run .
 
 reg-deploy: check-flyctl reg-check ## Deploy the registration service in the CURRENT working tree to fly.io
 	@printf "==> Deploying $(REG_DIR)/ to fly app $(REG_APP)\n"

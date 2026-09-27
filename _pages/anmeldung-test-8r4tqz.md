@@ -20,4 +20,4 @@ sitemap: false
 **Testseite.** Diese Anmeldung geht an den neuen Anmeldedienst im Testmodus. Nichts davon ist eine echte Buchung.
 </div>
 
-{% include registration-form.html lang="de" endpoint="https://arc42-registration.fly.dev/submit" %}
+{% include registration-form.html lang="de" endpoint=site.registration_test_endpoint %}
