@@ -23,7 +23,19 @@ type Claims struct {
 	LastName string `json:"n"`
 	Lang     string `json:"l"`
 	Issued   int64  `json:"t"` // unix seconds
+	// Purpose separates the two kinds of token. The confirm link in the
+	// mail carries PurposeConfirm; the page shown after submitting carries
+	// PurposeCorrect so the person can fix a mistyped address. A correction
+	// token must never confirm: it is on a page a bot sees, the confirm
+	// link is only in the mailbox.
+	Purpose     string `json:"p,omitempty"`
+	Corrections int    `json:"k,omitempty"` // how often the address was corrected
 }
+
+const (
+	PurposeConfirm = "confirm"
+	PurposeCorrect = "correct"
+)
 
 var (
 	ErrInvalid = errors.New("token: invalid")

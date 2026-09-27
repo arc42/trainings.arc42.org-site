@@ -183,6 +183,18 @@ func Confirmed(c token.Claims) (Rendered, error) {
 	return Rendered{Subject: backofficeSubject(l, c.ID, c.Code, status), Text: t.String()}, nil
 }
 
+// Corrected tells the back office that the registrant fixed their address on
+// the page after submitting. The confirmation went to the new address.
+func Corrected(c token.Claims, oldEmail string) (Rendered, error) {
+	l := lang(c.Lang)
+	status := map[string]string{"de": "E-MAIL KORRIGIERT", "en": "EMAIL CORRECTED"}[l]
+	var t bytes.Buffer
+	if err := textT.ExecuteTemplate(&t, "corrected_"+l+".txt", map[string]any{"C": c, "Old": oldEmail}); err != nil {
+		return Rendered{}, err
+	}
+	return Rendered{Subject: backofficeSubject(l, c.ID, c.Code, status), Text: t.String()}, nil
+}
+
 // Both back-office subjects differ only in the status tag, so mail clients
 // thread them and a filter can match the tag.
 func backofficeSubject(l, id, code, status string) string {

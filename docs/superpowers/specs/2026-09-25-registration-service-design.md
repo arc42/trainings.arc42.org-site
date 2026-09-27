@@ -178,8 +178,11 @@ never used to drop.
    fail page: the registration did not reach anyone and the person must know.
    If only the registrant mail fails, redirect to success anyway: the back
    office has it and will follow up.
-5. Redirect (303) to `/anmeldung-erfolg/` or `/registration-success/`, whose
-   text changes to "please check your inbox and confirm".
+5. The service answers with its own page (not a redirect to the site), in
+   the form's language: "Wir haben eine E-Mail an **<address>** geschickt",
+   with a form to correct the address (section 4.6). The address is shown
+   only on this page, never in a URL, because URLs reach logs and analytics.
+   A dropped submission gets exactly the same page.
 
 ### 4.3 Token
 
@@ -214,6 +217,32 @@ site.
 Expired, tampered or unreadable token: a page saying so, with a mailto link to
 info@arc42.de. A double confirm sends `BESTÄTIGT` twice; without state that
 cannot be detected, and a duplicate is harmless.
+
+### 4.6 Correcting a mistyped address
+
+Added in review on 2026-09-27. Most typos are noticed the moment the address
+is shown back, so the page after submitting shows it and offers one field to
+correct it.
+
+- The page carries a sealed token with purpose `correct` (same fields as the
+  confirm token, plus a correction count). `POST /correct` with that token and
+  a new address sends the registrant mail to the new address and a short
+  back-office mail `... (E-MAIL KORRIGIERT)` / `(EMAIL CORRECTED)` with old and
+  new address, same registration id. The BESTÄTIGT mail then carries the
+  corrected address.
+- A correction token can never confirm, and a confirm token can never
+  correct: the correction token is on a page a bot sees, the confirm link is
+  only in the mailbox.
+- At most two corrections; after that the page names info@arc42.de and shows
+  no form. The per-IP limit and the 3-per-address-and-day cap apply.
+- A dropped submission gets the same page and a correction form that sends
+  nothing, so a bot cannot tell a drop from an accept.
+- Showing the typed address leaks nothing: the browser sent it seconds
+  before. Whether an address exists is not known at this point anyway; a
+  bounce reaches Mailjet minutes later.
+- Rejected in review: a second "repeat your e-mail" field (copy and paste
+  defeats it, friction for everyone) and typo suggestions while typing
+  ("gmial.com").
 
 ### 4.5 Feed cache
 

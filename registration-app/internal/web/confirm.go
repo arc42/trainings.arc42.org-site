@@ -25,6 +25,9 @@ var confirmText = map[string]map[string]string{
 func (s *Server) handleConfirmPage(w http.ResponseWriter, r *http.Request) {
 	tok := r.URL.Query().Get("t")
 	c, err := s.d.Sealer.Open(tok)
+	if err == nil && c.Purpose != token.PurposeConfirm {
+		err = token.ErrInvalid
+	}
 	if err != nil {
 		s.errorPage(w, err)
 		return
@@ -50,6 +53,9 @@ func (s *Server) handleConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c, err := s.d.Sealer.Open(r.PostForm.Get("t"))
+	if err == nil && c.Purpose != token.PurposeConfirm {
+		err = token.ErrInvalid
+	}
 	if err != nil {
 		s.errorPage(w, err)
 		return

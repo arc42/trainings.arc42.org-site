@@ -23,9 +23,10 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	reg := dec.Reg
 	switch dec.Outcome {
 	case intake.Drop:
-		// A bot learns nothing about which check it tripped.
+		// A bot learns nothing about which check it tripped: it gets the same
+		// page a person gets, with a correction form that sends nothing.
 		s.d.Log.Printf("submit: dropped (%s)", dec.Reason)
-		s.redirect(w, r, "success", reg.Lang)
+		s.sentPage(w, token.Claims{Lang: reg.Lang}, firstTyped(reg.Email), false)
 		return
 	case intake.Reject:
 		s.d.Log.Printf("submit: rejected (%s)", dec.Reason)
@@ -58,12 +59,15 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 
 	// The registrant mail. If it fails the back office already has the
 	// registration and follows up, so the person still sees success.
+	claims := token.Claims{ID: reg.ID, Code: reg.Code, Email: reg.Emails[0], LastName: reg.LastName, Lang: reg.Lang}
 	if !mailRegistrant {
 		s.d.Log.Printf("submit %s: accepted %s (%s), registrant mail withheld (per-address cap) hints=%v", reg.ID, reg.Code, reg.Lang, dec.Hints)
-		s.redirect(w, r, "success", reg.Lang)
+		s.sentPage(w, claims, reg.Emails[0], false)
 		return
 	}
-	tok, err := s.d.Sealer.Seal(token.Claims{ID: reg.ID, Code: reg.Code, Email: reg.Emails[0], LastName: reg.LastName, Lang: reg.Lang})
+	confirm := claims
+	confirm.Purpose = token.PurposeConfirm
+	tok, err := s.d.Sealer.Seal(confirm)
 	if err == nil {
 		confirmURL := s.d.Cfg.PublicURL + "/confirm?t=" + url.QueryEscape(tok)
 		var rm mail.Rendered
@@ -76,5 +80,5 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	} else {
 		s.d.Log.Printf("submit %s: accepted %s (%s) hints=%v", reg.ID, reg.Code, reg.Lang, dec.Hints)
 	}
-	s.redirect(w, r, "success", reg.Lang)
+	s.sentPage(w, claims, reg.Emails[0], false)
 }

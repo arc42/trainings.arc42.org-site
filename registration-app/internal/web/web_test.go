@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -106,9 +107,7 @@ var linkRe = regexp.MustCompile(`https://register\.example(/confirm\?t=[A-Za-z0-
 func TestTheWholeFlowInGerman(t *testing.T) {
 	e := newEnv(t)
 	rec := e.post("/submit", form("de"))
-	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-erfolg/" {
-		t.Fatalf("submit: %d %q", rec.Code, rec.Header().Get("Location"))
-	}
+	sentPage(t, rec, "anna@example.org", "Fast geschafft")
 	if len(e.sender.got) != 2 {
 		t.Fatalf("sent %d mails, want back office + registrant", len(e.sender.got))
 	}
@@ -153,9 +152,7 @@ func TestTheWholeFlowInGerman(t *testing.T) {
 func TestEnglishRedirectsAndSubjects(t *testing.T) {
 	e := newEnv(t)
 	rec := e.post("/submit", form("en"))
-	if rec.Header().Get("Location") != "https://trainings.arc42.org/registration-success/" {
-		t.Errorf("Location = %q", rec.Header().Get("Location"))
-	}
+	sentPage(t, rec, "anna@example.org", "Almost done")
 	if !strings.HasSuffix(e.sender.got[0].Subject, "(UNCONFIRMED)") || !strings.Contains(e.sender.got[1].Text, "€2,890") {
 		t.Errorf("mails = %+v", e.sender.got)
 	}
@@ -166,8 +163,10 @@ func TestDropsLookLikeSuccessAndSendNothing(t *testing.T) {
 	f := form("de")
 	f.Set("_gotcha", "bot")
 	rec := e.post("/submit", f)
-	if rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-erfolg/" || len(e.sender.got) != 0 {
-		t.Errorf("honeypot: %q, %d mails", rec.Header().Get("Location"), len(e.sender.got))
+	// A bot gets exactly the page a person gets, correction form included.
+	sentPage(t, rec, "anna@example.org", "Fast geschafft")
+	if len(e.sender.got) != 0 {
+		t.Errorf("honeypot: %d mails", len(e.sender.got))
 	}
 	if !strings.Contains(e.logs.String(), "honeypot") {
 		t.Error("drop reason not logged")
@@ -200,8 +199,9 @@ func TestRegistrantFailureIsStillSuccess(t *testing.T) {
 		return nil
 	}
 	rec := e.post("/submit", form("de"))
-	if rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-erfolg/" || len(e.sender.got) != 1 {
-		t.Errorf("Location = %q, mails = %d", rec.Header().Get("Location"), len(e.sender.got))
+	sentPage(t, rec, "anna@example.org", "Fast geschafft")
+	if len(e.sender.got) != 1 {
+		t.Errorf("mails = %d", len(e.sender.got))
 	}
 }
 
@@ -267,5 +267,126 @@ func TestRootSaysWhatThisIs(t *testing.T) {
 	}
 	if rec := e.get("/nope"); rec.Code != http.StatusNotFound {
 		t.Errorf("GET /nope = %d, want 404", rec.Code)
+	}
+}
+
+// sentPage asserts the page shown after a submission: the address the person
+// typed, and a form to correct it.
+func sentPage(t *testing.T, rec *httptest.ResponseRecorder, email, title string) string {
+	t.Helper()
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK || !strings.Contains(body, title) || !strings.Contains(body, email) || !strings.Contains(body, `action="/correct"`) {
+		t.Fatalf("sent page: %d, want %q with %q and a correction form:\n%s", rec.Code, title, email, body)
+	}
+	if rec.Header().Get("Referrer-Policy") != "no-referrer" || rec.Header().Get("Cache-Control") != "no-store" {
+		t.Error("sent page carries a token and must not be cached or leak it")
+	}
+	return body
+}
+
+var correctionTokenRe = regexp.MustCompile(`action="/correct"[\s\S]*?name="t" value="([^"]+)"`)
+
+func correctionToken(t *testing.T, body string) string {
+	t.Helper()
+	m := correctionTokenRe.FindStringSubmatch(body)
+	if m == nil {
+		t.Fatalf("no correction token in:\n%s", body)
+	}
+	return html.UnescapeString(m[1])
+}
+
+func mailsTo(e *env, addr string) []send.Message {
+	var out []send.Message
+	for _, m := range e.sender.got {
+		if m.To[0] == addr {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// Typo in the address: the person corrects it on the page, the confirmation
+// goes to the new address, the back office learns about it, and the
+// confirmed mail carries the corrected address.
+func TestCorrectingTheAddressResendsTheConfirmation(t *testing.T) {
+	e := newEnv(t)
+	body := sentPage(t, e.post("/submit", form("de")), "anna@example.org", "Fast geschafft")
+	rec := e.post("/correct", url.Values{"t": {correctionToken(t, body)}, "email": {"anna@example.com"}})
+	sentPage(t, rec, "anna@example.com", "Fast geschafft")
+
+	toNew := mailsTo(e, "anna@example.com")
+	if len(toNew) != 1 || !strings.Contains(toNew[0].Text, "2.890 €") {
+		t.Fatalf("mails to the corrected address: %+v", toNew)
+	}
+	office := mailsTo(e, "office@example.org")
+	last := office[len(office)-1]
+	if !strings.Contains(last.Subject, "R-TEST1") || !strings.HasSuffix(last.Subject, "(E-MAIL KORRIGIERT)") ||
+		!strings.Contains(last.Text, "anna@example.org") || !strings.Contains(last.Text, "anna@example.com") {
+		t.Errorf("back-office correction notice: %q\n%s", last.Subject, last.Text)
+	}
+
+	link := linkRe.FindStringSubmatch(toNew[0].Text)
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
+	e.post("/confirm", url.Values{"t": {tok}})
+	conf := e.sender.got[len(e.sender.got)-1]
+	if !strings.HasSuffix(conf.Subject, "(BESTÄTIGT)") || !strings.Contains(conf.Text, "anna@example.com") {
+		t.Errorf("confirmed mail does not carry the corrected address:\n%s", conf.Text)
+	}
+}
+
+// The token on the page is for correcting only. If it could confirm, a bot
+// would confirm fakes without ever seeing the confirmation mail.
+func TestTheCorrectionTokenCannotConfirm(t *testing.T) {
+	e := newEnv(t)
+	body := sentPage(t, e.post("/submit", form("de")), "anna@example.org", "Fast geschafft")
+	before := len(e.sender.got)
+	rec := e.post("/confirm", url.Values{"t": {correctionToken(t, body)}})
+	if rec.Code != http.StatusBadRequest || len(e.sender.got) != before {
+		t.Errorf("confirm with a correction token: %d, %d new mails", rec.Code, len(e.sender.got)-before)
+	}
+	// And the other way round.
+	link := linkRe.FindStringSubmatch(mailsTo(e, "anna@example.org")[0].Text)
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
+	if rec := e.post("/correct", url.Values{"t": {tok}, "email": {"x@example.com"}}); rec.Code != http.StatusBadRequest {
+		t.Errorf("correct with a confirm token: %d", rec.Code)
+	}
+}
+
+func TestAtMostTwoCorrections(t *testing.T) {
+	e := newEnv(t)
+	body := sentPage(t, e.post("/submit", form("de")), "anna@example.org", "Fast geschafft")
+	body = sentPage(t, e.post("/correct", url.Values{"t": {correctionToken(t, body)}, "email": {"a1@example.com"}}), "a1@example.com", "Fast geschafft")
+	rec := e.post("/correct", url.Values{"t": {correctionToken(t, body)}, "email": {"a2@example.com"}})
+	// After the second correction the page names the address and offers no
+	// further form, only a human.
+	last := rec.Body.String()
+	if !strings.Contains(last, "a2@example.com") || strings.Contains(last, `action="/correct"`) || !strings.Contains(last, "info@arc42.de") {
+		t.Errorf("after two corrections:\n%s", last)
+	}
+	if len(mailsTo(e, "a1@example.com")) != 1 || len(mailsTo(e, "a2@example.com")) != 1 {
+		t.Errorf("each corrected address should get exactly one mail")
+	}
+}
+
+func TestAnInvalidCorrectionIsShownNotSent(t *testing.T) {
+	e := newEnv(t)
+	body := sentPage(t, e.post("/submit", form("en")), "anna@example.org", "Almost done")
+	before := len(e.sender.got)
+	rec := e.post("/correct", url.Values{"t": {correctionToken(t, body)}, "email": {"anna@localhost"}})
+	if len(e.sender.got) != before || !strings.Contains(rec.Body.String(), "does not look like") {
+		t.Errorf("invalid correction: %d new mails, body:\n%s", len(e.sender.got)-before, rec.Body.String())
+	}
+}
+
+// A dropped submission gets the same page and a working-looking correction;
+// correcting it sends nothing, and the bot cannot tell.
+func TestCorrectingADroppedSubmissionSendsNothing(t *testing.T) {
+	e := newEnv(t)
+	f := form("de")
+	f.Set("_gotcha", "bot")
+	body := sentPage(t, e.post("/submit", f), "anna@example.org", "Fast geschafft")
+	sentPage(t, e.post("/correct", url.Values{"t": {correctionToken(t, body)}, "email": {"victim@example.com"}}), "victim@example.com", "Fast geschafft")
+	if len(e.sender.got) != 0 {
+		t.Errorf("a dropped submission sent %d mails after correction", len(e.sender.got))
 	}
 }

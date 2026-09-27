@@ -55,6 +55,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /submit", s.handleSubmit)
 	mux.HandleFunc("GET /confirm", s.handleConfirmPage)
 	mux.HandleFunc("POST /confirm", s.handleConfirm)
+	mux.HandleFunc("POST /correct", s.handleCorrect)
 	return mux
 }
 

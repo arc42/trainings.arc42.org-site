@@ -1,0 +1,7 @@
+Registration {{.C.ID}}: the registrant corrected the e-mail address.
+
+Old:   {{.Old}}
+New:   {{.C.Email}}
+
+The confirmation request went to the new address. All other details are in
+the mail "REGISTRATION {{.C.ID}} ... (UNCONFIRMED)".

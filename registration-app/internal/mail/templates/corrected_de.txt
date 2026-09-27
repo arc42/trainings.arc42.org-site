@@ -1,0 +1,7 @@
+Anmeldung {{.C.ID}}: die E-Mail-Adresse wurde vom Anmeldenden korrigiert.
+
+Alt:   {{.Old}}
+Neu:   {{.C.Email}}
+
+Die Bitte um Bestätigung ging an die neue Adresse. Alle übrigen Angaben stehen
+in der Mail "ANMELDUNG {{.C.ID}} ... (UNBESTÄTIGT)".

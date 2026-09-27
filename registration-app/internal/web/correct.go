@@ -1,0 +1,140 @@
+package web
+
+import (
+	"net/http"
+	"net/url"
+	"strings"
+
+	"arc42-registration/internal/intake"
+	"arc42-registration/internal/mail"
+	"arc42-registration/internal/send"
+	"arc42-registration/internal/token"
+)
+
+// maxCorrections: two chances to fix a typo. After that the page points to
+// info@arc42.de; a person who needs a third try is better helped by a human,
+// and a bot gets no further address to mail.
+const maxCorrections = 2
+
+var sentText = map[string]map[string]string{
+	"de": {
+		"Title":     "Fast geschafft: bitte bestätigen Sie Ihre Anmeldung",
+		"Sent":      "Wir haben eine E-Mail an",
+		"SentTail":  "geschickt. Ihre Anmeldung ist erst vollständig, wenn Sie den Link darin öffnen und bestätigen. Der Link ist 5 Tage gültig.",
+		"NoMail":    "Keine Mail da? Sehen Sie bitte auch im Spam-Ordner nach.",
+		"Wrong":     "Adresse falsch geschrieben? Tragen Sie die richtige ein, wir schicken die E-Mail dann dorthin:",
+		"Button":    "An diese Adresse schicken",
+		"Invalid":   "Das sieht nicht nach einer gültigen E-Mail-Adresse aus.",
+		"Exhausted": "Die Adresse lässt sich hier nicht mehr ändern. Schreiben Sie uns bitte an",
+		"Back":      "Zurück zu den Terminen",
+	},
+	"en": {
+		"Title":     "Almost done: please confirm your registration",
+		"Sent":      "We have sent an e-mail to",
+		"SentTail":  ". Your registration is only complete once you open the link in it and confirm. The link is valid for 5 days.",
+		"NoMail":    "No mail? Please also check your spam folder.",
+		"Wrong":     "Address mistyped? Enter the correct one and we will send the e-mail there:",
+		"Button":    "Send to this address",
+		"Invalid":   "That does not look like a valid e-mail address.",
+		"Exhausted": "The address cannot be changed here any more. Please write to us at",
+		"Back":      "Back to the training dates",
+	},
+}
+
+// sentPage is shown after every accepted AND every dropped submission, so a
+// bot cannot tell the two apart. c is the correction token's content.
+func (s *Server) sentPage(w http.ResponseWriter, c token.Claims, email string, invalid bool) {
+	l := c.Lang
+	if l != "en" {
+		l = "de"
+	}
+	c.Purpose = token.PurposeCorrect
+	tok, err := s.d.Sealer.Seal(c)
+	if err != nil {
+		s.errorPage(w, err)
+		return
+	}
+	back := s.d.Cfg.SiteURL + map[string]string{"de": "/de/#training-dates", "en": "/#training-dates"}[l]
+	noStore(w)
+	_ = pages.ExecuteTemplate(w, "sent.html", map[string]any{
+		"Lang": l, "T": sentText[l], "Email": email, "Token": tok, "Back": back,
+		"Invalid": invalid, "Exhausted": c.Corrections >= maxCorrections,
+	})
+}
+
+func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 8192)
+	if err := r.ParseForm(); err != nil {
+		s.errorPage(w, token.ErrInvalid)
+		return
+	}
+	c, err := s.d.Sealer.Open(r.PostForm.Get("t"))
+	if err == nil && c.Purpose != token.PurposeCorrect {
+		err = token.ErrInvalid
+	}
+	if err != nil {
+		s.errorPage(w, err)
+		return
+	}
+	if c.Corrections >= maxCorrections {
+		s.sentPage(w, c, c.Email, false)
+		return
+	}
+	newEmail, ok := intake.ParseAddress(r.PostForm.Get("email"))
+	if !ok {
+		s.sentPage(w, c, c.Email, true)
+		return
+	}
+	old := c.Email
+	c.Email, c.Corrections = newEmail, c.Corrections+1
+
+	// A dropped submission (no id) and a limited client get the same page and
+	// no mail, so neither learns anything.
+	if c.ID == "" {
+		s.sentPage(w, c, newEmail, false)
+		return
+	}
+	if s.d.Checker != nil && s.d.Checker.Limiter != nil && !s.d.Checker.Limiter.Allow(intake.IPKey(clientIP(r))) {
+		s.d.Log.Printf("correct %s: dropped (rate limit)", c.ID)
+		s.sentPage(w, c, newEmail, false)
+		return
+	}
+	if s.d.RecipientLimiter != nil && !s.d.RecipientLimiter.Allow(newEmail) {
+		s.d.Log.Printf("correct %s: registrant mail withheld (per-address cap)", c.ID)
+		s.sentPage(w, c, newEmail, false)
+		return
+	}
+
+	var facts *mail.Facts
+	if c.Code != intake.Other {
+		if e, _ := s.d.Feed.Lookup(r.Context(), c.Code); e.Code != "" {
+			facts = mail.FactsFor(e, c.Lang)
+		}
+	}
+	confirm := c
+	confirm.Purpose = token.PurposeConfirm
+	tok, err := s.d.Sealer.Seal(confirm)
+	if err == nil {
+		var rm mail.Rendered
+		if rm, err = mail.Registrant(c.Lang, facts, c.Code == intake.Other, s.d.Cfg.PublicURL+"/confirm?t="+url.QueryEscape(tok)); err == nil {
+			err = s.send(r.Context(), send.Message{To: []string{newEmail}, ReplyTo: s.d.Cfg.ReplyTo, Subject: rm.Subject, Text: rm.Text, HTML: rm.HTML, CustomID: c.ID})
+		}
+	}
+	if err != nil {
+		s.d.Log.Printf("correct %s: registrant mail failed: %v", c.ID, err)
+	}
+	if m, err := mail.Corrected(c, old); err == nil {
+		if err := s.send(r.Context(), send.Message{To: []string{s.d.Cfg.BackofficeTo}, ReplyTo: newEmail, Subject: m.Subject, Text: m.Text, CustomID: c.ID}); err != nil {
+			s.d.Log.Printf("correct %s: back-office notice failed: %v", c.ID, err)
+		}
+	}
+	s.d.Log.Printf("correct %s: address corrected (%d of %d)", c.ID, c.Corrections, maxCorrections)
+	s.sentPage(w, c, newEmail, false)
+}
+
+// firstTyped is what the person typed into the email field, first address
+// only, for the page shown after a dropped submission.
+func firstTyped(s string) string {
+	first, _, _ := strings.Cut(s, ",")
+	return strings.TrimSpace(first)
+}

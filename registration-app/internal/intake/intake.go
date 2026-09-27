@@ -193,6 +193,19 @@ func parseEmails(s string) ([]string, bool) {
 	return out, len(out) > 0
 }
 
+// IPKey exposes ipKey for the correction endpoint, which shares the limiter.
+func IPKey(ip string) string { return ipKey(ip) }
+
+// ParseAddress accepts exactly one bare address, by the same rules as the
+// form's email field. It returns it lower-cased.
+func ParseAddress(s string) (string, bool) {
+	emails, ok := parseEmails(strings.TrimSpace(s))
+	if !ok || len(emails) != 1 {
+		return "", false
+	}
+	return emails[0], true
+}
+
 // ipKey is the rate-limit key for a client address: the address itself for
 // IPv4, its /64 prefix for IPv6, because one IPv6 client typically controls a
 // whole /64.
