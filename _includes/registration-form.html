@@ -60,13 +60,19 @@ activate JavaScript and reload this page.
   service accepts POST only, and the production Formspark form keeps its
   exact current attributes. rf_ prefix: includes share the caller's scope.
 {%- endcomment -%}
-{%- if include.endpoint -%}
-  {%- assign rf_action = include.endpoint -%}
+{%- comment -%}
+  site.registration_endpoint (empty in _config.yml) does the same for every
+  form on a site built with it: `make reg-demo` sets it, so no page of the
+  local demo can post to the real Formspark by accident.
+{%- endcomment -%}
+{%- assign rf_endpoint = include.endpoint | default: site.registration_endpoint -%}
+{%- if rf_endpoint -%}
+  {%- assign rf_action = rf_endpoint -%}
 {%- else -%}
   {%- capture rf_action -%}https://submit-form.com/{{ formspark_id }}{%- endcapture -%}
 {%- endif -%}
 <form action="{{ rf_action }}"
-      {% if include.endpoint %}method="post"{% else %}data-botpoison-public-key="{{ botpoison_key }}"{% endif %}
+      {% if rf_endpoint %}method="post"{% else %}data-botpoison-public-key="{{ botpoison_key }}"{% endif %}
       class="registration-form"
       id="arc42anmeldung">
 

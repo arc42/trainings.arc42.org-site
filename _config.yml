@@ -60,6 +60,9 @@ include:
 # the registration service in test mode. `make reg-demo` overrides it with
 # _config.regdemo.yml to try the whole flow on this machine.
 registration_test_endpoint: https://arc42-registration.fly.dev/submit
+# Where ALL registration forms post. Empty: Formspark (production until the
+# go-live). `make reg-demo` sets it so the local demo never reaches Formspark.
+registration_endpoint:
 
 exclude:
   - "*.sublime-project"
