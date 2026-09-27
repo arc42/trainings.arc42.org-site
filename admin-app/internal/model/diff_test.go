@@ -16,7 +16,7 @@ func aDate() Date {
 	}
 }
 
-// The change this whole report exists for: one checkbox, one row.
+// The change this whole report exists for: one choice, one row.
 func TestMarkingFewSeatsIsOneRow(t *testing.T) {
 	before := aDate()
 	after := before
@@ -26,7 +26,24 @@ func TestMarkingFewSeatsIsOneRow(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("got %d rows, want 1: %+v", len(got), got)
 	}
-	if got[0].Key != "seats_limited" || got[0].Before != "no" || got[0].After != "yes" {
+	if got[0].Key != "availability" || got[0].Before != "open" || got[0].After != "few seats" {
+		t.Errorf("row = %+v", got[0])
+	}
+}
+
+// Going from "few seats" to "waitlist" changes both stored fields, but it is
+// one decision, so it is one row and not "status and few seats left changed".
+func TestFewSeatsToWaitlistIsOneRow(t *testing.T) {
+	before := aDate()
+	before.SeatsLimited = true
+	after := aDate()
+	after.Status = "waitlist"
+
+	got := DiffDates(before, after)
+	if len(got) != 1 {
+		t.Fatalf("got %d rows, want 1: %+v", len(got), got)
+	}
+	if got[0].Key != "availability" || got[0].Before != "few seats" || got[0].After != "waitlist" {
 		t.Errorf("row = %+v", got[0])
 	}
 }
@@ -102,7 +119,7 @@ func TestValuesAreRenderedForPeople(t *testing.T) {
 	for _, c := range []struct{ key, before, after string }{
 		{"language", "English", "German"},
 		{"city", NoValue, "Köln"},
-		{"status", "open", "full"},
+		{"availability", "open", "full"},
 	} {
 		got, ok := byKey[c.key]
 		if !ok {

@@ -341,7 +341,7 @@ func TestSaveDateMarksDraftDirty(t *testing.T) {
 		// no "url": the form derives it from the id. status != open raises a
 		// warning, which this test acknowledges — it is about the draft, not
 		// the warning gate (TestWarningsGateTheFirstSaveThenLetItThrough).
-		"status": {"full"}, "confirm_warnings": {"1"},
+		"availability": {"full"}, "confirm_warnings": {"1"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -367,7 +367,7 @@ func TestSaveNewDateDerivesEmptyIdentifiers(t *testing.T) {
 	form := url.Values{
 		"course_id": {"msa"}, "id": {""}, "code": {""},
 		"start": {"2026-03-03"}, "end": {"2026-03-04"},
-		"language": {"en"}, "format": {"online"}, "status": {"open"},
+		"language": {"en"}, "format": {"online"}, "availability": {"open"},
 		"confirm_warnings": {"1"},
 	}
 	rec := httptest.NewRecorder()
@@ -411,7 +411,7 @@ func TestSaveRejectsInvalidDate(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-05"}, "end": {"2026-01-02"}, // end before start
 		"city": {"München"}, "language": {"de"}, "format": {"public"},
-		"status": {"open"},
+		"availability": {"open"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -539,12 +539,18 @@ func TestNewDateFormRendersCompletely(t *testing.T) {
 	// save, which TestSaveDerivesTheRegistrationURL covers.
 	for _, field := range []string{
 		`name="id"`, `name="code"`, `name="start"`, `name="end"`,
-		`name="format"`, `name="language"`, `name="status"`,
+		`name="format"`, `name="language"`, `name="availability"`,
 		`name="price_amount"`, `name="price_alumni"`, `name="early_bird_until"`,
-		`name="seats_limited"`,
 	} {
 		if !strings.Contains(body, field) {
 			t.Errorf("form is missing %s — rendering stopped early", field)
+		}
+	}
+	// Status and seats are one choice now; a second control for the seats is
+	// what let "fully booked" and "few seats left" land on the same date.
+	for _, gone := range []string{`name="status"`, `name="seats_limited"`} {
+		if strings.Contains(body, gone) {
+			t.Errorf("form still has %s", gone)
 		}
 	}
 	if !strings.Contains(body, "</form>") {
@@ -661,7 +667,7 @@ func TestExistingTrainerNamesArePreserved(t *testing.T) {
 	req := signedIn(t, s, http.MethodPost, "/dates/msa-a", url.Values{
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
-		"language": {"de"}, "format": {"public"}, "status": {"open"},
+		"language": {"de"}, "format": {"public"}, "availability": {"open"},
 		"trainers_other": {"Peter Hruschka"},
 	})
 	s.Routes().ServeHTTP(httptest.NewRecorder(), req)
@@ -864,7 +870,7 @@ func TestSaveDerivesTheRegistrationURL(t *testing.T) {
 	form := url.Values{
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
-		"country": {"DE"}, "language": {"de"}, "format": {"public"}, "status": {"open"},
+		"country": {"DE"}, "language": {"de"}, "format": {"public"}, "availability": {"open"},
 	} // note: no "url" key at all
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -933,7 +939,7 @@ func TestWarningsGateTheFirstSaveThenLetItThrough(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"status": {"full"}, // hides the date from the registration form
+		"availability": {"full"}, // hides the date from the registration form
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -974,7 +980,7 @@ func TestConfirmingWarningsDoesNotBypassErrors(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-05"}, "end": {"2026-01-02"}, // end before start
 		"city": {"München"}, "language": {"de"}, "format": {"public"},
-		"status": {"open"}, "confirm_warnings": {"1"},
+		"availability": {"open"}, "confirm_warnings": {"1"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -1082,7 +1088,7 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 		{"/dates/new", []string{
 			"course-hint", "id-hint", "code-hint", "start-hint", "end-hint",
 			"format-hint", "city-hint", "country-hint", "language-hint",
-			"status-hint", "price-hint", "alumni-hint", "currency-hint", "eb-hint", "ebu-hint",
+			"availability-hint", "price-hint", "alumni-hint", "currency-hint", "eb-hint", "ebu-hint",
 		}},
 		{"/courses/new", []string{
 			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-hint",

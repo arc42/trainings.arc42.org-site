@@ -18,7 +18,7 @@ func dirtyServer(t *testing.T, apiBase string) *Server {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"status":           {"full"}, // status != open warns; this test is about the draft
+		"availability":     {"full"}, // status != open warns; this test is about the draft
 		"confirm_warnings": {"1"},
 	}
 	s.Routes().ServeHTTP(httptest.NewRecorder(),
@@ -53,7 +53,7 @@ func TestProposeShowsAReadableReport(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"status": {"open"}, "seats_limited": {"on"}, "confirm_warnings": {"1"},
+		"availability": {"few seats"}, "confirm_warnings": {"1"},
 	}
 	s.Routes().ServeHTTP(httptest.NewRecorder(),
 		signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
@@ -65,9 +65,9 @@ func TestProposeShowsAReadableReport(t *testing.T) {
 	for _, want := range []string{
 		`class="kind kind-updated"`,
 		"MSA · 26-01 MSA · 2026-01-01 to 2026-01-02",
-		"Few seats left",
-		`<td class="was">no</td>`,
-		`<td class="now">yes</td>`,
+		"Availability",
+		`<td class="was">open</td>`,
+		`<td class="now">few seats</td>`,
 		`value="MSA 26-01 MSA:`,
 	} {
 		if !strings.Contains(body, want) {
@@ -176,6 +176,13 @@ func TestPRTitleNamesTheCourse(t *testing.T) {
 		c.After = &after
 		return c
 	}
+	fewSeatsToWaitlist := func() Change {
+		c := updatedSeats()
+		before, after := *c.After, *c.After
+		after.SeatsLimited, after.Status = false, "waitlist"
+		c.Before, c.After = &before, &after
+		return c
+	}
 	added := func() Change {
 		d := aDate()
 		d.ID, d.Code, d.Start, d.End = "msa-feb-2027", "27-02 MSA-EN", "2027-02-22", "2027-02-25"
@@ -207,7 +214,9 @@ func TestPRTitleNamesTheCourse(t *testing.T) {
 		{"back to open",
 			[]Change{reopened()}, "MSA 26-09 MSA-EN: open for registration again"},
 		{"a couple of fields are named",
-			[]Change{twoFields()}, "MSA 26-09 MSA-EN: city and status changed"},
+			[]Change{twoFields()}, "MSA 26-09 MSA-EN: city and availability changed"},
+		{"few seats to waitlist is one decision, not two fields",
+			[]Change{fewSeatsToWaitlist()}, "MSA 26-09 MSA-EN: fully booked, waiting list"},
 		{"a new date carries its span",
 			[]Change{added()}, "MSA 27-02 MSA-EN: new date, 2027-02-22 to 2027-02-25"},
 		{"a removal says so",
@@ -260,7 +269,7 @@ func TestPRBodyReportsTheFields(t *testing.T) {
 		"@gernotstarke",
 		"### updated — MSA · 26-09 MSA-EN · 2026-09-21 to 2026-09-24",
 		"| Field | Before | After |",
-		"| Few seats left | no | yes |",
+		"| Availability | open | few seats |",
 		"validate_trainings.rb",
 	} {
 		if !strings.Contains(body, want) {
@@ -362,7 +371,7 @@ func TestProposeEscapesUserContentInTheDiff(t *testing.T) {
 		"start": {"2026-01-01"}, "end": {"2026-01-02"},
 		"city":    {payload},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"url": {"https://example.org/a"}, "status": {"open"},
+		"url": {"https://example.org/a"}, "availability": {"open"},
 	}
 	s.Routes().ServeHTTP(httptest.NewRecorder(),
 		signedIn(t, s, http.MethodPost, "/dates/msa-a", form))

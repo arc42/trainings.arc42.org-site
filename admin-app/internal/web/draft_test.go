@@ -106,7 +106,7 @@ func TestCollapsedChangesKeepTheEarliestBefore(t *testing.T) {
 	_ = d.UpdateDate("a", nd)
 
 	fields := d.Changes[0].Fields()
-	if len(fields) != 1 || fields[0].Key != "status" {
+	if len(fields) != 1 || fields[0].Key != "availability" {
 		t.Fatalf("fields = %+v", fields)
 	}
 	if fields[0].Before != "open" || fields[0].After != "waitlist" {

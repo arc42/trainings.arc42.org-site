@@ -106,14 +106,14 @@ func whatChanged(fs []model.FieldChange) string {
 // cannot silently change every title.
 func phrase(f model.FieldChange) string {
 	switch f.Key {
-	case "seats_limited":
-		if f.After == "yes" {
-			return "only few seats left"
-		}
-		return "no longer short of seats"
-	case "status":
+	case "availability":
 		switch f.After {
+		case "few seats":
+			return "only few seats left"
 		case "open":
+			if f.Before == "few seats" {
+				return "no longer short of seats"
+			}
 			return "open for registration again"
 		case "waitlist":
 			return "fully booked, waiting list"
@@ -122,7 +122,7 @@ func phrase(f model.FieldChange) string {
 		case "cancelled":
 			return "cancelled"
 		}
-		return "status " + f.After
+		return "availability " + f.After
 	case "start", "end":
 		return "moved to " + f.After
 	case "city":
