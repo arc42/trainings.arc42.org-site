@@ -63,7 +63,7 @@ courses:
             until: "2026-08-08"
         seats_limited: true
         url: "https://trainings.arc42.org/#msa-dez-2026"
-        status: open
+        status: waitlist
       - id: msa-mar-2027
         code: "27-03 MSA"
         start: "2027-03-02"
