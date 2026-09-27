@@ -49,6 +49,9 @@ func New(d Deps) *Server {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok\n")) })
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("arc42 registration service. The form is on https://trainings.arc42.org/anmeldung/.\n"))
+	})
 	mux.HandleFunc("POST /submit", s.handleSubmit)
 	mux.HandleFunc("GET /confirm", s.handleConfirmPage)
 	mux.HandleFunc("POST /confirm", s.handleConfirm)

@@ -256,3 +256,16 @@ func TestConfirmationMailsPerAddressAreCapped(t *testing.T) {
 		t.Errorf("the fourth back-office mail does not say the confirmation was withheld:\n%s", toOffice[3].Text)
 	}
 }
+
+// Opening the service's address in a browser should explain itself rather
+// than answer 404, which looks like a failure.
+func TestRootSaysWhatThisIs(t *testing.T) {
+	e := newEnv(t)
+	rec := e.get("/")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "arc42 registration service") {
+		t.Errorf("GET / = %d %q", rec.Code, rec.Body.String())
+	}
+	if rec := e.get("/nope"); rec.Code != http.StatusNotFound {
+		t.Errorf("GET /nope = %d, want 404", rec.Code)
+	}
+}

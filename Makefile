@@ -13,6 +13,11 @@ SITE_PORT   := 4260
 APP_DIR     := admin-app
 REG_DIR     := registration-app
 REG_APP     := arc42-registration
+# Origins the demo service accepts: plain localhost plus the *.localhost
+# names that local proxies such as localdock put in front of the container.
+# An origin not listed here is dropped silently, which in a demo looks like
+# "nothing happens"; the service logs "dropped (origin ...)".
+REG_DEMO_ORIGINS := http://localhost:$(SITE_PORT),http://127.0.0.1:$(SITE_PORT),http://trainings-regdemo.localhost,https://trainings-regdemo.localhost,http://trainings-regdemo.localhost:$(SITE_PORT)
 FLY_APP     := arc42-trainings-admin
 PREVIEW_DIR := preview-out
 
@@ -230,7 +235,7 @@ reg-demo: check-go ## Try the whole registration flow locally: test form on :426
 	cd $(REG_DIR) && MAILER=log PORT=8099 PUBLIC_URL=http://localhost:8099 \
 		SITE_URL=http://localhost:$(SITE_PORT) FEED_URL=http://localhost:$(SITE_PORT)/api/trainings.json \
 		BACKOFFICE_TO=office@example.invalid \
-		ALLOWED_ORIGINS=http://localhost:$(SITE_PORT) TOKEN_KEY=$$(openssl rand -base64 32) go run .
+		ALLOWED_ORIGINS=$(REG_DEMO_ORIGINS) TOKEN_KEY=$$(openssl rand -base64 32) go run .
 
 reg-deploy: check-flyctl reg-check ## Deploy the registration service in the CURRENT working tree to fly.io
 	@printf "==> Deploying $(REG_DIR)/ to fly app $(REG_APP)\n"
