@@ -18,6 +18,25 @@ import (
 	"arc42-registration/internal/token"
 )
 
+// chromeText is the wording of the frame around every page (pages/_frame.html):
+// masthead link, progress bar. The footer is English on the site in both
+// languages, so it is here too.
+var chromeText = map[string]map[string]string{
+	"de": {"Home": "/de/", "DatesPath": "/de/#training-dates", "Dates": "Termine",
+		"Progress": "Fortschritt der Anmeldung", "Step1": "Formular", "Step2": "E-Mail bestätigen", "Step3": "Angemeldet", "Done": "erledigt"},
+	"en": {"Home": "/", "DatesPath": "/#training-dates", "Dates": "Training dates",
+		"Progress": "Registration progress", "Step1": "Form", "Step2": "Confirm e-mail", "Step3": "Registered", "Done": "done"},
+}
+
+// frame adds what pages/_frame.html needs to a page's own data.
+func (s *Server) frame(lang, title string, data map[string]any) map[string]any {
+	if _, ok := chromeText[lang]; !ok {
+		lang = "de"
+	}
+	data["Lang"], data["Title"], data["Site"], data["C"] = lang, title, s.d.Cfg.SiteURL, chromeText[lang]
+	return data
+}
+
 //go:embed pages/*.html
 var pageFiles embed.FS
 
