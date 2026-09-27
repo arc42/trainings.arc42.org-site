@@ -118,6 +118,35 @@ func TestClosedAndFeedDownAreFlagged(t *testing.T) {
 	}
 }
 
+// While the feed is down every code is accepted unchecked, so nothing else
+// stops a control character in a forged code from reaching the back-office
+// subject line. No real booking code contains one.
+func TestAControlCharacterInTheCodeIsDroppedEvenWhileTheFeedIsDown(t *testing.T) {
+	c := checker()
+	for _, code := range []string{"26-12 MSA\r\nX", "26-12 MSA\x07", "26-12\tMSA"} {
+		c.Feed = fakeFeed{code: feed.Unavailable}
+		f := germanForm()
+		f.Set("Kurs", code)
+		d := c.Check(context.Background(), Input{Form: f, IP: fmt.Sprint(len(code))})
+		if d.Outcome != Drop || !strings.Contains(d.Reason, "control") {
+			t.Errorf("code %q: outcome %v (%s), want Drop for a control character", code, d.Outcome, d.Reason)
+		}
+	}
+}
+
+// Every field at its limit, in 4-byte characters, is a legal submission. Its
+// form encoding is 12 bytes per character, so the body cap has to follow the
+// field limits or it turns a legal registration into a bare 413.
+func TestMaxFormBytesCoversEveryFieldAtItsLimit(t *testing.T) {
+	f := url.Values{}
+	for key, max := range maxLen {
+		f.Set(fieldNames[key][0], strings.Repeat("𝄞", max))
+	}
+	if n := len(f.Encode()); int64(n) > MaxFormBytes() {
+		t.Errorf("a legal form encodes to %d bytes, cap is %d", n, MaxFormBytes())
+	}
+}
+
 // Several addresses are allowed (the input has `multiple`), but only the
 // first receives the registrant mail, and the back office is told.
 func TestSeveralEmails(t *testing.T) {

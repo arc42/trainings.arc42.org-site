@@ -10,6 +10,7 @@ import (
 	"net/netip"
 	"net/url"
 	"strings"
+	"unicode"
 
 	"arc42-registration/internal/feed"
 )
@@ -92,6 +93,21 @@ var maxLen = map[string]int{
 	"billing": 1000, "comments": 4000,
 }
 
+// MaxFormBytes is the body cap for /submit, derived from maxLen so the two
+// cannot drift. The field limits are the rule people meet, as a readable
+// "too long" on the fail page; the cap only stops what no legal form can be.
+// A 4-byte character form-encodes to 12 bytes; 8 KB covers field names, the
+// short unlimited fields (via, form_source, language) and the honeypots.
+// A fixed 32 KB used to cut in first: a Chinese comment inside its
+// 4000-character limit got a bare 413.
+func MaxFormBytes() int64 {
+	n := 0
+	for _, max := range maxLen {
+		n += max
+	}
+	return int64(n*12 + 8<<10)
+}
+
 func get(f url.Values, key string) string {
 	for _, name := range fieldNames[key] {
 		if v := strings.TrimSpace(f.Get(name)); v != "" {
@@ -150,6 +166,12 @@ func (c *Checker) Check(ctx context.Context, in Input) Decision {
 	}
 	d.Reg.Emails = emails
 
+	// No real booking code contains a control character. Checked before the
+	// feed, because while the feed is down every code passes unchecked, and
+	// this one would end up in the back-office subject line.
+	if strings.IndexFunc(r.Code, unicode.IsControl) >= 0 {
+		return drop("control character in code")
+	}
 	if r.Code != Other {
 		entry, res := c.Feed.Lookup(ctx, r.Code)
 		switch res {

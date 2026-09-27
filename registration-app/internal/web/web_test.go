@@ -206,10 +206,24 @@ func TestRegistrantFailureIsStillSuccess(t *testing.T) {
 	}
 }
 
+// Chinese or emoji text is 9 to 12 bytes per character once form-encoded, so
+// a comment well inside its 4000-character limit used to hit the old fixed
+// 32 KB cap and get a bare 413 instead of the page.
+func TestALongNonLatinCommentIsNotRefusedAsTooLarge(t *testing.T) {
+	e := newEnv(t)
+	f := form("de")
+	f.Set("Bemerkungen", strings.Repeat("会", 3900))
+	rec := e.post("/submit", f)
+	if rec.Code == http.StatusRequestEntityTooLarge {
+		t.Fatal("a comment within its limit was refused as too large")
+	}
+	sentPage(t, rec, "anna@example.org", "Fast geschafft")
+}
+
 func TestOversizedBodyIsRefused(t *testing.T) {
 	e := newEnv(t)
 	f := form("de")
-	f.Set("Bemerkungen", strings.Repeat("x", maxBody))
+	f.Set("Bemerkungen", strings.Repeat("x", int(intake.MaxFormBytes())))
 	if rec := e.post("/submit", f); rec.Code != http.StatusRequestEntityTooLarge || len(e.sender.got) != 0 {
 		t.Errorf("status %d, %d mails", rec.Code, len(e.sender.got))
 	}

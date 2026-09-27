@@ -63,6 +63,22 @@ func TestLookupClassifiesCodes(t *testing.T) {
 	}
 }
 
+// A client that hangs up during the first fetch of a cold machine used to
+// cancel the fetch with it, and for the next RetryPause every code passed
+// unchecked as "feed unavailable". The fetch belongs to the service, not to
+// whichever request happened to trigger it.
+func TestACancelledRequestDoesNotCancelTheFetch(t *testing.T) {
+	var body atomic.Value
+	var hits atomic.Int32
+	body.Store(sample)
+	f := New(server(t, &body, &hits).URL, nil, at("2026-09-30T10:00:00Z"))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, res := f.Lookup(ctx, "26-12 MSA"); res != Bookable {
+		t.Errorf("result %v after a cancelled request, want Bookable", res)
+	}
+}
+
 func TestLookupResolvesTrainersAndIgnoresEarlyBird(t *testing.T) {
 	var body atomic.Value
 	body.Store(sample)

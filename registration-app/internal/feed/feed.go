@@ -104,7 +104,10 @@ func (f *Feed) Lookup(ctx context.Context, code string) (Entry, Result) {
 	now := f.now()
 	if (f.entries == nil || now.Sub(f.fetchedAt) > TTL) && now.Sub(f.triedAt) > RetryPause {
 		f.triedAt = now
-		if entries, err := f.fetch(ctx); err == nil {
+		// Detached from the request: a client hanging up must not cancel the
+		// service's own fetch and leave every code unchecked for RetryPause.
+		// The http.Client timeout still bounds it.
+		if entries, err := f.fetch(context.WithoutCancel(ctx)); err == nil {
 			f.entries, f.fetchedAt = entries, now
 		}
 	}

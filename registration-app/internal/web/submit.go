@@ -11,10 +11,8 @@ import (
 	"arc42-registration/internal/token"
 )
 
-const maxBody = 32 << 10
-
 func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+	r.Body = http.MaxBytesReader(w, r.Body, intake.MaxFormBytes())
 	if err := r.ParseForm(); err != nil {
 		s.d.Log.Printf("submit: unreadable body: %v", err)
 		http.Error(w, "request too large or malformed", http.StatusRequestEntityTooLarge)
