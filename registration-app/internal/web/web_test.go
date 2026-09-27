@@ -408,6 +408,49 @@ func TestCorrectingADroppedSubmissionSendsNothing(t *testing.T) {
 
 // A bot must not tell a drop from an accept by the page: same address
 // spelling, same token length.
+// The service's pages live on another host than the site, so they cannot use
+// its Jekyll layout. They carry a copy of the site's frame (masthead with the
+// arc42 logo, footer with imprint and privacy) so a registrant does not
+// suddenly land on a bare page from an unknown domain in the middle of
+// registering, and a progress bar that says where they are: form done, mail
+// to confirm, registered.
+func TestPagesCarryTheSiteFrameAndTheProgress(t *testing.T) {
+	e := newEnv(t)
+	sent := e.post("/submit", form("de")).Body.String()
+	reg := e.sender.got[1]
+	link := linkRe.FindStringSubmatch(reg.Text)
+	confirm := e.get(link[1]).Body.String()
+	sentEN := e.post("/submit", form("en")).Body.String()
+	bad := e.get("/confirm?t=garbage").Body.String()
+
+	frame := []string{`class="masthead"`, `aria-label="arc42"`, `href="https://trainings.arc42.org/imprint/"`, "Supported by INNOQ"}
+	for name, body := range map[string]string{"sent": sent, "confirm": confirm, "sent-en": sentEN, "error": bad} {
+		for _, want := range frame {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s page lacks %q", name, want)
+			}
+		}
+	}
+	for name, c := range map[string]struct{ body, home, step string }{
+		"sent":    {sent, `href="https://trainings.arc42.org/de/"`, `aria-current="step">E-Mail bestätigen`},
+		"confirm": {confirm, `href="https://trainings.arc42.org/de/"`, `aria-current="step">E-Mail bestätigen`},
+		"sent-en": {sentEN, `href="https://trainings.arc42.org/"`, `aria-current="step">Confirm e-mail`},
+	} {
+		if !strings.Contains(c.body, c.home) {
+			t.Errorf("%s page: logo does not link to %s", name, c.home)
+		}
+		if !strings.Contains(stepText(c.body), c.step) {
+			t.Errorf("%s page: current step is not %q", name, c.step)
+		}
+	}
+}
+
+// stepText collapses the markup inside a step so the test does not depend on
+// the icon's SVG.
+func stepText(body string) string {
+	return regexp.MustCompile(`aria-current="step"[^>]*>(?:\s|<[^>]*>)*`).ReplaceAllString(body, `aria-current="step">`)
+}
+
 func TestDroppedAndAcceptedPagesLookAlike(t *testing.T) {
 	e := newEnv(t)
 	f := form("de")

@@ -26,7 +26,7 @@ var sentText = map[string]map[string]string{
 	"de": {
 		"Title":     "Fast geschafft: bitte bestätigen Sie Ihre Anmeldung",
 		"Sent":      "Wir haben eine E-Mail an",
-		"SentTail":  "geschickt. Ihre Anmeldung ist erst vollständig, wenn Sie den Link darin öffnen und bestätigen. Der Link ist 5 Tage gültig.",
+		"SentTail":  " geschickt. Ihre Anmeldung ist erst vollständig, wenn Sie den Link darin öffnen und bestätigen. Der Link ist 5 Tage gültig.",
 		"NoMail":    "Keine Mail da? Sehen Sie bitte auch im Spam-Ordner nach.",
 		"Wrong":     "Adresse falsch geschrieben? Tragen Sie die richtige ein, wir schicken die E-Mail dann dorthin:",
 		"Button":    "An diese Adresse schicken",
@@ -62,10 +62,10 @@ func (s *Server) sentPage(w http.ResponseWriter, c token.Claims, email string, i
 	}
 	back := s.d.Cfg.SiteURL + map[string]string{"de": "/de/#training-dates", "en": "/#training-dates"}[l]
 	noStore(w)
-	_ = pages.ExecuteTemplate(w, "sent.html", map[string]any{
-		"Lang": l, "T": sentText[l], "Email": email, "Token": tok, "Back": back,
+	_ = pages.ExecuteTemplate(w, "sent.html", s.frame(l, sentText[l]["Title"], map[string]any{
+		"T": sentText[l], "Email": email, "Token": tok, "Back": back,
 		"Invalid": invalid, "Exhausted": c.Corrections >= maxCorrections,
-	})
+	}))
 }
 
 func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {

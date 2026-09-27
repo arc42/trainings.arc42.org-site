@@ -347,3 +347,72 @@ noscript {
     }
   }
 }
+
+/* ==========================================================================
+   Registration progress bar, final state (_includes/registration-steps.html)
+
+   The registration service draws the same bar on register.arc42.org with
+   step 2 current; this is its last frame, all done, on the confirmed pages.
+   Same geometry as the service's copy, so the hand-over between the two
+   hosts looks like one page moving on.
+   ========================================================================== */
+
+.reg-steps {
+  list-style: none;
+  display: flex;
+  max-width: 30rem;
+  /* The masthead is sticky and overlaps the top of the content. */
+  margin: 2em auto 1.6em;
+  padding: 0;
+
+  li {
+    flex: 1;
+    position: relative;
+    margin: 0;
+    padding-top: 2.9rem;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--ink);
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 1.2rem;
+      left: calc(50% + 1.5rem);
+      right: calc(-50% + 1.5rem);
+      height: 3px;
+      border-radius: 2px;
+      background: var(--band);
+    }
+
+    &:last-child::after {
+      display: none;
+    }
+  }
+
+  &__mark {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--band);
+    border: 3px solid var(--band);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  [aria-current] {
+    color: var(--band);
+    font-weight: 700;
+
+    .reg-steps__mark {
+      box-shadow: 0 0 0 5px rgba(160, 76, 94, 0.14);
+    }
+  }
+}

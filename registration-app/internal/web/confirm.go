@@ -43,7 +43,7 @@ func (s *Server) handleConfirmPage(w http.ResponseWriter, r *http.Request) {
 		lang = "de"
 	}
 	noStore(w)
-	_ = pages.ExecuteTemplate(w, "confirm.html", map[string]any{"Lang": lang, "T": confirmText[lang], "Facts": facts, "Token": tok})
+	_ = pages.ExecuteTemplate(w, "confirm.html", s.frame(lang, confirmText[lang]["Title"], map[string]any{"T": confirmText[lang], "Facts": facts, "Token": tok}))
 }
 
 func (s *Server) handleConfirm(w http.ResponseWriter, r *http.Request) {
@@ -87,5 +87,5 @@ func (s *Server) errorPage(w http.ResponseWriter, err error) {
 	}
 	noStore(w)
 	w.WriteHeader(status)
-	_ = pages.ExecuteTemplate(w, "error.html", map[string]string{"DE": de, "EN": en})
+	_ = pages.ExecuteTemplate(w, "error.html", s.frame("de", "Dieser Link funktioniert nicht / This link does not work", map[string]any{"DE": de, "EN": en}))
 }
