@@ -218,6 +218,14 @@ Expired, tampered or unreadable token: a page saying so, with a mailto link to
 info@arc42.de. A double confirm sends `BESTÄTIGT` twice; without state that
 cannot be detected, and a duplicate is harmless.
 
+### 4.5 Feed cache
+
+Fetched at start and refreshed at most every 5 minutes, on demand. If a
+refresh fails, the last good copy is used. If there has never been a good copy
+(cold start while the site is down), the code check is skipped and every
+back-office mail carries a `Hinweis: Kursliste nicht verfügbar` (EN: `Note: course list unavailable`); failing closed
+here would reject real bookings because of a GitHub Pages outage.
+
 ### 4.6 Correcting a mistyped address
 
 Added in review on 2026-09-27. Most typos are noticed the moment the address
@@ -243,14 +251,6 @@ correct it.
 - Rejected in review: a second "repeat your e-mail" field (copy and paste
   defeats it, friction for everyone) and typo suggestions while typing
   ("gmial.com").
-
-### 4.5 Feed cache
-
-Fetched at start and refreshed at most every 5 minutes, on demand. If a
-refresh fails, the last good copy is used. If there has never been a good copy
-(cold start while the site is down), the code check is skipped and every
-back-office mail carries a `Hinweis: Kursliste nicht verfügbar` (EN: `Note: course list unavailable`); failing closed
-here would reject real bookings because of a GitHub Pages outage.
 
 ## 5. Mailjet
 
