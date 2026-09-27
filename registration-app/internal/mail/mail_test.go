@@ -145,3 +145,21 @@ func TestRegistrantWithoutFactsIsNotOther(t *testing.T) {
 		}
 	}
 }
+
+// A waiting-list date has no flow of its own, only a note in the registrant
+// mail, so nobody reads the confirmation as a booked seat.
+func TestWaitlistDateGetsANoteInTheRegistrantMail(t *testing.T) {
+	w := dez
+	w.Status = "waitlist"
+	for _, l := range []string{"de", "en"} {
+		note := map[string]string{"de": "Warteliste", "en": "waiting list"}[l]
+		r, _ := Registrant(l, FactsFor(w, l), false, confirmURL)
+		if !strings.Contains(r.Text, note) || !strings.Contains(r.HTML, note) {
+			t.Errorf("%s: waitlist date without a waiting-list note:\n%s", l, r.Text)
+		}
+		open, _ := Registrant(l, FactsFor(dez, l), false, confirmURL)
+		if strings.Contains(open.Text, note) {
+			t.Errorf("%s: an open date mentions the waiting list", l)
+		}
+	}
+}

@@ -344,9 +344,13 @@ one that nobody could join.
 
 A waiting-list registration goes through **exactly the same process**:
 same checks, same two back-office mails, same registrant mail, same confirm
-click. The mails say nothing about the waiting list; the back office tells
-the registrant in its personal reply. Keeping the service ignorant of the
-status (beyond "is it bookable") is deliberate.
+click. There is no flow of its own, only a **note**: the registrant mail adds
+"Dieser Termin ist ausgebucht. Mit Ihrer Anmeldung kommen Sie auf die
+Warteliste; wir melden uns, sobald ein Platz frei wird." (EN: "this date is
+fully booked. Your registration puts you on the waiting list ..."), and the
+back-office mail lists "WARTELISTE" / "WAITING LIST" under its hints. The
+back office's personal reply follows as for any registration. (Changed in
+review on 2026-09-27; the first version kept the mails silent about it.)
 
 Status changes are manual, as today. Nothing flips a date to `waitlist` or
 `full`, and nothing removes a full date: some stay up for marketing, others

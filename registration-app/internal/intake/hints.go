@@ -15,6 +15,7 @@ const (
 	HintClosed        = "closed"         // the date was closed after the page was loaded
 	HintFeedDown      = "feed-down"      // the course list could not be read; code not checked
 	HintRecipientCap  = "recipient-cap"  // the confirmation mail was withheld: too many to this address today
+	HintWaitlist      = "waitlist"       // the date is fully booked; the registrant mail says so
 )
 
 func hintsFor(r Registration) []string {

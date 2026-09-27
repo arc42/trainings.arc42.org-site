@@ -19,12 +19,16 @@ func (f fakeFeed) Lookup(_ context.Context, code string) (feed.Entry, feed.Resul
 	if !ok {
 		return feed.Entry{}, feed.Unknown
 	}
-	return feed.Entry{CourseShortTitle: "MSA", Date: feed.Date{Code: code}}, res
+	status := "open"
+	if code == "27-03 MSA" {
+		status = "waitlist"
+	}
+	return feed.Entry{CourseShortTitle: "MSA", Date: feed.Date{Code: code, Status: status}}, res
 }
 
 func checker() *Checker {
 	return &Checker{
-		Feed:           fakeFeed{"26-12 MSA": feed.Bookable, "26-09 MSA-EN": feed.Closed},
+		Feed:           fakeFeed{"26-12 MSA": feed.Bookable, "26-09 MSA-EN": feed.Closed, "27-03 MSA": feed.Bookable},
 		Limiter:        NewLimiter(5, time.Hour, time.Now),
 		AllowedOrigins: []string{"https://trainings.arc42.org"},
 	}
@@ -205,5 +209,18 @@ func TestIPv6AddressesShareTheirSlash64Budget(t *testing.T) {
 	}
 	if d := c.Check(context.Background(), Input{Form: germanForm(), IP: "2001:db8:1:3::1"}); d.Outcome != Accept {
 		t.Errorf("another /64: %v, want Accept", d.Outcome)
+	}
+}
+
+// The back office sees at a glance that a registration is for the waiting list.
+func TestWaitlistRegistrationIsMarkedForTheBackOffice(t *testing.T) {
+	f := germanForm()
+	f.Set("Kurs", "27-03 MSA")
+	d := checker().Check(context.Background(), Input{Form: f, IP: "a"})
+	if d.Outcome != Accept || !has(d.Hints, HintWaitlist) {
+		t.Errorf("decision = %+v", d)
+	}
+	if d := checker().Check(context.Background(), Input{Form: germanForm(), IP: "b"}); has(d.Hints, HintWaitlist) {
+		t.Error("an open date is marked as waiting list")
 	}
 }

@@ -14,6 +14,7 @@
 {{if .Price}}<tr><td style="padding:2px 12px 2px 0;color:#555">{{$.T.Price}}</td><td>{{.Price}}</td></tr>{{end}}
 <tr><td style="padding:2px 12px 2px 0;color:#555">{{$.T.Code}}</td><td>{{.Code}}</td></tr>
 </table>
+{{if .Waitlist}}<p><strong>{{$.T.Waitlist}}</strong></p>{{end}}
 {{end}}{{else if .Other}}<p>{{.T.Other}}</p>{{else}}<p>{{.T.NoFacts}}</p>{{end}}
 <p>{{.T.ByHand}}</p>
 <p>{{.T.NotYou}}</p>

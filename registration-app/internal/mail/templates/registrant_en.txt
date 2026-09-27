@@ -15,6 +15,9 @@ Your selection
 {{- if .Price}}
   Price:         {{.Price}}{{end}}
   Booking code:  {{.Code}}
+{{- if .Waitlist}}
+
+{{$.T.Waitlist}}{{end}}
 {{end}}{{else if .Other}}
 You chose "other". We will get in touch with you personally.
 {{else}}

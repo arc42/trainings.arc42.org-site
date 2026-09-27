@@ -15,6 +15,9 @@ Ihre Auswahl
 {{- if .Price}}
   Preis:         {{.Price}}{{end}}
   Buchungscode:  {{.Code}}
+{{- if .Waitlist}}
+
+{{$.T.Waitlist}}{{end}}
 {{end}}{{else if .Other}}
 Sie haben "Sonstige" gewählt. Wir melden uns persönlich bei Ihnen.
 {{else}}

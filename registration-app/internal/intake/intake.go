@@ -161,6 +161,9 @@ func (c *Checker) Check(ctx context.Context, in Input) Decision {
 			d.Hints = append(d.Hints, HintFeedDown)
 		}
 		d.Entry, d.Found = entry, res != feed.Unavailable
+		if entry.Status == "waitlist" {
+			d.Hints = append(d.Hints, HintWaitlist)
+		}
 	}
 	d.Hints = append(d.Hints, hintsFor(d.Reg)...)
 	d.Outcome = Accept

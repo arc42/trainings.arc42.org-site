@@ -42,6 +42,9 @@ type Rendered struct {
 // prices are applied by hand (spec 2).
 type Facts struct {
 	Title, ShortTitle, Code, Dates, Where, Trainers, Price string
+	// Waitlist: the date is fully booked. There is no flow of its own, only
+	// a note in the registrant mail (spec section 8).
+	Waitlist bool
 }
 
 func FactsFor(e feed.Entry, lang string) *Facts {
@@ -51,6 +54,7 @@ func FactsFor(e feed.Entry, lang string) *Facts {
 		Code:       e.Code,
 		Dates:      labels.DateRange(e.Start, e.End, lang),
 		Where:      e.City,
+		Waitlist:   e.Status == "waitlist",
 	}
 	if f.Title == "" {
 		f.Title = e.CourseShortTitle
@@ -78,6 +82,7 @@ var text = map[string]map[string]string{
 		"Course": "Kurs", "Dates": "Termin", "Where": "Ort", "Trainers": "Trainer", "Price": "Preis", "Code": "Buchungscode",
 		"Other":     `Sie haben "Sonstige" gewählt. Wir melden uns persönlich bei Ihnen.`,
 		"NoFacts":   "Die Einzelheiten zu Ihrem Termin bestätigen wir Ihnen persönlich.",
+		"Waitlist":  "Hinweis: Dieser Termin ist ausgebucht. Mit Ihrer Anmeldung kommen Sie auf die Warteliste; wir melden uns, sobald ein Platz frei wird.",
 		"ByHand":    "Wir bearbeiten Anmeldungen von Hand und melden uns persönlich, meist innerhalb von ein bis zwei Werktagen.",
 		"NotYou":    "Sie haben sich nicht angemeldet? Dann ignorieren Sie diese Mail einfach. Ohne Bestätigung geschieht nichts.",
 		"Questions": "Fragen? Antworten Sie einfach auf diese Mail.",
@@ -90,6 +95,7 @@ var text = map[string]map[string]string{
 		"Course": "Course", "Dates": "Dates", "Where": "Location", "Trainers": "Trainers", "Price": "Price", "Code": "Booking code",
 		"Other":     `You chose "other". We will get in touch with you personally.`,
 		"NoFacts":   "We will confirm the details of your date personally.",
+		"Waitlist":  "Please note: this date is fully booked. Your registration puts you on the waiting list; we will get in touch as soon as a seat becomes available.",
 		"ByHand":    "We process registrations by hand and will get back to you personally, usually within one or two business days.",
 		"NotYou":    "You did not register? Then simply ignore this mail. Nothing happens without confirmation.",
 		"Questions": "Questions? Just reply to this mail.",
@@ -104,6 +110,7 @@ var hintText = map[string]map[string]string{
 		intake.HintSeveralEmails: "Mehrere E-Mail-Adressen; die Bestätigung ging nur an die erste",
 		intake.HintClosed:        "Termin war beim Absenden nicht mehr offen (ausgebucht, abgesagt oder vorbei)",
 		intake.HintFeedDown:      "Kursliste nicht verfügbar, Buchungscode ungeprüft",
+		intake.HintWaitlist:      "WARTELISTE: der Termin ist ausgebucht, der Anmeldende wurde darauf hingewiesen",
 		intake.HintRecipientCap:  "Bestätigungsmail an den Anmeldenden nicht verschickt: zu viele Anmeldungen an diese Adresse in 24 Stunden",
 	},
 	"en": {
@@ -113,6 +120,7 @@ var hintText = map[string]map[string]string{
 		intake.HintSeveralEmails: "Several e-mail addresses; only the first received the confirmation request",
 		intake.HintClosed:        "Date was no longer open when submitted (full, cancelled or past)",
 		intake.HintFeedDown:      "Course list unavailable, booking code not checked",
+		intake.HintWaitlist:      "WAITING LIST: the date is fully booked, the registrant was told so",
 		intake.HintRecipientCap:  "Confirmation mail to the registrant not sent: too many registrations to this address within 24 hours",
 	},
 }
