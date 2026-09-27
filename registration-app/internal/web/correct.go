@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/mail"
@@ -15,6 +16,11 @@ import (
 // info@arc42.de; a person who needs a third try is better helped by a human,
 // and a bot gets no further address to mail.
 const maxCorrections = 2
+
+// correctionWindow: corrections are for the moment right after submitting.
+// The page's token stops correcting this long after the submission, whatever
+// happens in between, which bounds what a replayed token can do.
+const correctionWindow = 30 * time.Minute
 
 var sentText = map[string]map[string]string{
 	"de": {
@@ -76,7 +82,8 @@ func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
 		s.errorPage(w, err)
 		return
 	}
-	if c.Corrections >= maxCorrections {
+	if c.Corrections >= maxCorrections || s.d.Sealer.Age(c) > correctionWindow {
+		c.Corrections = maxCorrections // shows the "write to us" page, no form
 		s.sentPage(w, c, c.Email, false)
 		return
 	}
@@ -90,7 +97,13 @@ func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
 
 	// A dropped submission (no id) and a limited client get the same page and
 	// no mail, so neither learns anything.
-	if c.ID == "" {
+	if c.Dropped == 1 {
+		s.sentPage(w, c, newEmail, false)
+		return
+	}
+	if s.d.CorrectionLimiter != nil && !s.d.CorrectionLimiter.Allow(c.ID) {
+		s.d.Log.Printf("correct %s: dropped (more than %d corrections)", c.ID, maxCorrections)
+		c.Corrections = maxCorrections
 		s.sentPage(w, c, newEmail, false)
 		return
 	}
@@ -113,6 +126,7 @@ func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
 	}
 	confirm := c
 	confirm.Purpose = token.PurposeConfirm
+	confirm.Issued = 0 // the new confirm link gets its full 5 days
 	tok, err := s.d.Sealer.Seal(confirm)
 	if err == nil {
 		var rm mail.Rendered

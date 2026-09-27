@@ -68,9 +68,10 @@ func newEnv(t *testing.T) *env {
 		Checker: &intake.Checker{Feed: ff, Limiter: intake.NewLimiter(100, time.Hour, time.Now),
 			AllowedOrigins: []string{"https://trainings.arc42.org"}},
 		Feed: ff, Sealer: sealer, Sender: e.sender,
-		RecipientLimiter: intake.NewLimiter(3, 24*time.Hour, time.Now),
-		NewID:            func() string { return "R-TEST1" },
-		Log:              log.New(e.logs, "", 0),
+		RecipientLimiter:  intake.NewLimiter(3, 24*time.Hour, time.Now),
+		CorrectionLimiter: intake.NewLimiter(maxCorrections, correctionWindow, func() time.Time { return *e.now }),
+		NewID:             func() string { return "R-TEST1" },
+		Log:               log.New(e.logs, "", 0),
 	}).Routes()
 	return e
 }
@@ -388,5 +389,64 @@ func TestCorrectingADroppedSubmissionSendsNothing(t *testing.T) {
 	sentPage(t, e.post("/correct", url.Values{"t": {correctionToken(t, body)}, "email": {"victim@example.com"}}), "victim@example.com", "Fast geschafft")
 	if len(e.sender.got) != 0 {
 		t.Errorf("a dropped submission sent %d mails after correction", len(e.sender.got))
+	}
+}
+
+// A bot must not tell a drop from an accept by the page: same address
+// spelling, same token length.
+func TestDroppedAndAcceptedPagesLookAlike(t *testing.T) {
+	e := newEnv(t)
+	f := form("de")
+	f.Set("Email", "Anna@Example.org")
+	accepted := sentPage(t, e.post("/submit", f), "anna@example.org", "Fast geschafft")
+	f.Set("_gotcha", "bot")
+	dropped := sentPage(t, e.post("/submit", f), "anna@example.org", "Fast geschafft")
+	if a, d := len(correctionToken(t, accepted)), len(correctionToken(t, dropped)); a != d {
+		t.Errorf("token length accepted %d, dropped %d", a, d)
+	}
+	if strings.Contains(dropped, "Anna@Example.org") {
+		t.Error("the dropped page shows the address as typed, the accepted one lower-cased")
+	}
+}
+
+// The token is stateless and can be posted again. However often, one
+// registration gets at most two corrections.
+func TestReplayingACorrectionTokenIsBounded(t *testing.T) {
+	e := newEnv(t)
+	tok := correctionToken(t, sentPage(t, e.post("/submit", form("de")), "anna@example.org", "Fast geschafft"))
+	for _, addr := range []string{"r1@example.com", "r2@example.com", "r3@example.com", "r4@example.com"} {
+		e.post("/correct", url.Values{"t": {tok}, "email": {addr}})
+	}
+	sent := 0
+	for _, addr := range []string{"r1@example.com", "r2@example.com", "r3@example.com", "r4@example.com"} {
+		sent += len(mailsTo(e, addr))
+	}
+	if sent != maxCorrections {
+		t.Errorf("replayed token sent %d corrections, want %d", sent, maxCorrections)
+	}
+}
+
+// Corrections are for the moment right after submitting.
+func TestTheCorrectionWindowCloses(t *testing.T) {
+	e := newEnv(t)
+	tok := correctionToken(t, sentPage(t, e.post("/submit", form("de")), "anna@example.org", "Fast geschafft"))
+	*e.now = e.now.Add(correctionWindow + time.Minute)
+	rec := e.post("/correct", url.Values{"t": {tok}, "email": {"late@example.com"}})
+	if len(mailsTo(e, "late@example.com")) != 0 || !strings.Contains(rec.Body.String(), "info@arc42.de") {
+		t.Errorf("late correction sent mail or offered a form:\n%s", rec.Body.String())
+	}
+}
+
+// A failed attempt re-issues the page's token; that must not restart the
+// window, or one token could be kept alive for ever.
+func TestAnInvalidCorrectionDoesNotExtendTheWindow(t *testing.T) {
+	e := newEnv(t)
+	tok := correctionToken(t, sentPage(t, e.post("/submit", form("de")), "anna@example.org", "Fast geschafft"))
+	*e.now = e.now.Add(correctionWindow - 5*time.Minute)
+	tok = correctionToken(t, e.post("/correct", url.Values{"t": {tok}, "email": {"not-an-address"}}).Body.String())
+	*e.now = e.now.Add(10 * time.Minute)
+	e.post("/correct", url.Values{"t": {tok}, "email": {"late@example.com"}})
+	if len(mailsTo(e, "late@example.com")) != 0 {
+		t.Error("an invalid correction restarted the correction window")
 	}
 }

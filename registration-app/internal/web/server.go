@@ -35,6 +35,11 @@ type Deps struct {
 	// script rotating IPs cannot make the service mail one inbox without
 	// end. nil means no cap. The back office still gets every submission.
 	RecipientLimiter *intake.Limiter
+	// CorrectionLimiter counts corrections per registration id. The token on
+	// the page is stateless and can be replayed; this is what holds a
+	// registration to maxCorrections. In memory: a restart forgets, and the
+	// correction window bounds what that can cost.
+	CorrectionLimiter *intake.Limiter
 }
 
 type Server struct{ d Deps }

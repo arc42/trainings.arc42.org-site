@@ -66,13 +66,19 @@ activate JavaScript and reload this page.
   local demo can post to the real Formspark by accident.
 {%- endcomment -%}
 {%- assign rf_endpoint = include.endpoint | default: site.registration_endpoint -%}
-{%- if rf_endpoint -%}
+{%- comment -%}
+  Explicit "" check, not a bare if: an empty string is truthy in Liquid, and
+  `registration_endpoint: ""` would otherwise give every form action="" and
+  drop Botpoison, silently breaking every registration. (`!= blank` does not
+  work here: this Liquid version treats nil != blank as true.)
+{%- endcomment -%}
+{%- if rf_endpoint and rf_endpoint != "" -%}
   {%- assign rf_action = rf_endpoint -%}
 {%- else -%}
   {%- capture rf_action -%}https://submit-form.com/{{ formspark_id }}{%- endcapture -%}
 {%- endif -%}
 <form action="{{ rf_action }}"
-      {% if rf_endpoint %}method="post"{% else %}data-botpoison-public-key="{{ botpoison_key }}"{% endif %}
+      {% if rf_endpoint and rf_endpoint != "" %}method="post"{% else %}data-botpoison-public-key="{{ botpoison_key }}"{% endif %}
       class="registration-form"
       id="arc42anmeldung">
 

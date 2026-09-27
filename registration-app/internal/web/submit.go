@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"net/url"
+	"strings"
 
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/mail"
@@ -26,7 +27,8 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 		// A bot learns nothing about which check it tripped: it gets the same
 		// page a person gets, with a correction form that sends nothing.
 		s.d.Log.Printf("submit: dropped (%s)", dec.Reason)
-		s.sentPage(w, token.Claims{Lang: reg.Lang}, firstTyped(reg.Email), false)
+		addr := strings.ToLower(firstTyped(reg.Email))
+		s.sentPage(w, token.Claims{ID: s.d.NewID(), Code: reg.Code, Email: addr, LastName: reg.LastName, Lang: reg.Lang, Dropped: 1}, addr, false)
 		return
 	case intake.Reject:
 		s.d.Log.Printf("submit: rejected (%s)", dec.Reason)

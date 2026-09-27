@@ -30,6 +30,10 @@ type Claims struct {
 	// link is only in the mailbox.
 	Purpose     string `json:"p,omitempty"`
 	Corrections int    `json:"k,omitempty"` // how often the address was corrected
+	// Dropped marks the token of a dropped submission, whose correction form
+	// must send nothing. Always serialised (no omitempty), so a dropped and
+	// an accepted submission produce tokens of the same length.
+	Dropped int `json:"d"`
 }
 
 const (
@@ -66,8 +70,13 @@ func NewSealer(key []byte, ttl time.Duration, now func() time.Time) (*Sealer, er
 	return &Sealer{aead: aead, ttl: ttl, now: now}, nil
 }
 
+// Seal stamps the issue time unless the claims already carry one: a token
+// re-issued on the correction page keeps the age of the submission, so
+// re-issuing cannot extend how long it works.
 func (s *Sealer) Seal(c Claims) (string, error) {
-	c.Issued = s.now().Unix()
+	if c.Issued == 0 {
+		c.Issued = s.now().Unix()
+	}
 	plain, err := json.Marshal(c)
 	if err != nil {
 		return "", err
@@ -104,4 +113,9 @@ func (s *Sealer) Open(tok string) (Claims, error) {
 		return Claims{}, ErrExpired
 	}
 	return c, nil
+}
+
+// Age is how long ago the claims were first issued.
+func (s *Sealer) Age(c Claims) time.Duration {
+	return s.now().Sub(time.Unix(c.Issued, 0))
 }

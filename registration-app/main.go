@@ -56,6 +56,9 @@ func main() {
 		// Three confirmation requests per address and day are plenty for a
 		// person who mistyped twice; more is someone using us as a mailer.
 		RecipientLimiter: intake.NewLimiter(3, 24*time.Hour, time.Now),
+		// Two corrections per registration within the half hour the page's
+		// correction token works (internal/web/correct.go).
+		CorrectionLimiter: intake.NewLimiter(2, 30*time.Minute, time.Now),
 	})
 
 	hs := &http.Server{
