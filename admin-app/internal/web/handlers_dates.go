@@ -86,7 +86,7 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 	blank := newDateDefaults(m.Courses)
 	data := map[string]any{
 		"Title": "New date", "Courses": m.Courses, "Draft": d, "Login": sess.Login,
-		"Formats": model.Formats, "Languages": model.Languages, "Statuses": model.Statuses,
+		"Formats": model.Formats, "Languages": model.Languages, "Availabilities": model.Availabilities,
 		"IsNew": true, "Date": blank,
 		// CourseID is set unconditionally: a key the template reads but the
 		// handler never wrote used to abort rendering halfway down the form.
@@ -132,9 +132,9 @@ func parseDateForm(r *http.Request, isNew bool) (model.Date, string) {
 		ID: get("id"), Code: get("code"), Start: get("start"), End: get("end"),
 		City: get("city"), Country: strings.ToUpper(get("country")),
 		Language: get("language"), Format: get("format"),
-		Price: parsePrice(get), SeatsLimited: get("seats_limited") != "",
-		Status: get("status"),
+		Price: parsePrice(get),
 	}
+	d.SetAvailability(get("availability"))
 	// The id and the booking code are computed from course, first day and
 	// language. form.js shows them live, but the server is the one that owes
 	// the value: with scripting off both fields arrive empty, and an operator
@@ -210,7 +210,7 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 		m := d.Doc.Model()
 		s.render(w, "dateform.gohtml", map[string]any{
 			"Title": title, "Courses": m.Courses, "Draft": d, "Login": sess.Login,
-			"Formats": model.Formats, "Languages": model.Languages, "Statuses": model.Statuses,
+			"Formats": model.Formats, "Languages": model.Languages, "Availabilities": model.Availabilities,
 			"IsNew": isNew, "Date": nd, "CourseID": courseID,
 			"Problems": problems, "Warnings": warnings,
 			"KnownTrainers": model.KnownTrainers, "OtherTrainers": otherTrainers(nd.Trainers),

@@ -140,28 +140,61 @@ func HasAnyCardTemplate(courseID string) bool {
 	return coursesWithPublicCard[courseID] || coursesWithOnlineCard[courseID]
 }
 
-// Formats, Languages and Statuses back the form <select>s and the validator.
+// Formats and Languages back the form <select>s; Statuses is what the
+// validator accepts in the file.
 var (
 	Formats   = []string{"public", "inhouse", "online"}
 	Languages = []string{"de", "en"}
 	Statuses  = []string{"open", "waitlist", "full", "cancelled"}
 )
 
-// statusLabels says what a status does on the site, in the words the
+// Availabilities back the one "Availability" <select> on the date form. The
+// file and the feed keep two fields for it, status and seats_limited, because
+// four consumer sites read both (ADR-0004: an existing field never changes).
+// The form used to offer them separately, and that allowed "fully booked" and
+// "only a few seats left" on the same date. One choice cannot contradict
+// itself. Ordered from most to least bookable, which is how a date moves.
+var Availabilities = []string{"open", "few seats", "waitlist", "full", "cancelled"}
+
+// availabilityLabels says what each choice does on the site, in the words the
 // operator thinks in. The card and form wording (DE/EN) lives in the Liquid
 // includes; this is only the admin app's own explanation.
-var statusLabels = map[string]string{
+var availabilityLabels = map[string]string{
 	"open":      "open for registration",
+	"few seats": "open, only a few seats left",
 	"waitlist":  "fully booked, waiting list available",
 	"full":      "fully booked, no waiting list",
 	"cancelled": "cancelled, hidden everywhere",
 }
 
-// StatusLabel returns the explanation for a status, or the status itself if
-// there is none, so an unexpected value still renders as something.
-func StatusLabel(status string) string {
-	if l, ok := statusLabels[status]; ok {
+// AvailabilityLabel returns the explanation for a choice, or the choice
+// itself if there is none, so an unexpected value still renders as something.
+func AvailabilityLabel(a string) string {
+	if l, ok := availabilityLabels[a]; ok {
 		return l
 	}
-	return status
+	return a
+}
+
+// Availability reads the stored pair as the one choice the form offers. The
+// seat flag counts only on an open date: on any other status it contradicts
+// the status, which wins.
+func (d Date) Availability() string {
+	if d.Status == "open" && d.SeatsLimited {
+		return "few seats"
+	}
+	return d.Status
+}
+
+// SetAvailability stores a choice as the pair. Every choice but "few seats"
+// clears the seat flag, so saving a date also repairs a contradictory pair
+// left by a hand edit. An unknown choice lands in Status unchanged, where the
+// validator rejects it like any other unknown status.
+func (d *Date) SetAvailability(a string) {
+	d.SeatsLimited = a == "few seats"
+	if d.SeatsLimited {
+		d.Status = "open"
+		return
+	}
+	d.Status = a
 }

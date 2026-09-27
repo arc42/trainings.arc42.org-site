@@ -34,9 +34,8 @@ func TestDateWarningsFireOnImplausibleEntries(t *testing.T) {
 		{"a course that starts and ends the same day", func(d *model.Date) { d.End = d.Start }, "end"},
 		{"a course running longer than a working week", func(d *model.Date) { d.End = "2027-03-08" }, "end"},
 		{"an online date carrying a city", func(d *model.Date) { d.City = "München" }, "city"},
-		{"a full date cannot be registered for", func(d *model.Date) { d.Status = "full" }, "status"},
+		{"a full date cannot be registered for", func(d *model.Date) { d.Status = "full" }, "availability"},
 		{"a waitlist date is still registrable and warns about nothing", func(d *model.Date) { d.Status = "waitlist" }, ""},
-		{"few seats on a waitlist date contradicts itself", func(d *model.Date) { d.Status, d.SeatsLimited = "waitlist", true }, "seats_limited"},
 		{"a booking code off the house convention", func(d *model.Date) { d.Code = "27-02-MSA-online" }, "code"},
 		{"an id off the naming convention", func(d *model.Date) { d.ID = "msa-27-02-online" }, "id"},
 	}
@@ -67,18 +66,6 @@ func TestPublicDateWithoutCountryWarns(t *testing.T) {
 	}
 	if got := fields(DateWarnings(d, "msa", "2026-08-16", true)); !strings.Contains(got, "country") {
 		t.Errorf("expected a country warning, got %q", got)
-	}
-}
-
-// The combination that shipped yesterday: seats advertised on a date nobody
-// can book.
-func TestFewSeatsOnAnUnbookableDateWarns(t *testing.T) {
-	d := model.Date{
-		ID: "msa-feb-2027", Code: "27-02 MSA-EN", Start: "2027-02-23", End: "2027-02-25",
-		Language: "en", Format: "online", Status: "full", SeatsLimited: true,
-	}
-	if got := fields(DateWarnings(d, "msa", "2026-08-16", true)); !strings.Contains(got, "seats_limited") {
-		t.Errorf("expected a seats_limited warning, got %q", got)
 	}
 }
 
@@ -231,7 +218,7 @@ func TestStatusWarningNamesTheRightSite(t *testing.T) {
 	d := model.Date{ID: "msa-feb-2027-en", Code: "27-02 MSA-EN", Start: "2027-02-23",
 		End: "2027-02-25", Language: "en", Format: "online", Status: "full"}
 	for _, w := range DateWarnings(d, "msa", "2026-08-16", false) {
-		if w.Field == "status" && strings.Contains(w.Message, "arc42.de") {
+		if w.Field == "availability" && strings.Contains(w.Message, "arc42.de") {
 			t.Errorf("status warning still mentions arc42.de: %q", w.Message)
 		}
 	}

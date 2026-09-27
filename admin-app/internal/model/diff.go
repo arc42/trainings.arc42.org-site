@@ -45,9 +45,10 @@ func DiffDates(before, after Date) []FieldChange {
 		{"format", "Format", before.Format, after.Format},
 		{"trainers", "Trainers", strings.Join(before.Trainers, ", "), strings.Join(after.Trainers, ", ")},
 		{"price", "Price", FormatPrice(before.Price), FormatPrice(after.Price)},
-		{"seats_limited", "Few seats left", yesNo(before.SeatsLimited), yesNo(after.SeatsLimited)},
 		{"url", "Registration link", before.URL, after.URL},
-		{"status", "Status", before.Status, after.Status},
+		// status and seats_limited are one choice on the form, so they are one
+		// row here: "few seats" to "waitlist" is a single decision.
+		{"availability", "Availability", before.Availability(), after.Availability()},
 	})
 }
 
@@ -189,11 +190,4 @@ func languageName(code string) string {
 		return "English"
 	}
 	return code
-}
-
-func yesNo(b bool) string {
-	if b {
-		return "yes"
-	}
-	return "no"
 }

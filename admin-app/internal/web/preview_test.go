@@ -60,7 +60,7 @@ func TestDumpPreview(t *testing.T) {
 			"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 			"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 			"country": {"DE"}, "language": {"de"}, "format": {"public"},
-			"status": {"open"}, "seats_limited": {"on"}, "confirm_warnings": {"1"},
+			"availability": {"few seats"}, "confirm_warnings": {"1"},
 		}))
 	recP := httptest.NewRecorder()
 	s2.Routes().ServeHTTP(recP, signedIn(t, s2, http.MethodGet, "/propose", nil))
