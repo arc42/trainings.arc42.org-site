@@ -5,7 +5,7 @@ import "strings"
 // The two identifiers on a date carry the same three facts — course, year,
 // month — but serve different readers, so the file keeps both:
 //
-//   - ID is the anchor in https://www.arc42.de/termine#<id> and the key in
+//   - ID is the anchor in https://trainings.arc42.org/#<id> and the key in
 //     api/trainings.json. It must never change once published, or links rot.
 //   - Code is the Formspark <option value>, so it reaches the back office
 //     verbatim in a registration mail. Humans read it; hence the space and the
@@ -81,11 +81,16 @@ func DateID(courseID, start, language string) string {
 
 // RegistrationURL derives the public link for a date. Every published date
 // points at the same anchored page, so this is the whole rule.
+//
+// That page is the English trainings home, not arc42.de/termine: all
+// registrations go through trainings.arc42.org, and the sites that render this
+// link (docs, faq, arc42.org, examples) are English. arc42.de links its own
+// /termine anchors and never reads this field.
 func RegistrationURL(dateID string) string {
 	if dateID == "" {
 		return ""
 	}
-	return "https://www.arc42.de/termine#" + dateID
+	return "https://trainings.arc42.org/#" + dateID
 }
 
 // Defaults are the values a new date for a course starts with. They come from

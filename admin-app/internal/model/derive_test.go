@@ -28,8 +28,8 @@ func TestBookingCodeFollowsTheHouseConvention(t *testing.T) {
 	}
 }
 
-func TestRegistrationURLIsTheTermineAnchor(t *testing.T) {
-	if got := RegistrationURL("msa-dez-2026"); got != "https://www.arc42.de/termine#msa-dez-2026" {
+func TestRegistrationURLIsTheTrainingsAnchor(t *testing.T) {
+	if got := RegistrationURL("msa-dez-2026"); got != "https://trainings.arc42.org/#msa-dez-2026" {
 		t.Errorf("RegistrationURL = %q", got)
 	}
 	if got := RegistrationURL(""); got != "" {

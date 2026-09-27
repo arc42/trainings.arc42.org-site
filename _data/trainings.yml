@@ -62,7 +62,7 @@ courses:
             amount: 2690
             until: "2026-08-08"
         seats_limited: true
-        url: "https://www.arc42.de/termine#msa-dez-2026"
+        url: "https://trainings.arc42.org/#msa-dez-2026"
         status: open
       - id: msa-mar-2027
         code: "27-03 MSA"
@@ -78,7 +78,7 @@ courses:
           early_bird:
             amount: 2690
             until: "2026-11-02"
-        url: "https://www.arc42.de/termine#msa-mar-2027"
+        url: "https://trainings.arc42.org/#msa-mar-2027"
         status: open
       - id: msa-jun-2027
         code: "27-06 MSA"
@@ -94,7 +94,7 @@ courses:
           early_bird:
             amount: 2690
             until: "2027-02-08"
-        url: "https://www.arc42.de/termine#msa-jun-2027"
+        url: "https://trainings.arc42.org/#msa-jun-2027"
         status: open
       - id: msa-sep-2027
         code: "27-09 MSA"
@@ -110,7 +110,7 @@ courses:
           early_bird:
             amount: 2690
             until: "2027-05-14"
-        url: "https://www.arc42.de/termine#msa-sep-2027"
+        url: "https://trainings.arc42.org/#msa-sep-2027"
         status: open
       - id: msa-dez-2027
         code: "27-12 MSA"
@@ -126,7 +126,7 @@ courses:
           early_bird:
             amount: 2690
             until: "2027-07-30"
-        url: "https://www.arc42.de/termine#msa-dez-2027"
+        url: "https://trainings.arc42.org/#msa-dez-2027"
         status: open
 
       - id: msa-27-02-online
@@ -139,7 +139,7 @@ courses:
         price:
           amount: 2100
           currency: EUR
-        url: "https://www.arc42.de/termine#msa-27-02-online"
+        url: "https://trainings.arc42.org/#msa-27-02-online"
         status: open
 
       - id: msa-06-2027
@@ -152,7 +152,7 @@ courses:
         price:
           amount: 2100
           currency: EUR
-        url: "https://www.arc42.de/termine#msa-06-2027"
+        url: "https://trainings.arc42.org/#msa-06-2027"
         status: open
 
       - id: msa-sep-2027-en
@@ -165,7 +165,7 @@ courses:
         price:
           amount: 2100
           currency: EUR
-        url: "https://www.arc42.de/termine#msa-sep-2027-en"
+        url: "https://trainings.arc42.org/#msa-sep-2027-en"
         status: open
   - id: improve
     short_title: "IMPROVE"
@@ -192,7 +192,7 @@ courses:
           currency: EUR
           alumni: 2050
         seats_limited: true
-        url: "https://www.arc42.de/termine#improve-nov-2026"
+        url: "https://trainings.arc42.org/#improve-nov-2026"
         status: open
       - id: improve-jun-2027
         code: "27-06 IMPROVE"
@@ -206,7 +206,7 @@ courses:
           amount: 2200
           currency: EUR
           alumni: 2050
-        url: "https://www.arc42.de/termine#improve-jun-2027"
+        url: "https://trainings.arc42.org/#improve-jun-2027"
         status: open
       - id: improve-nov-2027
         code: "27-11 IMPROVE"
@@ -220,7 +220,7 @@ courses:
           amount: 2200
           currency: EUR
           alumni: 2050
-        url: "https://www.arc42.de/termine#improve-nov-2027"
+        url: "https://trainings.arc42.org/#improve-nov-2027"
         status: open
 
       - id: improve-apr-2027
@@ -233,7 +233,7 @@ courses:
         price:
           amount: 2100
           currency: EUR
-        url: "https://www.arc42.de/termine#improve-apr-2027"
+        url: "https://trainings.arc42.org/#improve-apr-2027"
         status: open
   - id: req4arc
     short_title: "Req4Arc"
@@ -259,7 +259,7 @@ courses:
           amount: 2200
           currency: EUR
           alumni: 2050
-        url: "https://www.arc42.de/termine#req4arc-mar-2027"
+        url: "https://trainings.arc42.org/#req4arc-mar-2027"
         status: open
       - id: req4arc-sep-2027
         code: "27-09 Req4Arc"
@@ -273,7 +273,7 @@ courses:
           amount: 2200
           currency: EUR
           alumni: 2050
-        url: "https://www.arc42.de/termine#req4arc-sep-2027"
+        url: "https://trainings.arc42.org/#req4arc-sep-2027"
         status: open
 
       - id: req4arc-jun-2027
@@ -288,7 +288,7 @@ courses:
           amount: 2100
           currency: EUR
           alumni: 2050
-        url: "https://www.arc42.de/termine#req4arc-jun-2027"
+        url: "https://trainings.arc42.org/#req4arc-jun-2027"
         status: open
   - id: adoc
     short_title: "ADOC"
@@ -316,7 +316,7 @@ courses:
           amount: 1500
           currency: EUR
           alumni: 1350
-        url: "https://www.arc42.de/termine#adoc-oct-2026"
+        url: "https://trainings.arc42.org/#adoc-oct-2026"
         status: open
       - id: adoc-jun-2027
         code: "27-06 ADOC"
@@ -331,7 +331,7 @@ courses:
           amount: 1500
           currency: EUR
           alumni: 1350
-        url: "https://www.arc42.de/termine#adoc-jun-2027"
+        url: "https://trainings.arc42.org/#adoc-jun-2027"
         status: open
 
       - id: adoc-oct-2027
@@ -346,5 +346,5 @@ courses:
           amount: 1900
           currency: EUR
           alumni: 1750
-        url: "https://www.arc42.de/termine#adoc-oct-2027"
+        url: "https://trainings.arc42.org/#adoc-oct-2027"
         status: open

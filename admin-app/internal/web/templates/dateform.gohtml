@@ -100,7 +100,7 @@
     </div>
     {{/* No registration URL field: every published date links to the same
          anchored page, so the date id already determines it. The server writes
-         https://www.arc42.de/termine#<id> on save. */}}
+         https://trainings.arc42.org/#<id> on save. */}}
   </fieldset>
 
   {{/* The two identifiers come after everything they are computed from —
@@ -116,11 +116,11 @@
       {{if .IsNew}}<small id="id-hint" class="hint">Computed from the course,
         the month and year of the first day and the language, e.g. msa-sep-2027,
         or msa-sep-2027-en for an English run. Month names are English
-        (dec, not dez). It becomes the anchor link on arc42.de, so it must not
+        (dec, not dez). It becomes the anchor link on trainings.arc42.org and arc42.de, so it must not
         change once published. Override it only if the computed id is already
         taken.</small>
-      {{else}}<small id="id-hint" class="hint">The anchor link on arc42.de
-        (termine#{{.Date.ID}}). It is published, so changing it breaks every
+      {{else}}<small id="id-hint" class="hint">The anchor link on trainings.arc42.org
+        and arc42.de (#{{.Date.ID}}). It is published, so changing it breaks every
         link and bookmark that points at this date.</small>{{end}}
     </label>
     <label>Booking code
