@@ -41,6 +41,35 @@ func TestRoundTrip(t *testing.T) {
 	}
 }
 
+// Every field at its form limit, in 4-byte characters, and a code that the
+// feed did not vet (it was down) must still give a link that opens. The last
+// name is only there to label the BESTÄTIGT mail, whose R-id already points
+// at the full first mail, so the token keeps the first 60 characters of it.
+func TestTheLongestLegalSubmissionStillOpens(t *testing.T) {
+	now := time.Date(2026, 9, 30, 10, 0, 0, 0, time.UTC)
+	s := sealer(&now)
+	in := Claims{
+		ID: "R-7F3KQ", Code: strings.Repeat("𝄞", 64),
+		Email:    strings.Repeat("a", 64) + "@" + strings.Repeat("b", 251) + ".org",
+		LastName: strings.Repeat("𝄞", 200), Lang: "en",
+		Purpose: PurposeCorrect, Corrections: 2, Dropped: 1,
+	}
+	tok, err := s.Seal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := s.Open(tok)
+	if err != nil {
+		t.Fatalf("a %d-char token for a legal submission does not open: %v", len(tok), err)
+	}
+	if n := len([]rune(out.LastName)); n != 60 {
+		t.Errorf("last name in the token has %d characters, want 60", n)
+	}
+	if out.Email != in.Email || out.Code != in.Code {
+		t.Error("email or code was shortened; only the name may be")
+	}
+}
+
 func TestExpiresAfterFiveDays(t *testing.T) {
 	now := time.Date(2026, 9, 30, 10, 0, 0, 0, time.UTC)
 	s := sealer(&now)

@@ -24,7 +24,7 @@ type Config struct {
 
 	MailFrom     string
 	MailFromName string
-	BackofficeTo string
+	BackofficeTo []string // one or more mailboxes, comma-separated in BACKOFFICE_TO
 	ReplyTo      string
 
 	FeedURL   string // the public course feed
@@ -48,7 +48,7 @@ func Load() (Config, error) {
 		MailjetPrivate: os.Getenv("MJ_APIKEY_PRIVATE"),
 		MailFrom:       env("MAIL_FROM", "trainings@arc42.org"),
 		MailFromName:   env("MAIL_FROM_NAME", "arc42 Trainings"),
-		BackofficeTo:   os.Getenv("BACKOFFICE_TO"),
+		BackofficeTo:   list(os.Getenv("BACKOFFICE_TO")),
 		ReplyTo:        env("REPLY_TO", "info@arc42.de"),
 		FeedURL:        env("FEED_URL", "https://trainings.arc42.org/api/trainings.json"),
 		SiteURL:        strings.TrimRight(env("SITE_URL", "https://trainings.arc42.org"), "/"),
@@ -76,8 +76,16 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("MAILER must be mailjet or log, not %q", c.Mailer)
 	}
 
-	if c.BackofficeTo == "" {
+	if len(c.BackofficeTo) == 0 {
 		return Config{}, errors.New("BACKOFFICE_TO is required")
+	}
+	// Mail clients separate with semicolons, this list with commas. A
+	// semicolon here would reach Mailjet as one broken address and fail
+	// every back-office mail, silently, in the logs.
+	for _, a := range c.BackofficeTo {
+		if strings.ContainsAny(a, "; ") || !strings.Contains(a, "@") {
+			return Config{}, fmt.Errorf("BACKOFFICE_TO: %q is not one address; separate several with commas", a)
+		}
 	}
 	if c.PublicURL == "" {
 		return Config{}, errors.New("PUBLIC_URL is required: it is the base of every confirm link")

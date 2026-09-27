@@ -158,9 +158,13 @@ PR #49): the 32 KB body cap (now derived from the field limits), control
 characters in a booking code (dropped), the cancelled feed fetch (detached
 from the request), and the three comment/doc items.
 
-Still open, waiting for Gernot's decision (fix or accept):
-- An extreme name plus address can make a confirm token too long to open.
-- After a correction, the old confirm link (to the mistyped address) still works; the correction notice mitigates.
+Also fixed on 27 Sep 2026: an extreme name plus address no longer makes a
+confirm token too long to open (the token keeps 60 characters of the last
+name, the form has maxlength on every field).
+
+Accepted by Gernot, 27 Sep 2026: after a correction, the old confirm link (to
+the mistyped address) still works; the correction notice to the back office
+mitigates it, and revoking it would need state the service does not keep.
 
 Open decision: a back-office UI for registrations. Recommendation on record:
 not now; if wanted after the observation weeks, a PII-free event log shown in

@@ -62,7 +62,7 @@ func (s *Server) handleConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 	m, err := mail.Confirmed(c)
 	if err == nil {
-		err = s.send(r.Context(), send.Message{To: []string{s.d.Cfg.BackofficeTo}, ReplyTo: c.Email, Subject: m.Subject, Text: m.Text, CustomID: c.ID})
+		err = s.send(r.Context(), send.Message{To: s.d.Cfg.BackofficeTo, ReplyTo: c.Email, Subject: m.Subject, Text: m.Text, CustomID: c.ID})
 	}
 	if err != nil {
 		s.d.Log.Printf("confirm %s: mail failed: %v", c.ID, err)

@@ -63,7 +63,7 @@ func newEnv(t *testing.T) *env {
 	sealer, _ := token.NewSealer([]byte("0123456789abcdef0123456789abcdef"), token.Valid, func() time.Time { return *e.now })
 	ff := fakeFeed{"26-12 MSA": feed.Bookable}
 	e.srv = New(Deps{
-		Cfg: config.Config{BackofficeTo: "office@example.org", ReplyTo: "info@arc42.de",
+		Cfg: config.Config{BackofficeTo: []string{"office@example.org"}, ReplyTo: "info@arc42.de",
 			SiteURL: "https://trainings.arc42.org", PublicURL: "https://register.example"},
 		Checker: &intake.Checker{Feed: ff, Limiter: intake.NewLimiter(100, time.Hour, time.Now),
 			AllowedOrigins: []string{"https://trainings.arc42.org"}},

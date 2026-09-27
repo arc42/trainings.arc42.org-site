@@ -50,7 +50,15 @@ var (
 // weekend and the back office's follow-up after 2 to 3 working days.
 const Valid = 5 * 24 * time.Hour
 
-const maxLen = 1024
+// maxLen bounds what Open will even try to decode. The longest legal
+// submission (every form field at its limit, in 4-byte characters) seals to
+// about 1300 characters; see TestTheLongestLegalSubmissionStillOpens.
+const maxLen = 2048
+
+// maxNameInToken is how much of the last name the token keeps. It only labels
+// the BESTÄTIGT mail, whose R-id points at the first mail with the full name;
+// keeping all 200 allowed characters made the longest links fail to open.
+const maxNameInToken = 60
 
 type Sealer struct {
 	aead cipher.AEAD
@@ -76,6 +84,9 @@ func NewSealer(key []byte, ttl time.Duration, now func() time.Time) (*Sealer, er
 func (s *Sealer) Seal(c Claims) (string, error) {
 	if c.Issued == 0 {
 		c.Issued = s.now().Unix()
+	}
+	if r := []rune(c.LastName); len(r) > maxNameInToken {
+		c.LastName = string(r[:maxNameInToken])
 	}
 	plain, err := json.Marshal(c)
 	if err != nil {

@@ -36,6 +36,26 @@ func TestLoadAcceptsATestSetup(t *testing.T) {
 	}
 }
 
+// The back office can be more than one mailbox (info@arc42.de and
+// trainings@arc42.org). Same syntax as TEST_RECIPIENTS: commas. A semicolon
+// is refused rather than handed to Mailjet as one broken address, which
+// would fail every back-office mail.
+func TestBackofficeToIsACommaSeparatedList(t *testing.T) {
+	base(t)
+	t.Setenv("BACKOFFICE_TO", "info@arc42.de, Trainings@arc42.org")
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(c.BackofficeTo) != 2 || c.BackofficeTo[0] != "info@arc42.de" || c.BackofficeTo[1] != "trainings@arc42.org" {
+		t.Errorf("BackofficeTo = %v", c.BackofficeTo)
+	}
+	t.Setenv("BACKOFFICE_TO", "info@arc42.de; trainings@arc42.org")
+	if _, err := Load(); err == nil {
+		t.Error("a semicolon-separated BACKOFFICE_TO was accepted")
+	}
+}
+
 // The guard the spec asks for: a deployment that is not production and has
 // no allow-list must not start, or it would mail whatever address a form
 // submission names.

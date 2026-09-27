@@ -33,8 +33,8 @@ func main() {
 	if cfg.TestMode() {
 		// The back office address is always allowed, so test mode still
 		// shows both back-office mails.
-		sender = send.NewAllowList(sender, append(cfg.TestRecipients, cfg.BackofficeTo), logger)
-		logger.Printf("test mode: mail only to %v and %s", cfg.TestRecipients, cfg.BackofficeTo)
+		sender = send.NewAllowList(sender, append(cfg.TestRecipients, cfg.BackofficeTo...), logger)
+		logger.Printf("test mode: mail only to %v and %v", cfg.TestRecipients, cfg.BackofficeTo)
 	}
 
 	sealer, err := token.NewSealer(cfg.TokenKey, token.Valid, time.Now)

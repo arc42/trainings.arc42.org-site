@@ -23,7 +23,7 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 |---|---|---|
 | `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` | yes | Mailjet key pair (sub-account key) |
 | `TOKEN_KEY` | yes | 32 random bytes, base64 (`openssl rand -base64 32`). Rotating it invalidates every open confirm link |
-| `BACKOFFICE_TO` | yes | where UNBESTÄTIGT/BESTÄTIGT go. A personal address, and this repo is public |
+| `BACKOFFICE_TO` | yes | where UNBESTÄTIGT/BESTÄTIGT go; several addresses **comma**-separated (a semicolon is refused at start). Personal addresses, and this repo is public |
 | `TEST_RECIPIENTS` | yes | if set: **test mode**. Registrant mails only to these addresses, `[TEST]` in every subject. Personal addresses too |
 | `PUBLIC_URL` | no | this service's base URL, the start of every confirm link |
 | `SITE_URL` | no | where the success, fail and confirmed pages live (default trainings.arc42.org) |

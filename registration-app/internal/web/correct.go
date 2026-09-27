@@ -138,7 +138,7 @@ func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
 		s.d.Log.Printf("correct %s: registrant mail failed: %v", c.ID, err)
 	}
 	if m, err := mail.Corrected(c, old); err == nil {
-		if err := s.send(r.Context(), send.Message{To: []string{s.d.Cfg.BackofficeTo}, ReplyTo: newEmail, Subject: m.Subject, Text: m.Text, CustomID: c.ID}); err != nil {
+		if err := s.send(r.Context(), send.Message{To: s.d.Cfg.BackofficeTo, ReplyTo: newEmail, Subject: m.Subject, Text: m.Text, CustomID: c.ID}); err != nil {
 			s.d.Log.Printf("correct %s: back-office notice failed: %v", c.ID, err)
 		}
 	}

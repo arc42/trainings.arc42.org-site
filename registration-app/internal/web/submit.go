@@ -49,7 +49,7 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	// the person has to know.
 	bo, err := mail.Backoffice(reg, facts, dec.Hints)
 	if err == nil {
-		err = s.send(r.Context(), send.Message{To: []string{s.d.Cfg.BackofficeTo}, ReplyTo: reg.Emails[0], Subject: bo.Subject, Text: bo.Text, CustomID: reg.ID})
+		err = s.send(r.Context(), send.Message{To: s.d.Cfg.BackofficeTo, ReplyTo: reg.Emails[0], Subject: bo.Subject, Text: bo.Text, CustomID: reg.ID})
 	}
 	if err != nil {
 		s.d.Log.Printf("submit %s: back-office mail failed: %v", reg.ID, err)
