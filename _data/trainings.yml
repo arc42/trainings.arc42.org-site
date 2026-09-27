@@ -61,7 +61,6 @@ courses:
           early_bird:
             amount: 2690
             until: "2026-08-08"
-        seats_limited: true
         url: "https://trainings.arc42.org/#msa-dez-2026"
         status: waitlist
       - id: msa-mar-2027
