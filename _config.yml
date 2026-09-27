@@ -56,10 +56,21 @@ include:
 #   - admin-app: the Go source of the trainings admin app. Without this line
 #     https://trainings.arc42.org/admin-app/main.go serves the app's source.
 #   - docs: the design specs. Repository documents, not site content.
+# Where the hidden registration test pages post (_pages/*-test-8r4tqz.md):
+# the registration service in test mode. `make reg-demo` overrides it with
+# _config.regdemo.yml to try the whole flow on this machine.
+registration_test_endpoint: https://arc42-registration.fly.dev/submit
+# Where ALL registration forms post. Empty: Formspark (production until the
+# go-live). `make reg-demo` sets it so the local demo never reaches Formspark.
+registration_endpoint:
+
 exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"
   - admin-app
+  # The registration service's Go source. Same reason as admin-app: anything
+  # not excluded is copied into _site/ and published.
+  - registration-app
   # Local output of `make training-app-demo` and `make app-preview`. Gitignored, but
   # Jekyll would still copy whatever is lying there into _site — where
   # html-proofer then checks the admin app's pages as if they were site pages.

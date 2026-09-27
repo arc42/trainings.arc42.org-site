@@ -25,7 +25,7 @@ template cannot look up what was booked, so it cannot say "MSA, 1 to 4 December,
 Munich, 2.890 €". Its "recap of the submitted data" is worse than nothing: it
 mails text typed by a stranger to an address typed by the same stranger, from
 arc42's name. The spam log already shows the pattern bots use to probe for
-exactly that (a dotted Gmail address, `a.b.c.d.e1@gmail.com`).
+exactly that (a Gmail address with many dots in its local part).
 
 **The spam that matters is plausible.** About one submission a week has a real
 course selected and a believable person, so someone has to judge whether it is
@@ -178,8 +178,11 @@ never used to drop.
    fail page: the registration did not reach anyone and the person must know.
    If only the registrant mail fails, redirect to success anyway: the back
    office has it and will follow up.
-5. Redirect (303) to `/anmeldung-erfolg/` or `/registration-success/`, whose
-   text changes to "please check your inbox and confirm".
+5. The service answers with its own page (not a redirect to the site), in
+   the form's language: "Wir haben eine E-Mail an **<address>** geschickt",
+   with a form to correct the address (section 4.6). The address is shown
+   only on this page, never in a URL, because URLs reach logs and analytics.
+   A dropped submission gets exactly the same page.
 
 ### 4.3 Token
 
@@ -222,6 +225,32 @@ refresh fails, the last good copy is used. If there has never been a good copy
 (cold start while the site is down), the code check is skipped and every
 back-office mail carries a `Hinweis: Kursliste nicht verfügbar` (EN: `Note: course list unavailable`); failing closed
 here would reject real bookings because of a GitHub Pages outage.
+
+### 4.6 Correcting a mistyped address
+
+Added in review on 2026-09-27. Most typos are noticed the moment the address
+is shown back, so the page after submitting shows it and offers one field to
+correct it.
+
+- The page carries a sealed token with purpose `correct` (same fields as the
+  confirm token, plus a correction count). `POST /correct` with that token and
+  a new address sends the registrant mail to the new address and a short
+  back-office mail `... (E-MAIL KORRIGIERT)` / `(EMAIL CORRECTED)` with old and
+  new address, same registration id. The BESTÄTIGT mail then carries the
+  corrected address.
+- A correction token can never confirm, and a confirm token can never
+  correct: the correction token is on a page a bot sees, the confirm link is
+  only in the mailbox.
+- At most two corrections; after that the page names info@arc42.de and shows
+  no form. The per-IP limit and the 3-per-address-and-day cap apply.
+- A dropped submission gets the same page and a correction form that sends
+  nothing, so a bot cannot tell a drop from an accept.
+- Showing the typed address leaks nothing: the browser sent it seconds
+  before. Whether an address exists is not known at this point anyway; a
+  bounce reaches Mailjet minutes later.
+- Rejected in review: a second "repeat your e-mail" field (copy and paste
+  defeats it, friction for everyone) and typo suggestions while typing
+  ("gmial.com").
 
 ## 5. Mailjet
 
@@ -344,9 +373,13 @@ one that nobody could join.
 
 A waiting-list registration goes through **exactly the same process**:
 same checks, same two back-office mails, same registrant mail, same confirm
-click. The mails say nothing about the waiting list; the back office tells
-the registrant in its personal reply. Keeping the service ignorant of the
-status (beyond "is it bookable") is deliberate.
+click. There is no flow of its own, only a **note**: the registrant mail adds
+"Dieser Termin ist ausgebucht. Mit Ihrer Anmeldung kommen Sie auf die
+Warteliste; wir melden uns, sobald ein Platz frei wird." (EN: "this date is
+fully booked. Your registration puts you on the waiting list ..."), and the
+back-office mail lists "WARTELISTE" / "WAITING LIST" under its hints. The
+back office's personal reply follows as for any registration. (Changed in
+review on 2026-09-27; the first version kept the mails silent about it.)
 
 Status changes are manual, as today. Nothing flips a date to `waitlist` or
 `full`, and nothing removes a full date: some stay up for marketing, others

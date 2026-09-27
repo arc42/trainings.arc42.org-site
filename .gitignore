@@ -21,3 +21,6 @@ demo-out/
 preview-out/
 .agents
 skills-lock.json
+
+# Office lock files (PowerPoint/Word keep one next to an open document)
+~$*

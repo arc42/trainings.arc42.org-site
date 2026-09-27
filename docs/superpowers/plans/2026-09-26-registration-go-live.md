@@ -22,9 +22,9 @@
 ## Review Focus
 
 - **A registrant with JavaScript off**: after Task 1 the form works without JavaScript for the first time; the `<noscript>` block and the `display:none` wrapper must be gone, and the preselect/summary script must still only enhance. Pinned in Task 1, step 6 (curl the built page, submit with a plain POST).
-- **A registrant whose confirmation mail never arrives**: the success page must tell them to check spam and whom to write to, otherwise the first sign of a quarantined mail is a phone call weeks later. Pinned in Task 1, step 3 (page copy) and step 7 (grep).
+- **A registrant whose confirmation mail never arrives**: the service's page after submitting tells them to check spam and lets them correct the address (spec 4.6); check it once on the live service after go-live.
 - **An old tab or cached page still posting to Formspark after the switch**: Formspark keeps receiving for weeks; the back office must know such a notification is still real. Pinned in Task 2, step 3 (checklist item) and Task 5 (only retire after the Formspark log is quiet).
-- **arc42.de's `?kurs=` links with stale ids** (`msa-06-2027` vs the feed's `msa-jun-2027`): preselection silently fails. Pinned in Task 4, step 1.
+- **arc42.de's `?kurs=` links**: every id arc42.de links to must exist as a `data-id` on the form, including ids off the naming convention such as `msa-06-2027` (a real date: 27-06 MSA-EN, online), or preselection silently fails. Pinned in Task 4, step 1.
 - **Rollback after the service went production**: reverting the site PR sends the forms back to Formspark, but the service still accepts posts from any cached new page; that is fine and must not be "fixed" by stopping the service. Pinned in Task 2, step 4.
 
 ---
@@ -66,31 +66,14 @@ Delete the Botpoison `<script>` block and its comment from `_includes/head.html`
 
 - [ ] **Step 3: Success and fail pages**
 
-`_pages/anmeldung-erfolg.md`, replace the box with:
-
-```markdown
-<div class="form-outcome form-outcome--success" markdown="1">
-### Fast geschafft: bitte bestätigen Sie Ihre Anmeldung.
-
-Wir haben Ihnen eine E-Mail geschickt. Ihre Anmeldung ist erst vollständig, wenn Sie den Link darin öffnen und bestätigen. Der Link ist 5 Tage gültig.
-
-Keine Mail da? Sehen Sie bitte im Spam-Ordner nach, oder schreiben Sie uns an [info@arc42.de](mailto:info@arc42.de).
-</div>
-```
-
-`_pages/registration-success.md`:
-
-```markdown
-<div class="form-outcome form-outcome--success" markdown="1">
-### Almost done: please confirm your registration.
-
-We have sent you an e-mail. Your registration is only complete once you open the link in it and confirm. The link is valid for 5 days.
-
-No mail? Please check your spam folder, or write to us at [info@arc42.de](mailto:info@arc42.de).
-</div>
-```
-
-Keep the "und nun..." / "and now..." buttons. In both fail pages, replace the first paragraph ("Unsere Anmeldeseite benötigt JavaScript..." / "Our registration page requires JavaScript...") with "Beim Absenden ist etwas schiefgegangen." / "Something went wrong while sending your registration." and keep the mailto button.
+Since 2026-09-27 the service shows its own page after submitting (the typed
+address plus a correction form, spec 4.2 step 5 and 4.6), so nothing redirects
+to `/anmeldung-erfolg/` or `/registration-success/` any more. Keep both pages
+(bookmarks, and the rollback to Formspark needs them) and leave their text as
+it is. In both fail pages, replace the first paragraph ("Unsere Anmeldeseite
+benötigt JavaScript..." / "Our registration page requires JavaScript...") with
+"Beim Absenden ist etwas schiefgegangen." / "Something went wrong while
+sending your registration." and keep the mailto button.
 
 - [ ] **Step 4: Privacy statement**
 
@@ -107,11 +90,10 @@ make site
 grep -o '<form action="[^"]*" method="post"' _site/anmeldung/index.html _site/registration/index.html
 grep -c -i -E 'botpoison|submit-form.com|noscript|main_body' _site/anmeldung/index.html _site/registration/index.html _site/index.html
 test ! -e _site/anmeldung-test-8r4tqz && echo test-page-gone
-grep -c 'Spam' _site/anmeldung-erfolg/index.html
 make check-links
 ```
 
-Expected: both forms post to `https://register.arc42.org/submit`; the count is `0` everywhere; `test-page-gone`; the spam hint is present; the link check passes.
+Expected: both forms post to `https://register.arc42.org/submit`; the count is `0` everywhere; `test-page-gone`; the link check passes.
 
 - [ ] **Step 7: Open the PR, do not merge yet**
 
@@ -152,9 +134,9 @@ Precondition: Task 3 closed with "continue".
 
 **Files (arc42.de-site):** `_pages/anmeldung.md`, `_pages/anmeldungEN.md`, `_includes/head/custom.html` (Botpoison block), the `test-theme` target in its `Makefile`, `README.md`, and the data file behind its `/termine` page.
 
-- [ ] **Step 1: Stale ids first**
+- [ ] **Step 1: Every linked id exists**
 
-In arc42.de-site, find why `/termine` links `?kurs=msa-06-2027` while the feed id is `msa-jun-2027`: `grep -rn 'msa-06-2027' .` and check the workflow that refreshes its copy of `trainings.json`. Fix it so every `?kurs=` value on arc42.de exists as a `data-id` on `https://trainings.arc42.org/anmeldung/`. Verify with:
+Before stubbing anything, confirm that every `?kurs=` value on arc42.de exists as a `data-id` on `https://trainings.arc42.org/anmeldung/`. (An earlier note suspected `msa-06-2027` was stale; it is not, it is a separate date with an off-convention id. If a real mismatch shows up, check arc42.de's workflow that refreshes its copy of `trainings.json`.) Verify with:
 
 ```bash
 curl -s https://trainings.arc42.org/anmeldung/ | grep -o 'data-id="[^"]*"' | sort -u > /tmp/ids

@@ -2,7 +2,8 @@
 
 .PHONY: help dev build stop site check-links check-consumers clean install update shell logs \
         app-test app-check app-build training-app-demo training-app-stop app-preview check-go \
-        check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases
+        check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases \
+        reg-test reg-check reg-run reg-demo reg-deploy reg-status reg-logs
 
 # This site's fixed local dev port. Every arc42 site has its own so their dev
 # servers can run side by side; see raw/port-assignment.md in meta.arc42.org.
@@ -10,6 +11,13 @@
 # CMD passes it to Jekyll so its startup banner names the real port.
 SITE_PORT   := 4260
 APP_DIR     := admin-app
+REG_DIR     := registration-app
+REG_APP     := arc42-registration
+# Origins the demo service accepts: plain localhost plus the *.localhost
+# names that local proxies such as localdock put in front of the container.
+# An origin not listed here is dropped silently, which in a demo looks like
+# "nothing happens"; the service logs "dropped (origin ...)".
+REG_DEMO_ORIGINS := http://localhost:$(SITE_PORT),http://127.0.0.1:$(SITE_PORT),http://trainings-regdemo.localhost,https://trainings-regdemo.localhost,http://trainings-regdemo.localhost:$(SITE_PORT)
 FLY_APP     := arc42-trainings-admin
 PREVIEW_DIR := preview-out
 
@@ -183,3 +191,62 @@ check-flyctl:
 	@flyctl auth whoami >/dev/null 2>&1 || { \
 		printf "\n  flyctl is installed but not signed in — run: flyctl auth login\n"; \
 		printf "  You also need access to the '$(FLY_APP)' fly app.\n\n"; exit 1; }
+
+# ---------------------------------------------- registration service (Go)
+#
+# A third program: receives the registration form, mails via Mailjet, confirms
+# from a sealed link. Stateless, own fly app. See registration-app/README.md
+# and docs/superpowers/specs/2026-09-25-registration-service-design.md.
+
+reg-test: check-go ## Run the registration service's Go tests
+	cd $(REG_DIR) && go test ./...
+
+reg-check: check-go ## Tests, vet and gofmt for the registration service (what CI gates on)
+	cd $(REG_DIR) && go test ./...
+	cd $(REG_DIR) && go vet ./...
+	@unformatted=$$(cd $(REG_DIR) && gofmt -l .); \
+	if [ -n "$$unformatted" ]; then \
+		printf "==> gofmt would rewrite:\n%s\n" "$$unformatted"; exit 1; \
+	fi
+	@printf "==> registration service: tests, vet and gofmt are clean\n"
+
+reg-run: check-go ## Run the registration service on :8099; mails are printed, not sent
+	@# A fresh TOKEN_KEY per run: links from an earlier run stop working, which
+	@# is fine for a local loop. The live course feed is used.
+	cd $(REG_DIR) && MAILER=log PORT=8099 PUBLIC_URL=http://localhost:8099 \
+		BACKOFFICE_TO=office@example.invalid ALLOWED_ORIGINS=http://localhost:4260 \
+		TOKEN_KEY=$$(openssl rand -base64 32) go run .
+
+reg-demo: check-go ## Try the whole registration flow locally: test form on :4260, mails printed here
+	@# The site runs detached in Docker with _config.regdemo.yml, so its test
+	@# pages post to the service on :8099; the service runs in the foreground,
+	@# printing every mail. Redirects go to the local site, so the success and
+	@# confirmed pages are the ones in this checkout. Nothing is sent anywhere.
+	@docker compose down --remove-orphans >/dev/null 2>&1 || true
+	@docker rm -f trainings-regdemo >/dev/null 2>&1 || true
+	docker compose run -d --name trainings-regdemo --service-ports jekyll \
+		bundle exec jekyll serve --host 0.0.0.0 --port $(SITE_PORT) --force_polling --config _config.yml,_config.regdemo.yml
+	@printf "\n==> Form (DE): http://localhost:$(SITE_PORT)/anmeldung-test-8r4tqz/\n"
+	@printf "==> Form (EN): http://localhost:$(SITE_PORT)/registration-test-8r4tqz/\n"
+	@printf "==> The site needs ~20 s to build. Mails appear below; open the confirm link from there.\n"
+	@printf "==> Ctrl-C stops the service; 'docker rm -f trainings-regdemo' stops the site.\n\n"
+	@# FEED_URL is the local site's feed, so the courses the service accepts are
+	@# exactly the ones this checkout's form offers (the live feed may differ).
+	cd $(REG_DIR) && MAILER=log PORT=8099 PUBLIC_URL=http://localhost:8099 \
+		SITE_URL=http://localhost:$(SITE_PORT) FEED_URL=http://localhost:$(SITE_PORT)/api/trainings.json \
+		BACKOFFICE_TO=office@example.invalid \
+		ALLOWED_ORIGINS=$(REG_DEMO_ORIGINS) TOKEN_KEY=$$(openssl rand -base64 32) go run .
+
+reg-deploy: check-flyctl reg-check ## Deploy the registration service in the CURRENT working tree to fly.io
+	@printf "==> Deploying $(REG_DIR)/ to fly app $(REG_APP)\n"
+	@if [ "$(YES)" != "1" ]; then \
+		printf "==> Type 'deploy' to continue (or YES=1 make reg-deploy): "; \
+		read -r answer; [ "$$answer" = "deploy" ] || { printf "==> aborted\n"; exit 1; }; \
+	fi
+	cd $(REG_DIR) && flyctl deploy --remote-only -a $(REG_APP)
+
+reg-status: check-flyctl ## Show the registration service's machines and health checks
+	cd $(REG_DIR) && flyctl status -a $(REG_APP)
+
+reg-logs: check-flyctl ## Tail the registration service's logs (drops, rejects, sends)
+	cd $(REG_DIR) && flyctl logs -a $(REG_APP)

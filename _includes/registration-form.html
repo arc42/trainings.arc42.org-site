@@ -50,28 +50,62 @@ activate JavaScript and reload this page.
 
 <div id="main_body" style="display: none;">
 
-<form action="https://submit-form.com/{{ formspark_id }}"
-      data-botpoison-public-key="{{ botpoison_key }}"
+{%- comment -%}
+  include.endpoint: where the form posts when it is NOT Formspark. Set only by
+  the hidden test pages while the registration service runs in test mode
+  (spec 2026-09-25, section 7.2 stage 4); the go-live PR makes it the default.
+  With an endpoint there is no Botpoison attribute: the service does its own
+  checks, and the Botpoison script would otherwise try to attach a challenge
+  the service never verifies. method="post" only with an endpoint: the
+  service accepts POST only, and the production Formspark form keeps its
+  exact current attributes. rf_ prefix: includes share the caller's scope.
+{%- endcomment -%}
+{%- comment -%}
+  site.registration_endpoint (empty in _config.yml) does the same for every
+  form on a site built with it: `make reg-demo` sets it, so no page of the
+  local demo can post to the real Formspark by accident.
+{%- endcomment -%}
+{%- assign rf_endpoint = include.endpoint | default: site.registration_endpoint -%}
+{%- comment -%}
+  Explicit "" check, not a bare if: an empty string is truthy in Liquid, and
+  `registration_endpoint: ""` would otherwise give every form action="" and
+  drop Botpoison, silently breaking every registration. (`!= blank` does not
+  work here: this Liquid version treats nil != blank as true.)
+{%- endcomment -%}
+{%- if rf_endpoint and rf_endpoint != "" -%}
+  {%- assign rf_action = rf_endpoint -%}
+{%- else -%}
+  {%- capture rf_action -%}https://submit-form.com/{{ formspark_id }}{%- endcapture -%}
+{%- endif -%}
+<form action="{{ rf_action }}"
+      {% if rf_endpoint and rf_endpoint != "" %}method="post"{% else %}data-botpoison-public-key="{{ botpoison_key }}"{% endif %}
       class="registration-form"
       id="arc42anmeldung">
 
 <strong>{% if include.lang == "de" %}Wer meldet an?{% else %}Who registers?{% endif %}</strong>
   <br>
 
+{%- comment -%}
+  Every maxlength on this form is the registration service's own limit
+  (registration-app/internal/intake, maxLen): names 200, e-mail 320, billing
+  address 1000, comments 4000 characters. With the attribute the browser
+  stops typing at the limit, so nobody meets the service's "too long"
+  rejection after filling in the whole form. Change both together.
+{%- endcomment -%}
 {% if include.lang == "de" %}
-<input type="text" id="nachname" name="Nachname" aria-label="Nachname (Pflichtfeld)" placeholder="* Nachname" size="20" required  />
-<input type="text" id="vorname" name="Vorname" aria-label="Vorname" placeholder="Vorname" size="20"  />
+<input type="text" id="nachname" name="Nachname" maxlength="200" aria-label="Nachname (Pflichtfeld)" placeholder="* Nachname" size="20" required  />
+<input type="text" id="vorname" name="Vorname" maxlength="200" aria-label="Vorname" placeholder="Vorname" size="20"  />
 
 <label for="email">E-Mail (für Anmeldebestätigung und Ähnliches)</label>
-<input type="email" id="email" name="Email" placeholder="* E-Mail" required multiple  />
+<input type="email" id="email" name="Email" maxlength="320" placeholder="* E-Mail" required multiple  />
 
 <label for="kurs">Für welchen Kurs melden Sie an?</label>
 {% else %}
-<input type="text" id="nachname" name="last name" aria-label="Last name (required)" placeholder="* last name" size="20" required  />
-<input type="text" id="vorname" name="first name" aria-label="First name" placeholder="first name" size="20"  />
+<input type="text" id="nachname" name="last name" maxlength="200" aria-label="Last name (required)" placeholder="* last name" size="20" required  />
+<input type="text" id="vorname" name="first name" maxlength="200" aria-label="First name" placeholder="first name" size="20"  />
 
 <label for="email">E-Mail </label>
-<input type="email" id="email" name="Email" placeholder="* E-Mail" required multiple  />
+<input type="email" id="email" name="Email" maxlength="320" placeholder="* E-Mail" required multiple  />
 
 <label for="kurs">Which training?</label>
 {% endif %}
@@ -83,9 +117,9 @@ activate JavaScript and reload this page.
   nothing meaningful in it.
 {%- endcomment -%}
 {%- comment -%}
-  Both forms list the SAME set of bookable dates (status "open" or "waitlist", not past; a waitlist registration goes
-  through the same form and the back office tells the registrant it is a
-  waiting-list place).
+  Both forms list the SAME set of bookable dates (status "open" or
+  "waitlist", not past). A waitlist registration goes through the same form,
+  and the back office tells the registrant it is a waiting-list place.
   A date whose delivery language differs from the form's language is NOT
   hidden — it gets a delivery hint appended to its visible label instead.
   (Hiding them made /registration/ a dead end for 14 of 15 advertised
@@ -196,34 +230,34 @@ activate JavaScript and reload this page.
 
 {% if include.lang == "de" %}
 Falls Sie mehr als eine Person anmelden, schreiben Sie die weiteren Namen als Bemerkung.
-<input type="text" id="lastnameTN" name="NachnameTN" aria-label="Nachname teilnehmende Person" placeholder="Nachname teilnehmende Person"   />
-<input type="text" id="firstnameTN" name="VornameTN" aria-label="Vorname teilnehmende Person" placeholder="Vorname teilnehmende Person"  />
+<input type="text" id="lastnameTN" name="NachnameTN" maxlength="200" aria-label="Nachname teilnehmende Person" placeholder="Nachname teilnehmende Person"   />
+<input type="text" id="firstnameTN" name="VornameTN" maxlength="200" aria-label="Vorname teilnehmende Person" placeholder="Vorname teilnehmende Person"  />
 
 <label for="emailTN">E-Mail (teilnehmende Person(en), falls abweichend zu obiger E-Mail)</label>
-<input type="email" id="emailTN" name="EmailTN" placeholder="E-Mail TN" />
+<input type="email" id="emailTN" name="EmailTN" maxlength="320" placeholder="E-Mail TN" />
 
 <label for="ra">Rechnungsadresse</label>
-<textarea id="ra" name="Rechnungsadresse" placeholder="* Diese Adresse benötigen wir zur Abrechnung" required ></textarea>
+<textarea id="ra" name="Rechnungsadresse" maxlength="1000" placeholder="* Diese Adresse benötigen wir zur Abrechnung" required ></textarea>
 {% else %}
 In case you register more than one person, please state their names in the comments.
-<input type="text" id="lastnameTN" name="NachnameTN" aria-label="Last name of participant" placeholder="last name of participant"   />
-<input type="text" id="firstnameTN" name="VornameTN" aria-label="First name of participant" placeholder="first name of participant"  />
+<input type="text" id="lastnameTN" name="NachnameTN" maxlength="200" aria-label="Last name of participant" placeholder="last name of participant"   />
+<input type="text" id="firstnameTN" name="VornameTN" maxlength="200" aria-label="First name of participant" placeholder="first name of participant"  />
 
 <label for="emailTN">E-Mail (participant)</label>
-<input type="email" id="emailTN" name="EmailTN" placeholder="E-Mail participant" />
+<input type="email" id="emailTN" name="EmailTN" maxlength="320" placeholder="E-Mail participant" />
 
 <label for="ra">Billing address</label>
-<textarea id="ra" name="Billing address" placeholder="* required to produce and send the invoice" required ></textarea>
+<textarea id="ra" name="Billing address" maxlength="1000" placeholder="* required to produce and send the invoice" required ></textarea>
 {% endif %}
 
 <hr class="form-rule">
 
 {% if include.lang == "de" %}
 <label for="comments">Bemerkungen (z.B. weitere TN, Bestell-/Auftragsnummer)</label>
-<textarea id="comments" name="Bemerkungen" placeholder="Bemerkungen"></textarea>
+<textarea id="comments" name="Bemerkungen" maxlength="4000" placeholder="Bemerkungen"></textarea>
 {% else %}
 <label for="comments">Comments (e.g. additional participants, order-numbers or similar)</label>
-<textarea id="comments" name="Comments" placeholder="Comments"></textarea>
+<textarea id="comments" name="Comments" maxlength="4000" placeholder="Comments"></textarea>
 {% endif %}
 <hr class="form-rule">
 

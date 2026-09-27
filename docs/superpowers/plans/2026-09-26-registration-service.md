@@ -49,7 +49,7 @@
 **Interfaces:**
 - Produces: `config.Config` (fields `Addr, Environment, Mailer, MailjetPublic, MailjetPrivate, TokenKey []byte, MailFrom, MailFromName, BackofficeTo, ReplyTo, FeedURL, SiteURL, PublicURL, AllowedOrigins []string, TestRecipients []string`), `config.Load() (Config, error)`, `Config.TestMode() bool`.
 
-- [ ] **Step 1: Exclude the directory from the site first**
+- [x] **Step 1: Exclude the directory from the site first**
 
 In `_config.yml`, directly under `  - admin-app`, add:
 
@@ -59,7 +59,7 @@ In `_config.yml`, directly under `  - admin-app`, add:
   - registration-app
 ```
 
-- [ ] **Step 2: Create the module and the failing test**
+- [x] **Step 2: Create the module and the failing test**
 
 `registration-app/go.mod`:
 
@@ -162,12 +162,12 @@ func TestLogMailerNeedsNoKeysAndNoAllowList(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: Run it to verify it fails**
+- [x] **Step 3: Run it to verify it fails**
 
 Run: `cd registration-app && go test ./internal/config`
 Expected: FAIL, `undefined: Load`.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 `registration-app/internal/config/config.go`:
 
@@ -280,12 +280,12 @@ func list(s string) []string {
 }
 ```
 
-- [ ] **Step 5: Run it to verify it passes**
+- [x] **Step 5: Run it to verify it passes**
 
 Run: `cd registration-app && go test ./internal/config -v`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 6: Makefile targets**
+- [x] **Step 6: Makefile targets**
 
 In `Makefile`: below `APP_DIR     := admin-app` add
 
@@ -323,7 +323,7 @@ reg-run: check-go ## Run the registration service on :8099; mails are printed, n
 		TOKEN_KEY=$$(openssl rand -base64 32) go run .
 ```
 
-- [ ] **Step 7: CI workflow (tests only for now; Task 9 adds the deploy job)**
+- [x] **Step 7: CI workflow (tests only for now; Task 9 adds the deploy job)**
 
 `.github/workflows/registration-app.yml`:
 
@@ -365,7 +365,7 @@ jobs:
           fi
 ```
 
-- [ ] **Step 8: Verify and commit**
+- [x] **Step 8: Verify and commit**
 
 Run: `make reg-check && make site && test ! -e _site/registration-app && echo excluded`
 Expected: `registration service: tests, vet and gofmt are clean` and `excluded`.
@@ -385,7 +385,7 @@ git commit -m "feat(registration): module skeleton, configuration and build plum
 **Interfaces:**
 - Produces: `labels.Money(amount int, currency, lang string) string`, `labels.DateRange(start, end, lang string) string` (long style).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 The expected strings are the site's: check them against the built site before relying on them (`make site`, then `grep -o 'data-date="[^"]*"' _site/anmeldung/index.html` shows the short style; the long style is documented at the top of `_includes/training-date-label.html`, the money style at the top of `_includes/money.html`).
 
@@ -441,12 +441,12 @@ func TestDateRangeMatchesTheSite(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/labels`
 Expected: FAIL, `undefined: Money`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `registration-app/internal/labels/labels.go`:
 
@@ -538,12 +538,12 @@ func DateRange(start, end, lang string) string {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/labels -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/labels
@@ -560,7 +560,7 @@ git commit -m "feat(registration): money and date labels in the site's format"
 **Interfaces:**
 - Produces: `feed.New(url string, client *http.Client, now func() time.Time) *Feed`; `(*Feed).Lookup(ctx, code string) (feed.Entry, feed.Result)`; `feed.Result` constants `Bookable, Closed, Unknown, Unavailable`; `feed.Entry{CourseTitle, CourseShortTitle string; Date}`; `feed.Date{ID, Code, Start, End, City, Format, Language, Status string; Trainers []string; Price *Price}`; `feed.Price{Amount int; Currency string}`; constants `TTL`, `RetryPause`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/feed/feed_test.go`:
 
@@ -706,12 +706,12 @@ func TestAnEmptyFeedIsNotTrusted(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/feed`
 Expected: FAIL, `undefined: New`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `registration-app/internal/feed/feed.go`:
 
@@ -875,12 +875,12 @@ func (f *Feed) fetch(ctx context.Context) (map[string]Entry, error) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/feed -v`
 Expected: PASS, 6 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/feed
@@ -897,7 +897,7 @@ git commit -m "feat(registration): course feed client with Berlin-time bookabili
 **Interfaces:**
 - Produces: `token.Claims{ID, Code, Email, LastName, Lang string; Issued int64}`; `token.NewSealer(key []byte, ttl time.Duration, now func() time.Time) (*Sealer, error)`; `(*Sealer).Seal(Claims) (string, error)`; `(*Sealer).Open(string) (Claims, error)`; `token.ErrInvalid`, `token.ErrExpired`; `token.Valid = 5 * 24 * time.Hour`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/token/token_test.go`:
 
@@ -992,12 +992,12 @@ func TestAnotherKeyCannotOpen(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/token`
 Expected: FAIL, `undefined: NewSealer`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `registration-app/internal/token/token.go`:
 
@@ -1099,12 +1099,12 @@ func (s *Sealer) Open(tok string) (Claims, error) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/token -v`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/token
@@ -1122,7 +1122,7 @@ git commit -m "feat(registration): sealed 5-day confirmation token"
 - Consumes: `feed.Entry`, `feed.Result` (Task 3).
 - Produces: `intake.Registration` (fields `ID, Lang, LastName, FirstName, Email string; Emails []string; Code, ParticipantLast, ParticipantFirst, ParticipantEmail, Billing, Comments, Via, FormSource string`); `intake.Other = "sonstige"`; `intake.Outcome` constants `Accept, Drop, Reject`; `intake.Decision{Outcome; Reason string; Reg Registration; Entry feed.Entry; Found bool; Hints []string}`; `intake.Input{Form url.Values; Origin, IP string}`; `intake.Lookuper` interface; `intake.Checker{Feed Lookuper; Limiter *Limiter; AllowedOrigins []string}` with `Check(ctx, Input) Decision`; `intake.NewLimiter(max int, window time.Duration, now func() time.Time) *Limiter` with `Allow(key string) bool`; `intake.NewID() string`; hint keys `HintGmailDots, HintURLInName, HintOddCase, HintSeveralEmails, HintClosed, HintFeedDown`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/intake/intake_test.go`:
 
@@ -1318,12 +1318,12 @@ func has(list []string, s string) bool {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/intake`
 Expected: FAIL, undefined identifiers.
 
-- [ ] **Step 3: Implement the rate limiter**
+- [x] **Step 3: Implement the rate limiter**
 
 `registration-app/internal/intake/ratelimit.go`:
 
@@ -1377,7 +1377,7 @@ func (l *Limiter) Allow(key string) bool {
 }
 ```
 
-- [ ] **Step 4: Implement the hints**
+- [x] **Step 4: Implement the hints**
 
 `registration-app/internal/intake/hints.go`:
 
@@ -1452,7 +1452,7 @@ func oddCase(s string) bool {
 }
 ```
 
-- [ ] **Step 5: Implement the checker**
+- [x] **Step 5: Implement the checker**
 
 `registration-app/internal/intake/intake.go`:
 
@@ -1678,12 +1678,12 @@ func NewID() string {
 }
 ```
 
-- [ ] **Step 6: Run to verify it passes**
+- [x] **Step 6: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/intake -v`
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add registration-app/internal/intake
@@ -1701,7 +1701,7 @@ git commit -m "feat(registration): intake checks, rate limit and spam hints"
 - Consumes: `feed.Entry` (Task 3), `intake.Registration` and hint keys (Task 5), `token.Claims` (Task 4), `labels` (Task 2).
 - Produces: `mail.Facts{Title, ShortTitle, Code, Dates, Where, Trainers, Price string}`; `mail.FactsFor(feed.Entry, lang string) *Facts`; `mail.Rendered{Subject, Text, HTML string}`; `mail.Registrant(lang string, facts *Facts, confirmURL string) (Rendered, error)` (facts nil for "Sonstige"); `mail.Backoffice(reg intake.Registration, facts *Facts, hints []string) (Rendered, error)`; `mail.Confirmed(token.Claims) (Rendered, error)`.
 
-- [ ] **Step 1: Write the test and the expected output**
+- [x] **Step 1: Write the test and the expected output**
 
 `registration-app/internal/mail/mail_test.go`:
 
@@ -2047,12 +2047,12 @@ All details are in the mail "REGISTRATION R-7F3KQ ... (UNCONFIRMED)".
 
 The two HTML goldens (`registrant_de.html`, `registrant_en.html`) are generated in Step 4 with `-update` and then read by a person, because hand-typing escaped HTML is where typos hide.
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/mail`
 Expected: FAIL, undefined identifiers.
 
-- [ ] **Step 3: Implement the templates and the renderer**
+- [x] **Step 3: Implement the templates and the renderer**
 
 `templates/registrant_de.txt`:
 
@@ -2424,12 +2424,12 @@ func indent(s string) string {
 }
 ```
 
-- [ ] **Step 4: Generate the HTML goldens and read them**
+- [x] **Step 4: Generate the HTML goldens and read them**
 
 Run: `cd registration-app && go test ./internal/mail -run TestRegistrantMails -update && go test ./internal/mail -v`
 Expected: PASS. Then open `internal/mail/testdata/registrant_de.html` in a browser and check: one blue button "Anmeldung bestätigen", the confirm URL printed under it, the table with Kurs, Termin, Ort, Trainer, Preis `2.890 €`, Buchungscode, and no name or address anywhere. `git diff --stat internal/mail/testdata` must show only the two `.html` files as new; if a `.txt` golden changed, the templates differ from this plan.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/mail
@@ -2446,7 +2446,7 @@ git commit -m "feat(registration): mails in the registration's language, nothing
 **Interfaces:**
 - Produces: `send.Message{To []string; ReplyTo, Subject, Text, HTML, CustomID string}`; `send.Sender` interface `Send(ctx, Message) error`; `send.Mailjet{Public, Private, From, FromName string; Sandbox bool; Client *http.Client; Endpoint string}`; `send.NewAllowList(next Sender, allowed []string, logger *log.Logger) *AllowList`; `send.LogSender{W io.Writer}`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/send/send_test.go`:
 
@@ -2550,12 +2550,12 @@ func TestMailjetSandboxAgainstTheRealAPI(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/send`
 Expected: FAIL, undefined identifiers.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `registration-app/internal/send/send.go`:
 
@@ -2758,12 +2758,12 @@ func (m *Mailjet) post(ctx context.Context, payload []byte) error {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `cd registration-app && go test ./internal/send -v`
 Expected: PASS; `TestMailjetSandboxAgainstTheRealAPI` is SKIPPED unless the Mailjet keys are in the environment. When Gernot has finished the Mailjet Todoist tasks, run it once with the keys exported: it must PASS, which proves the key pair and the sender `trainings@arc42.org` are accepted without delivering anything.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add registration-app/internal/send
@@ -2781,7 +2781,7 @@ git commit -m "feat(registration): Mailjet sender with tracking off, test-mode a
 - Consumes: everything from Tasks 1 to 7.
 - Produces: `web.Deps{Cfg config.Config; Checker *intake.Checker; Feed intake.Lookuper; Sealer *token.Sealer; Sender send.Sender; NewID func() string; Log *log.Logger}`; `web.New(Deps) *Server`; `(*Server).Routes() http.Handler` with `GET /healthz`, `POST /submit`, `GET /confirm`, `POST /confirm`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `registration-app/internal/web/web_test.go`:
 
@@ -3021,12 +3021,12 @@ func TestBadTokens(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd registration-app && go test ./internal/web`
 Expected: FAIL, undefined identifiers.
 
-- [ ] **Step 3: Implement the pages**
+- [x] **Step 3: Implement the pages**
 
 `pages/confirm.html`:
 
@@ -3077,7 +3077,7 @@ button{font-size:17px;padding:10px 20px;background:#1f4e79;color:#fff;border:0;b
 </body></html>
 ```
 
-- [ ] **Step 4: Implement the server, submit and confirm handlers**
+- [x] **Step 4: Implement the server, submit and confirm handlers**
 
 `server.go`:
 
@@ -3347,12 +3347,12 @@ func (s *Server) errorPage(w http.ResponseWriter, err error) {
 }
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `make reg-check`
 Expected: `registration service: tests, vet and gofmt are clean`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add registration-app/internal/web
@@ -3367,7 +3367,7 @@ git commit -m "feat(registration): submit, two-step confirm, bilingual error pag
 - Create: `registration-app/main.go`, `registration-app/Dockerfile`, `registration-app/fly.toml`, `registration-app/README.md`
 - Modify: `Makefile` (deploy targets), `.github/workflows/registration-app.yml` (deploy job)
 
-- [ ] **Step 1: Write `main.go`**
+- [x] **Step 1: Write `main.go`**
 
 ```go
 // Command arc42-registration receives the trainings.arc42.org registration
@@ -3439,7 +3439,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 2: Local smoke run against the live feed**
+- [x] **Step 2: Local smoke run against the live feed**
 
 Run in one terminal: `make reg-run`. In another:
 
@@ -3454,7 +3454,7 @@ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" -X POST http://localhos
 
 Expected: both print `303 https://trainings.arc42.org/anmeldung-erfolg/`. The first terminal prints two mails (`(UNBESTÄTIGT)` to `office@example.invalid`, the registrant mail with a `http://localhost:8099/confirm?t=...` link) and, for the second request, `submit: dropped (unknown code 99 FAKE)`. Open the confirm link in a browser: a page with the course and one button; pressing it prints the `(BESTÄTIGT)` mail and redirects to `/anmeldung-bestaetigt/` (a 404 until Task 10 is deployed; that is expected here).
 
-- [ ] **Step 3: Container and fly config**
+- [x] **Step 3: Container and fly config**
 
 `registration-app/Dockerfile`:
 
@@ -3517,7 +3517,7 @@ primary_region = "ams"
   path = "/healthz"
 ```
 
-- [ ] **Step 4: Prove the image works, including the time zone**
+- [x] **Step 4: Prove the image works, including the time zone**
 
 ```bash
 cd registration-app && docker build -t arc42-registration:local . && \
@@ -3527,7 +3527,7 @@ docker run --rm -p 8099:8080 -e MAILER=log -e PUBLIC_URL=http://localhost:8099 \
 
 Expected: `listening on :8080`, no panic (a missing zone database would panic at start in `feed.mustBerlin`). `curl -s localhost:8099/healthz` prints `ok`. Stop with Ctrl-C.
 
-- [ ] **Step 5: Deploy targets and CI deploy job**
+- [x] **Step 5: Deploy targets and CI deploy job**
 
 Add to the registration section of the `Makefile`:
 
@@ -3575,11 +3575,11 @@ Append to `.github/workflows/registration-app.yml`:
           FLY_API_TOKEN: ${{ secrets.FLY_REGISTRATION_API_TOKEN }}
 ```
 
-- [ ] **Step 6: README**
+- [x] **Step 6: README**
 
 `registration-app/README.md`, covering, in this order and briefly: what it does (one paragraph, link to the spec and to `docs/registration-flow/registration-flow.svg`); the four endpoints; the configuration table from spec section 6 plus `PUBLIC_URL` and `MAILER`, marking which are fly secrets and why (`BACKOFFICE_TO` and `TEST_RECIPIENTS` are personal addresses, the repo is public); test mode and the start-up refusal; `make reg-run` / `reg-check` / `reg-deploy` / `reg-logs`; what the log lines mean (`dropped (reason)`, `rejected (reason)`, `accepted`, `confirmed`); rotating `TOKEN_KEY` invalidates open links.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add registration-app Makefile .github/workflows/registration-app.yml
@@ -3594,7 +3594,7 @@ git commit -m "feat(registration): main, container, fly app and deploy plumbing"
 - Modify: `_includes/registration-form.html` (the `<form>` tag), `_includes/head.html` (noindex)
 - Create: `_pages/anmeldung-bestaetigt.md`, `_pages/registration-confirmed.md`, `_pages/anmeldung-test-8r4tqz.md`, `_pages/registration-test-8r4tqz.md`
 
-- [ ] **Step 1: The endpoint parameter**
+- [x] **Step 1: The endpoint parameter**
 
 In `_includes/registration-form.html`, replace
 
@@ -3625,7 +3625,7 @@ with
 
 (`method="post"` only with an endpoint: the service accepts POST only, and a form without `method` submits as GET. The production Formspark form keeps its exact current attributes, so this task changes nothing for real registrants.)
 
-- [ ] **Step 2: noindex support**
+- [x] **Step 2: noindex support**
 
 In `_includes/head.html`, directly after `{% include seo.html %}`:
 
@@ -3638,7 +3638,7 @@ In `_includes/head.html`, directly after `{% include seo.html %}`:
 {% if page.noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
 ```
 
-- [ ] **Step 3: The confirmed pages**
+- [x] **Step 3: The confirmed pages**
 
 `_pages/anmeldung-bestaetigt.md`:
 
@@ -3690,7 +3690,7 @@ We process registrations _by hand_ and will get back to you personally, usually 
 <a class="btn btn--inverse" href="/">Take me<br>home</a>
 ```
 
-- [ ] **Step 4: The test pages**
+- [x] **Step 4: The test pages**
 
 `_pages/anmeldung-test-8r4tqz.md`:
 
@@ -3722,7 +3722,7 @@ sitemap: false
 
 `_pages/registration-test-8r4tqz.md`: the same with `title: "Registration (test)"`, `permalink: /registration-test-8r4tqz/`, `lang: en`, no `locale` line, `translation_url: /anmeldung-test-8r4tqz/`, the notice text `**Test page.** This registration goes to the new registration service in test mode. Nothing here is a real booking.`, and `lang="en"` in the include.
 
-- [ ] **Step 5: Verify the built pages**
+- [x] **Step 5: Verify the built pages**
 
 ```bash
 make site
@@ -3736,7 +3736,7 @@ make check-links
 
 Expected: the test pages post to `https://arc42-registration.fly.dev/submit`, the production pages still to `https://submit-form.com/AIKiYyJP` and `.../Tq1M7LqmX`; botpoison counts `0` for the test page and `1` for `/anmeldung/`; noindex counts `1` for the test page and `0` for `/anmeldung/`; the sitemap count is `0`; `confirmed-pages`; the link check passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add _includes/registration-form.html _includes/head.html _pages/anmeldung-bestaetigt.md _pages/registration-confirmed.md _pages/anmeldung-test-8r4tqz.md _pages/registration-test-8r4tqz.md
@@ -3749,12 +3749,12 @@ git commit -m "feat: confirmed pages, hidden test pages and an endpoint option f
 
 Prerequisites (Gernot, Todoist section "Registration service"): the Mailjet domain, key and curl tasks are done; the fly app exists and its secrets are imported, including `BACKOFFICE_TO` and `TEST_RECIPIENTS`.
 
-- [ ] **Step 1: Deploy**
+- [x] **Step 1: Deploy**
 
 Run: `make reg-deploy` (type `deploy`), then `make reg-status`.
 Expected: one machine, check passing. `curl -s https://arc42-registration.fly.dev/healthz` prints `ok`.
 
-- [ ] **Step 2: Automated cases against the deployed service**
+- [x] **Step 2: Automated cases against the deployed service**
 
 ```bash
 B=https://arc42-registration.fly.dev
@@ -3772,9 +3772,29 @@ curl -s -o /dev/null -w "badtoken %{http_code}\n" "$B/confirm?t=garbage"
 
 Expected: the first three redirect to `.../anmeldung-erfolg/`, `missing` to `.../registration-fail/`, `badtoken 400`. `make reg-logs` shows `dropped (honeypot)`, `dropped (unknown code 99 FAKE)`, `dropped (origin https://evil.example)`, `rejected (required field missing)`, and no send.
 
-- [ ] **Step 3: Rate limit**
+- [x] **Step 3: Rate limit**
 
 Send the `unknown` request six more times from one machine within a minute. Expected: the log shows `dropped (rate limit)` at the latest from the sixth request on. The limiter counts every submission that got past the origin and honeypot checks, so the `unknown` and `missing` requests from Step 2 already count.
+
+**Result, 27 Sep 2026** (deployed from `feat/registration-service` with
+`MAILER=log`, before Mailjet approved the account):
+- fly created two machines on the first deploy ("high availability"). Scaled
+  to **one** (`fly scale count 1`): the rate limit and the per-address cap
+  are in memory, so two machines would each count separately.
+- Step 2 differs from the text above as the service changed after this plan
+  was written: drops answer **200 with the normal sent page**, not a
+  redirect (bots learn nothing). Logged reasons as expected: honeypot,
+  unknown code, origin, control character in code (new), rejected (required
+  field missing), `badtoken 400`.
+- A full registration (R-TZSTX, example.org registrant) was accepted; the
+  back-office mail was logged with `[TEST]` in the subject, the registrant
+  mail was withheld by the allow-list.
+- Step 3: fifth submission processed, sixth and seventh `dropped (rate limit)`.
+- **Open question from the review answered:** a forged `Fly-Client-IP` (and
+  `X-Forwarded-For`) header from a rate-limited client was still dropped,
+  so fly's proxy overwrites it.
+- `register.arc42.org`: CNAME in place, `fly certs add` issued a Let's
+  Encrypt certificate at once, `https://register.arc42.org/healthz` is 200.
 
 - [ ] **Step 4: Hand over**
 
@@ -3787,14 +3807,14 @@ Tell Gernot the test pages are live at `https://trainings.arc42.org/anmeldung-te
 **Files:**
 - Modify: `CLAUDE.md` ("What is here", "Building and checking", "Contracts that break silently"), `README.md` (overview and local development)
 
-- [ ] **Step 1: CLAUDE.md**
+- [x] **Step 1: CLAUDE.md**
 
 - "What is here": "Two programs" becomes three: add **the registration service** (Go, own fly app `arc42-registration`, source under `registration-app/`, see `registration-app/README.md`).
 - "Building and checking": add `make reg-check` next to `make app-check`.
 - "Contracts that break silently", add one bullet: *The registration service reads `/api/trainings.json`* to decide which booking codes it accepts; a code that disappears from the feed is dropped silently, and an empty feed is treated as unavailable. It is a feed consumer under ADR-0004 like the other sites. Also: `registration-app` in `exclude:` is load-bearing, like `admin-app`.
 - Do **not** touch the Formspark bullets yet: production still posts to Formspark until the go-live plan.
 
-- [ ] **Step 2: README.md**
+- [x] **Step 2: README.md**
 
 Add a short "Registration service" subsection under the overview, linking `registration-app/README.md`, the spec, and `docs/registration-flow/`.
 

@@ -1,0 +1,59 @@
+name: Registration service
+
+# Same shape as deploy-admin-app.yml: tests on every PR touching the service,
+# and on main.
+on:
+  push:
+    branches: [main]
+    paths: ["registration-app/**", ".github/workflows/registration-app.yml"]
+  pull_request:
+    paths: ["registration-app/**", ".github/workflows/registration-app.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          # No go.sum (standard library only); point the cache at go.mod.
+          cache-dependency-path: registration-app/go.mod
+      - name: Test
+        working-directory: registration-app
+        run: go test ./... -v
+      - name: Vet
+        working-directory: registration-app
+        run: go vet ./...
+      - name: Gofmt
+        working-directory: registration-app
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt would rewrite:"; echo "$unformatted"; exit 1
+          fi
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-registration-app
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        working-directory: registration-app
+        # A deploy token is scoped to one fly app, so this is a separate
+        # secret from the admin app's FLY_API_TOKEN. Skips cleanly until it
+        # exists, like deploy-admin-app.yml.
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::notice title=Deploy skipped::FLY_REGISTRATION_API_TOKEN is not set."
+            exit 0
+          fi
+          flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_REGISTRATION_API_TOKEN }}

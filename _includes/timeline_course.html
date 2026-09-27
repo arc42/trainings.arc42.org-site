@@ -8,8 +8,15 @@ Parameters:
 - date: Course date
 - location: Course location (not needed for online courses)
 - anchor_id: Unique anchor for linking
-- sold_out: true/false (optional)
-- few_seats: Text to display for limited availability (optional)
+- sold_out: true/false (optional). Greys the card; waitlist and full both set it.
+- status_note: why the card is greyed, as a finished string in the page
+  language ("Fully booked, waiting list available" / "Fully booked") (optional)
+- waitlist_label: button text for a waitlist date ("Join waiting list");
+  when absent the button says "Register" (optional)
+- hide_register: true hides the register button; set for full dates only,
+  because a waitlist date is registered through the same form (optional)
+- few_seats: Text to display for limited availability (optional). Never set
+  together with sold_out: timeline_auto.html suppresses it on a greyed card.
 - pricing: Pricing information (optional)
 - trainer: Trainer names (optional)
 - credits: CPSA credit points (optional)
