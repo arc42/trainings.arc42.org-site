@@ -1,0 +1,9 @@
+[trainings.arc42.org] REGISTRATION R-7F3KQ 26-12 MSA (CONFIRMED)
+
+Registration R-7F3KQ was confirmed by the registrant.
+
+Course:     26-12 MSA
+Last name:  Müller
+E-mail:     anna@example.org
+
+All details are in the mail "REGISTRATION R-7F3KQ ... (UNCONFIRMED)".

@@ -10,14 +10,12 @@
 {%- if include.page_lang == "de" -%}
   {%- assign blurb = "Ihr systematischer Weg zu besseren Anforderungen!" -%}
   {%- assign trainer_line = 'Mit dem "dynamischen Duo" Peter Hruschka und Gernot Starke.' -%}
-  {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
   {%- assign info_label = "Mehr Info" -%}
   {%- assign register_label = "Anmeldung" -%}
   {%- assign register_url = "/anmeldung/" -%}
 {%- else -%}
   {%- assign blurb = "Your systematic path to better requirements!" -%}
   {%- assign trainer_line = 'With the "dynamic duo" Peter Hruschka and Gernot Starke.' -%}
-  {%- assign sold_out_text = "(sold out — waitlist only)" -%}
   {%- assign info_label = "More info (in German)" -%}
   {%- assign register_label = "Register" -%}
   {%- assign register_url = "/registration/" -%}
@@ -44,8 +42,8 @@
         <h2 class="course-title">REQ4ARC <br>(CPSA-Advanced)</h2>
         <p>{{ blurb }}</p>
         <p>{{ trainer_line }}</p>
-        {% if sold_out %}
-            <p class="timeline-sold-out">{{ sold_out_text }}</p>
+        {% if sold_out and include.status_note %}
+            <p class="timeline-sold-out">({{ include.status_note }})</p>
         {% endif %}
         {% if include.few_seats %}
             <p class="timeline-few-seats">{{ include.few_seats }}</p>
@@ -61,8 +59,8 @@
         </p>
         {% endif %}
         <a class="button buttonReq4Arc" href="https://www.arc42.de/info-req4arc/" hreflang="de">{{ info_label }}</a>
-        {% unless sold_out %}
-            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ register_label }}</a>
+        {% unless include.hide_register %}
+            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ include.waitlist_label | default: register_label }}</a>
         {% endunless %}
     </div>
 </div>

@@ -1,0 +1,28 @@
+[trainings.arc42.org] REGISTRATION R-7F3KQ 26-12 MSA (UNCONFIRMED)
+
+Registration R-7F3KQ (UNCONFIRMED)
+
+Course:                   26-12 MSA
+                          Mastering Software Architectures, December 1-4, 2026, München
+Last name:                Müller
+First name:               Anna
+E-mail:                   anna@example.org
+Participant last name:    
+Participant first name:   
+Participant e-mail:       
+Billing address:
+  Firma X
+  Straße 1
+  12345 Ort
+Comments:
+  -
+
+Language:                 en
+via:                      arc42.de
+form_source:              https://trainings.arc42.org/anmeldung/
+
+Notes:
+  - Gmail address with many dots (a spam-probing pattern)
+  - Date was no longer open when submitted (full, cancelled or past)
+
+Book only on the "(CONFIRMED)" mail with the same number R-7F3KQ.

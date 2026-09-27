@@ -42,8 +42,37 @@ frontmatter behaviour (course-default trainers stay baked into the templates).
   {%- assign type = c.id -%}
   {%- if d.format == "online" -%}{%- assign type = type | append: "_online" -%}{%- endif -%}
   {%- capture datelabel -%}{%- include training-date-label.html date=d lang=page_lang style="long" -%}{%- endcapture -%}
+  {%- comment -%}
+    Status wording is decided HERE, once, like price and credits below, and
+    handed to the card templates as finished strings. waitlist and full both
+    grey the card (sold_out), but only full hides the button: a waitlist date
+    is registered through the same form, and the button says so.
+    ta_-prefixed because the card templates run in this include's scope and
+    assign their own register_label; a bare name would be overwritten by the
+    previous card and leak into the next one.
+  {%- endcomment -%}
   {%- assign sold_out = false -%}
-  {%- if d.status == "waitlist" or d.status == "full" -%}{%- assign sold_out = true -%}{%- endif -%}
+  {%- assign ta_status_note = nil -%}
+  {%- assign ta_waitlist_label = nil -%}
+  {%- assign ta_hide_register = false -%}
+  {%- if d.status == "waitlist" -%}
+    {%- assign sold_out = true -%}
+    {%- if page_lang == "de" -%}
+      {%- assign ta_status_note = "Ausgebucht, Warteliste verfügbar" -%}
+      {%- assign ta_waitlist_label = "Auf die Warteliste" -%}
+    {%- else -%}
+      {%- assign ta_status_note = "Fully booked, waiting list available" -%}
+      {%- assign ta_waitlist_label = "Join waiting list" -%}
+    {%- endif -%}
+  {%- elsif d.status == "full" -%}
+    {%- assign sold_out = true -%}
+    {%- assign ta_hide_register = true -%}
+    {%- if page_lang == "de" -%}
+      {%- assign ta_status_note = "Ausgebucht" -%}
+    {%- else -%}
+      {%- assign ta_status_note = "Fully booked" -%}
+    {%- endif -%}
+  {%- endif -%}
   {%- assign trainerline = nil -%}
   {%- if d.trainers -%}{%- assign trainerline = d.trainers | join: trainer_join -%}{%- endif -%}
   {%- comment -%}
@@ -62,7 +91,12 @@ frontmatter behaviour (course-default trainers stay baked into the templates).
   {%- assign creditline = creditline | strip -%}
   {%- if creditline == "" -%}{%- assign creditline = nil -%}{%- endif -%}
   {%- assign few_seats = nil -%}
-  {%- if d.seats_limited -%}
+  {%- comment -%}
+    Never on a greyed card: "fully booked" and "only a few seats" contradict
+    each other. The admin app warns about that combination, but a warning can
+    be saved anyway, and a hand edit skips it.
+  {%- endcomment -%}
+  {%- if d.seats_limited and sold_out == false -%}
     {%- if page_lang == "de" -%}
       {%- assign few_seats = "Nur noch wenige Plätze verfügbar" -%}
     {%- else -%}
@@ -76,6 +110,9 @@ frontmatter behaviour (course-default trainers stay baked into the templates).
      location=d.city
      anchor_id=d.id
      sold_out=sold_out
+     status_note=ta_status_note
+     waitlist_label=ta_waitlist_label
+     hide_register=ta_hide_register
      few_seats=few_seats
      pricing=pricing
      trainer=trainerline

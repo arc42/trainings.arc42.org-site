@@ -933,13 +933,13 @@ func TestWarningsGateTheFirstSaveThenLetItThrough(t *testing.T) {
 		"course_id": {"msa"}, "id": {"msa-a"}, "code": {"26-01 MSA"},
 		"start": {"2026-01-01"}, "end": {"2026-01-02"}, "city": {"München"},
 		"country": {"DE"}, "language": {"de"}, "format": {"public"},
-		"status": {"waitlist"}, // hides the date from the registration form
+		"status": {"full"}, // hides the date from the registration form
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
 	body := rec.Body.String()
 
-	if !strings.Contains(body, "nobody can book it") {
+	if !strings.Contains(body, "nobody can register") {
 		t.Errorf("the status warning was not shown:\n%s", body)
 	}
 	if !strings.Contains(body, "Save anyway") {
@@ -958,7 +958,7 @@ func TestWarningsGateTheFirstSaveThenLetItThrough(t *testing.T) {
 	if !ok || !d.Dirty() {
 		t.Fatalf("the acknowledged save did not apply; status %d body:\n%s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(string(d.Doc.Bytes()), "status: waitlist") {
+	if !strings.Contains(string(d.Doc.Bytes()), "status: full") {
 		t.Error("the acknowledged edit did not reach the document")
 	}
 }
@@ -1286,5 +1286,28 @@ func TestTheIdAndCodePlaceholdersFollowTheCourse(t *testing.T) {
 				t.Error("a hardcoded MSA example is back in the form")
 			}
 		})
+	}
+}
+
+// The dropdown used to show four bare tokens and a hint that still talked
+// about arc42.de's retired form. It must say what each status does.
+func TestStatusDropdownExplainsEachStatus(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new", nil))
+	body := rec.Body.String()
+	for _, want := range []string{
+		`<option value="waitlist"`,
+		`waitlist: fully booked, waiting list available</option>`,
+		`full: fully booked, no waiting list</option>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("status dropdown lacks %q", want)
+		}
+	}
+	if strings.Contains(body, "registration form on arc42.de") {
+		t.Error("status hint still refers to arc42.de's retired form")
 	}
 }

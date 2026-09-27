@@ -160,6 +160,13 @@ func TestPRTitleNamesTheCourse(t *testing.T) {
 		c.After = &after
 		return c
 	}
+	reopened := func() Change {
+		c := statusChange("open")
+		before := *c.Before
+		before.Status = "waitlist"
+		c.Before = &before
+		return c
+	}
 	twoFields := func() Change {
 		c := updatedSeats()
 		after := *c.After
@@ -193,8 +200,12 @@ func TestPRTitleNamesTheCourse(t *testing.T) {
 	}{
 		{"the seats checkbox says what it means",
 			[]Change{updatedSeats()}, "MSA 26-09 MSA-EN: only few seats left"},
-		{"a status change carries the new status",
-			[]Change{statusChange("full")}, "MSA 26-09 MSA-EN: status full"},
+		{"a status change says what it means",
+			[]Change{statusChange("full")}, "MSA 26-09 MSA-EN: fully booked"},
+		{"waitlist says there is a waiting list",
+			[]Change{statusChange("waitlist")}, "MSA 26-09 MSA-EN: fully booked, waiting list"},
+		{"back to open",
+			[]Change{reopened()}, "MSA 26-09 MSA-EN: open for registration again"},
 		{"a couple of fields are named",
 			[]Change{twoFields()}, "MSA 26-09 MSA-EN: city and status changed"},
 		{"a new date carries its span",

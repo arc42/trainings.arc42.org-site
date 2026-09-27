@@ -9,13 +9,11 @@
 
 {%- if include.page_lang == "de" -%}
   {%- assign blurb = "Mit Gernot Starke (INNOQ Fellow) und Carola Lilienthal (WPS)" -%}
-  {%- assign sold_out_text = "(Ausgebucht, nur noch Warteliste)" -%}
   {%- assign info_label = "Mehr Info" -%}
   {%- assign register_label = "Anmeldung" -%}
   {%- assign register_url = "/anmeldung/" -%}
 {%- else -%}
   {%- assign blurb = "With Gernot Starke (INNOQ Fellow) and Carola Lilienthal (WPS)" -%}
-  {%- assign sold_out_text = "(sold out — waitlist only)" -%}
   {%- assign info_label = "More info (in German)" -%}
   {%- assign register_label = "Register" -%}
   {%- assign register_url = "/registration/" -%}
@@ -42,8 +40,8 @@
         <h2 class="course-title">IMPROVE<br>
         (CPSA-Advanced)</h2>
         <p>{{ blurb }}</p>
-        {% if sold_out %}
-            <p class="timeline-sold-out">{{ sold_out_text }}</p>
+        {% if sold_out and include.status_note %}
+            <p class="timeline-sold-out">({{ include.status_note }})</p>
         {% endif %}
         {% if include.few_seats %}
             <p class="timeline-few-seats">{{ include.few_seats }}</p>
@@ -59,8 +57,8 @@
         </p>
         {% endif %}
         <a class="button buttonImprove" href="https://www.arc42.de/info-improve/" hreflang="de">{{ info_label }}</a>
-        {% unless sold_out %}
-            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ register_label }}</a>
+        {% unless include.hide_register %}
+            <a class="button buttonAnmeldung" href="{{ register_url }}?kurs={{ anchor_id }}">{{ include.waitlist_label | default: register_label }}</a>
         {% endunless %}
     </div>
 </div>

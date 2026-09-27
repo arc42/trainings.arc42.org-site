@@ -1,0 +1,28 @@
+Hello,
+
+thank you for your {{if .Facts}}registration{{else}}request{{end}} with arc42. It is only complete once you confirm it:
+
+{{.ConfirmURL}}
+
+The link is valid for 5 days.
+{{with .Facts}}
+Your selection
+  Course:        {{.Title}}
+  Dates:         {{.Dates}}
+  Location:      {{.Where}}
+{{- if .Trainers}}
+  Trainers:      {{.Trainers}}{{end}}
+{{- if .Price}}
+  Price:         {{.Price}}{{end}}
+  Booking code:  {{.Code}}
+{{else}}
+You chose "other". We will get in touch with you personally.
+{{end}}
+We process registrations by hand and will get back to you personally, usually within one or two business days.
+
+You did not register? Then simply ignore this mail. Nothing happens without confirmation.
+
+Questions? Just reply to this mail.
+
+arc42 Trainings
+https://trainings.arc42.org

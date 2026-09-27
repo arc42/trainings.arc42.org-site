@@ -85,7 +85,7 @@ Training dates: 4 changes (MSA, IMPROVE)
 ```
 
 A single-field edit is described by what it means rather than by the field name
-(`only few seats left`, `status full`), which is why
+(`only few seats left`, `fully booked`), which is why
 [`model.FieldChange`](internal/model/diff.go) carries a stable `Key` next to its
 human `Label` — the wording is chosen per field, and switching on prose would
 break the moment a label is reworded. Two or three fields are named; more are

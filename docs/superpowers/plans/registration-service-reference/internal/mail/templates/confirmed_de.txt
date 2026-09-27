@@ -1,0 +1,7 @@
+Anmeldung {{.ID}} wurde vom Anmeldenden bestätigt.
+
+Kurs:       {{.Code}}
+Nachname:   {{.LastName}}
+E-Mail:     {{.Email}}
+
+Alle Angaben stehen in der Mail "ANMELDUNG {{.ID}} ... (UNBESTÄTIGT)".

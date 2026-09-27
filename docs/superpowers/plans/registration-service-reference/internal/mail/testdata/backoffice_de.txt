@@ -1,0 +1,28 @@
+[trainings.arc42.org] ANMELDUNG R-7F3KQ 26-12 MSA (UNBESTÄTIGT)
+
+Anmeldung R-7F3KQ (UNBESTÄTIGT)
+
+Kurs:              26-12 MSA
+                   Mastering Software Architectures, 1.-4. Dezember 2026, München
+Nachname:          Müller
+Vorname:           Anna
+E-Mail:            anna@example.org
+Nachname TN:       
+Vorname TN:        
+E-Mail TN:         
+Rechnungsadresse:
+  Firma X
+  Straße 1
+  12345 Ort
+Bemerkungen:
+  -
+
+Sprache:           de
+via:               arc42.de
+form_source:       https://trainings.arc42.org/anmeldung/
+
+Hinweise:
+  - Gmail-Adresse mit vielen Punkten (Muster aus Spam-Tests)
+  - Termin war beim Absenden nicht mehr offen (ausgebucht, abgesagt oder vorbei)
+
+Gebucht wird erst auf die Mail "(BESTÄTIGT)" mit derselben Nummer R-7F3KQ.

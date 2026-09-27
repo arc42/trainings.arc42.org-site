@@ -88,12 +88,14 @@
       <label>Booking status <span class="req" aria-hidden="true">*</span>
         <select name="status" required>
           {{$s := .Date.Status}}
-          {{range .Statuses}}<option value="{{.}}" {{if eqStr . $s}}selected{{end}}>{{.}}</option>{{end}}
+          {{range .Statuses}}<option value="{{.}}" {{if eqStr . $s}}selected{{end}}>{{.}}: {{statusLabel .}}</option>{{end}}
         </select>
-        <small id="status-hint" class="hint">Only <b>open</b> appears in the
-          registration form on arc42.de. <b>waitlist</b> and <b>full</b> still
-          show on the timeline, marked sold out; <b>cancelled</b> disappears
-          everywhere. Anything but open means nobody can book this date.</small>
+        <small id="status-hint" class="hint"><b>open</b> and <b>waitlist</b>
+          appear in the registration form on trainings.arc42.org; a waitlist
+          card says "fully booked, waiting list available" and its button
+          joins the waiting list. <b>full</b> stays on the timeline as fully
+          booked, with no button and no form entry. <b>cancelled</b>
+          disappears everywhere.</small>
       </label>
     </div>
     {{/* No registration URL field: every published date links to the same
