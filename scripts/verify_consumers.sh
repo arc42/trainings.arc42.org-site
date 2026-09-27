@@ -13,8 +13,9 @@
 # republishing shows up as a failure here.
 #
 # How a page is checked, without needing to know how it is built: each consumer
-# bakes the feed's date ids into its HTML, either as links to the arc42.de
-# anchors (`termine#msa-dez-2026`) or as the anchors themselves (`id="..."`).
+# bakes the feed's date ids into its HTML, either as links to the date anchors
+# (`trainings.arc42.org/#msa-dez-2026`, formerly `arc42.de/termine#...`) or as
+# the anchors themselves (`id="..."`).
 # So for every consumer:
 #
 #   · every date id on the page must still exist in the feed
@@ -109,7 +110,7 @@ note "  per-course sites must show: $(printf '%s' "$lead_per_course" | tr '\n' '
 
 # Every id on the page that looks like a date id, i.e. starts with a course id.
 page_date_ids() {
-  { printf '%s' "$1" | grep -oE 'termine#[a-z0-9-]+' | sed 's/.*#//'
+  { printf '%s' "$1" | grep -oE '(termine|trainings\.arc42\.org/(de/)?)#[a-z0-9-]+' | sed 's/.*#//'
     printf '%s' "$1" | grep -oE 'id="[a-z0-9-]+"' | sed 's/^id="//; s/"$//'
   } | sort -u | while read -r id; do
         [ -n "$id" ] || continue

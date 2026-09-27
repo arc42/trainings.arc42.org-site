@@ -377,7 +377,7 @@ func TestSaveNewDateDerivesEmptyIdentifiers(t *testing.T) {
 	}
 	d, _ := s.drafts.Get("sid")
 	doc := string(d.Doc.Bytes())
-	for _, want := range []string{"msa-mar-2026-en", "26-03 MSA-EN", "termine#msa-mar-2026-en"} {
+	for _, want := range []string{"msa-mar-2026-en", "26-03 MSA-EN", "https://trainings.arc42.org/#msa-mar-2026-en"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("saved document lacks %q:\n%s", want, doc)
 		}
@@ -873,7 +873,7 @@ func TestSaveDerivesTheRegistrationURL(t *testing.T) {
 	if !ok {
 		t.Fatalf("no draft after save; status %d body:\n%s", rec.Code, rec.Body.String())
 	}
-	if want := `url: "https://www.arc42.de/termine#msa-a"`; !strings.Contains(string(d.Doc.Bytes()), want) {
+	if want := `url: "https://trainings.arc42.org/#msa-a"`; !strings.Contains(string(d.Doc.Bytes()), want) {
 		t.Errorf("registration url was not derived, wanted %s in:\n%s", want, d.Doc.Bytes())
 	}
 }
