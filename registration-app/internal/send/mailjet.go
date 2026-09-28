@@ -64,9 +64,16 @@ func (m *Mailjet) Send(ctx context.Context, msg Message) error {
 		return err
 	}
 
-	// One retry, only for a server-side or network failure. A 4xx is our
-	// mistake (bad key, unvalidated sender) and will not improve.
-	err = m.post(ctx, payload)
+	return retryOnce(ctx, func() error { return m.post(ctx, payload) })
+}
+
+type retryable struct{ error }
+
+// retryOnce is the retry rule both providers share: one more try, only for
+// a server-side or network failure. A 4xx is our mistake (bad key,
+// unvalidated sender) and will not improve.
+func retryOnce(ctx context.Context, post func() error) error {
+	err := post()
 	var retry retryable
 	if errors.As(err, &retry) {
 		select {
@@ -74,12 +81,10 @@ func (m *Mailjet) Send(ctx context.Context, msg Message) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-		err = m.post(ctx, payload)
+		err = post()
 	}
 	return err
 }
-
-type retryable struct{ error }
 
 func (m *Mailjet) post(ctx context.Context, payload []byte) error {
 	endpoint := m.Endpoint

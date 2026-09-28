@@ -1,5 +1,5 @@
-// Package send delivers a rendered mail. Mailjet does it in production; the
-// allow-list wrapper keeps a test deployment from mailing anyone else; the log
+// Package send delivers a rendered mail. Mailjet or Brevo does it in
+// production (MAILER); the allow-list wrapper keeps a test deployment from mailing anyone else; the log
 // sender prints mails for local runs.
 package send
 

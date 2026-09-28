@@ -77,6 +77,27 @@ func TestLoadAllowsProductionWithoutAllowList(t *testing.T) {
 	}
 }
 
+// Brevo is the second provider, chosen with MAILER=brevo. Its key is one
+// string starting "xkeysib-"; a placeholder must stop the start, like a
+// placeholder Mailjet key does, instead of failing at the first real send.
+func TestBrevoNeedsARealLookingKey(t *testing.T) {
+	base(t)
+	t.Setenv("MAILER", "brevo")
+	t.Setenv("MJ_APIKEY_PUBLIC", "")
+	t.Setenv("MJ_APIKEY_PRIVATE", "")
+	t.Setenv("BREVO_API_KEY", "xkeysib-0123456789abcdef0123456789abcdef-AbCdEf")
+	c, err := Load()
+	if err != nil || c.Mailer != "brevo" || c.BrevoKey == "" {
+		t.Fatalf("Load with a Brevo key: %v %+v", err, c.Mailer)
+	}
+	for _, bad := range []string{"", "x", "sk-0123456789abcdef0123456789abcdef"} {
+		t.Setenv("BREVO_API_KEY", bad)
+		if _, err := Load(); err == nil {
+			t.Errorf("BREVO_API_KEY %q was accepted", bad)
+		}
+	}
+}
+
 func TestLoadRejectsBadSettings(t *testing.T) {
 	cases := map[string][2]string{
 		"short token key":     {"TOKEN_KEY", "c2hvcnQ="},

@@ -16,9 +16,10 @@ type Config struct {
 	Addr        string
 	Environment string // "PRODUCTION" or anything else
 
-	Mailer         string // "mailjet" (default) or "log" for local runs
+	Mailer         string // "mailjet" (default), "brevo", or "log" (no provider: mails go to the log)
 	MailjetPublic  string
 	MailjetPrivate string
+	BrevoKey       string
 
 	TokenKey []byte // 32 bytes, AES-256
 
@@ -46,6 +47,7 @@ func Load() (Config, error) {
 		Mailer:         env("MAILER", "mailjet"),
 		MailjetPublic:  os.Getenv("MJ_APIKEY_PUBLIC"),
 		MailjetPrivate: os.Getenv("MJ_APIKEY_PRIVATE"),
+		BrevoKey:       os.Getenv("BREVO_API_KEY"),
 		MailFrom:       env("MAIL_FROM", "trainings@arc42.org"),
 		MailFromName:   env("MAIL_FROM_NAME", "arc42 Trainings"),
 		BackofficeTo:   list(os.Getenv("BACKOFFICE_TO")),
@@ -72,8 +74,14 @@ func Load() (Config, error) {
 		if len(c.MailjetPublic) < 20 || len(c.MailjetPrivate) < 20 {
 			return Config{}, errors.New("MJ_APIKEY_PUBLIC and MJ_APIKEY_PRIVATE are missing or too short to be real Mailjet keys")
 		}
+	case "brevo":
+		// Brevo API keys are one string, "xkeysib-" and about 80 more
+		// characters. Same reason as above for refusing a placeholder.
+		if !strings.HasPrefix(c.BrevoKey, "xkeysib-") || len(c.BrevoKey) < 40 {
+			return Config{}, errors.New("BREVO_API_KEY is missing or does not look like a Brevo API key (xkeysib-...)")
+		}
 	default:
-		return Config{}, fmt.Errorf("MAILER must be mailjet or log, not %q", c.Mailer)
+		return Config{}, fmt.Errorf("MAILER must be mailjet, brevo or log, not %q", c.Mailer)
 	}
 
 	if len(c.BackofficeTo) == 0 {

@@ -21,7 +21,8 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 
 | Env | Secret | Meaning |
 |---|---|---|
-| `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` | yes | Mailjet key pair (sub-account key) |
+| `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` | yes | Mailjet key pair (sub-account key), for `MAILER=mailjet` |
+| `BREVO_API_KEY` | yes | Brevo API key (`xkeysib-…`), for `MAILER=brevo`. Open and click tracking must be off in the Brevo account: the API has no per-message switch |
 | `TOKEN_KEY` | yes | 32 random bytes, base64 (`openssl rand -base64 32`). Rotating it invalidates every open confirm link |
 | `BACKOFFICE_TO` | yes | where UNBESTÄTIGT/BESTÄTIGT go; several addresses **comma**-separated (a semicolon is refused at start). Personal addresses, and this repo is public |
 | `TEST_RECIPIENTS` | yes | if set: **test mode**. Registrant mails only to these addresses, `[TEST]` in every subject. Personal addresses too |
@@ -31,7 +32,7 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `ALLOWED_ORIGINS` | no | comma list of form origins; others are dropped silently |
 | `MAIL_FROM`, `MAIL_FROM_NAME`, `REPLY_TO` | no | default `trainings@arc42.org`, `arc42 Trainings`, `info@arc42.de` |
 | `ENVIRONMENT` | no | `PRODUCTION` or anything else |
-| `MAILER` | no | `mailjet` (default) or `log`: print mails instead of sending |
+| `MAILER` | no | `mailjet` (default), `brevo`, or `log`: print mails instead of sending |
 
 Outside `ENVIRONMENT=PRODUCTION` the service **refuses to start** unless
 `TEST_RECIPIENTS` is set (or `MAILER=log`), so a test deployment cannot mail
