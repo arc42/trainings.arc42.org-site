@@ -2,30 +2,6 @@ package labels
 
 import "testing"
 
-// Expected strings are what the site renders today: the price lines from
-// _site/index.html and _site/de/index.html, the date ranges from the long
-// style documented in _includes/training-date-label.html. If the site's
-// format changes, these cases change with it, in the same PR.
-func TestMoneyMatchesTheSite(t *testing.T) {
-	cases := []struct {
-		amount    int
-		cur, lang string
-		want      string
-	}{
-		{2890, "EUR", "de", "2.890 €"},
-		{2890, "EUR", "en", "€2,890"},
-		{2100, "", "de", "2.100 €"},
-		{950, "EUR", "en", "€950"},
-		{12500, "EUR", "de", "12.500 €"},
-		{2200, "CHF", "de", "2.200 CHF"},
-	}
-	for _, c := range cases {
-		if got := Money(c.amount, c.cur, c.lang); got != c.want {
-			t.Errorf("Money(%d,%q,%q) = %q, want %q", c.amount, c.cur, c.lang, got, c.want)
-		}
-	}
-}
-
 func TestDateRangeMatchesTheSite(t *testing.T) {
 	cases := []struct{ start, end, lang, want string }{
 		{"2026-12-01", "2026-12-04", "de", "1.-4. Dezember 2026"},

@@ -116,7 +116,7 @@ func TestTheWholeFlowInGerman(t *testing.T) {
 	if bo.To[0] != "office@example.org" || !strings.HasSuffix(bo.Subject, "(UNBESTÄTIGT)") || bo.ReplyTo != "anna@example.org" {
 		t.Errorf("back-office mail = %+v", bo)
 	}
-	if reg.To[0] != "anna@example.org" || reg.ReplyTo != "info@arc42.de" || !strings.Contains(reg.Text, "2.890 €") {
+	if reg.To[0] != "anna@example.org" || reg.ReplyTo != "info@arc42.de" || !strings.Contains(reg.Text, "26-12 MSA") {
 		t.Errorf("registrant mail = %+v", reg)
 	}
 
@@ -154,7 +154,7 @@ func TestEnglishRedirectsAndSubjects(t *testing.T) {
 	e := newEnv(t)
 	rec := e.post("/submit", form("en"))
 	sentPage(t, rec, "anna@example.org", "Almost done")
-	if !strings.HasSuffix(e.sender.got[0].Subject, "(UNCONFIRMED)") || !strings.Contains(e.sender.got[1].Text, "€2,890") {
+	if !strings.HasSuffix(e.sender.got[0].Subject, "(UNCONFIRMED)") || !strings.Contains(e.sender.got[1].Text, "26-12 MSA") {
 		t.Errorf("mails = %+v", e.sender.got)
 	}
 }
@@ -330,7 +330,7 @@ func TestCorrectingTheAddressResendsTheConfirmation(t *testing.T) {
 	sentPage(t, rec, "anna@example.com", "Fast geschafft")
 
 	toNew := mailsTo(e, "anna@example.com")
-	if len(toNew) != 1 || !strings.Contains(toNew[0].Text, "2.890 €") {
+	if len(toNew) != 1 || !strings.Contains(toNew[0].Text, "26-12 MSA") {
 		t.Fatalf("mails to the corrected address: %+v", toNew)
 	}
 	office := mailsTo(e, "office@example.org")

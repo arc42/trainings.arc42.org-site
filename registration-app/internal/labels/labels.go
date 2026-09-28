@@ -12,22 +12,6 @@ import (
 var monthsDE = []string{"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"}
 var monthsEN = []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 
-// Money: de "2.890 €", en "€2,890"; other currencies "2.890 CHF" / "2,890 CHF".
-func Money(amount int, currency, lang string) string {
-	sep := ","
-	if lang == "de" {
-		sep = "."
-	}
-	num := group(amount, sep)
-	if currency == "" || currency == "EUR" {
-		if lang == "de" {
-			return num + " €"
-		}
-		return "€" + num
-	}
-	return num + " " + currency
-}
-
 func group(n int, sep string) string {
 	s := strconv.Itoa(n)
 	if n < 0 {
