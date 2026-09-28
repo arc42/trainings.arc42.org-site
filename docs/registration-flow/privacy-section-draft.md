@@ -100,6 +100,14 @@ Framework (DPF).</li>
 <strong>Datenschutzerklärung:</strong>
 <a href="https://www.mailjet.com/legal/privacy-policy/" target="_blank">https://www.mailjet.com/legal/privacy-policy/</a>;
 <strong>Auftragsverarbeitungsvertrag:</strong> abgeschlossen.</li>
+<li><strong>Brevo</strong> <em>[nur falls statt Mailjet eingesetzt; den
+nicht genutzten Dienst streichen]</em>: Versand der E-Mails zur Anmeldung;
+<strong>Dienstanbieter:</strong> Brevo (Sendinblue)
+<em>[Vertragspartner (Sendinblue France SAS oder Sendinblue Germany GmbH) und Anschrift aus dem AVV übernehmen]</em>; <strong>Website:</strong>
+<a href="https://www.brevo.com" target="_blank">https://www.brevo.com</a>;
+<strong>Datenschutzerklärung:</strong>
+<a href="https://www.brevo.com/legal/privacypolicy/" target="_blank">https://www.brevo.com/legal/privacypolicy/</a>;
+<strong>Auftragsverarbeitungsvertrag:</strong> abgeschlossen.</li>
 </ul>
 ```
 
@@ -171,6 +179,14 @@ Framework (DPF).</li>
 <a href="https://www.mailjet.com" target="_blank">https://www.mailjet.com</a>;
 <strong>privacy policy:</strong>
 <a href="https://www.mailjet.com/legal/privacy-policy/" target="_blank">https://www.mailjet.com/legal/privacy-policy/</a>;
+<strong>data processing agreement:</strong> in place.</li>
+<li><strong>Brevo</strong> <em>[only if used instead of Mailjet; delete the
+unused service]</em>: sending the registration e-mails;
+<strong>provider:</strong> Brevo (Sendinblue)
+<em>[contracting entity (Sendinblue France SAS or Sendinblue Germany GmbH) and address as in the DPA]</em>; <strong>website:</strong>
+<a href="https://www.brevo.com" target="_blank">https://www.brevo.com</a>;
+<strong>privacy policy:</strong>
+<a href="https://www.brevo.com/legal/privacypolicy/" target="_blank">https://www.brevo.com/legal/privacypolicy/</a>;
 <strong>data processing agreement:</strong> in place.</li>
 </ul>
 ```
