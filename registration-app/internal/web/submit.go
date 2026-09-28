@@ -71,7 +71,7 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		confirmURL := s.d.Cfg.PublicURL + "/confirm?t=" + url.QueryEscape(tok)
 		var rm mail.Rendered
-		if rm, err = mail.Registrant(reg.Lang, facts, reg.Code == intake.Other, confirmURL); err == nil {
+		if rm, err = mail.Registrant(reg.Lang, facts, reg.Code == intake.Other, confirmURL, s.d.Sealer.Code(reg.ID, reg.Emails[0])); err == nil {
 			err = s.send(r.Context(), send.Message{To: []string{reg.Emails[0]}, ReplyTo: s.d.Cfg.ReplyTo, Subject: rm.Subject, Text: rm.Text, HTML: rm.HTML, CustomID: reg.ID})
 		}
 	}

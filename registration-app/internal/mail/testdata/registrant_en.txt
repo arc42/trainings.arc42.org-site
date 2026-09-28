@@ -2,11 +2,16 @@ Please confirm your registration: MSA, December 1-4, 2026
 
 Hello,
 
-thank you for your registration with arc42. It is only complete once you confirm it:
+thank you for your registration with arc42. It is only complete once you confirm it.
 
+    Your confirmation code:  482 913
+
+Enter it on the page that opened after you submitted the form.
+
+Or confirm with this link:
 https://register.arc42.org/confirm?t=TOKEN
 
-The link is valid for 5 days.
+The code and the link are valid for 5 days.
 
 Your selection
   Course:        Mastering Software Architectures

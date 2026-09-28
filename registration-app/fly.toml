@@ -1,5 +1,6 @@
-# The registration service. Stateless like the admin app: no [mounts], ever.
-# Pending registrations live inside the confirm link (internal/token), not here.
+# The registration service. No [mounts]: pending registrations live inside
+# the sealed links (internal/token), and the little state there is (confirmed
+# ids, wrong-code counts) is in Turso (internal/store), not on this machine.
 app = "arc42-registration"
 primary_region = "ams"
 

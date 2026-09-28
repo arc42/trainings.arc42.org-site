@@ -53,8 +53,13 @@ Formular wird von einem eigenen Anmeldedienst entgegengenommen, der beim
 Anbieter Fly.io in einem Rechenzentrum in Amsterdam läuft. Er speichert die
 Angaben nicht, sondern gibt sie per E-Mail an unser Schulungsbüro weiter und
 schickt Ihnen eine E-Mail mit einem Bestätigungslink. Erst wenn Sie diesen
-Link öffnen und die Anmeldung bestätigen, gilt sie als bestätigt. Der Link
-enthält Ihre Angaben verschlüsselt und ist fünf Tage gültig. Die E-Mails
+Link öffnen oder den Code aus der E-Mail eingeben und die Anmeldung
+bestätigen, gilt sie als bestätigt. Der Link enthält Ihre Angaben
+verschlüsselt; Link und Code sind fünf Tage gültig. Damit eine Anmeldung nur
+einmal bestätigt wird, speichert der Dienst die Anmeldenummer und den
+Zeitpunkt der Bestätigung (sowie die Zahl falsch eingegebener Codes) für
+höchstens sechs Tage in einer Datenbank beim Anbieter Turso; Namen oder
+E-Mail-Adressen speichert er dort nicht. Die E-Mails
 versenden wir über den Dienst Mailjet; Öffnungs- und Klickverfolgung sind
 dabei abgeschaltet.</p>
 <p>Zum Schutz vor automatisierten Anmeldungen verarbeitet der Dienst Ihre
@@ -93,6 +98,13 @@ Amsterdam); <strong>Dienstanbieter:</strong> Fly.io, Inc., USA
 <strong>Auftragsverarbeitungsvertrag:</strong> abgeschlossen.
 <strong>Grundlage Drittlandübermittlung:</strong> EU-US Data Privacy
 Framework (DPF).</li>
+<li><strong>Turso:</strong> Datenbank, in der der Anmeldedienst Anmeldenummern
+bestätigter Anmeldungen und die Zahl falscher Code-Eingaben für höchstens sechs
+Tage speichert (keine Namen, keine E-Mail-Adressen; Datenbank-Standort in der
+EU); <strong>Dienstanbieter:</strong> <em>[Anbieter und Anschrift aus dem AVV
+bzw. von turso.tech übernehmen]</em>; <strong>Website:</strong>
+<a href="https://turso.tech" target="_blank">https://turso.tech</a>;
+<strong>Auftragsverarbeitungsvertrag:</strong> <em>[prüfen]</em>.</li>
 <li><strong>Mailjet:</strong> Versand der E-Mails zur Anmeldung;
 <strong>Dienstanbieter:</strong> Mailjet SAS, Paris, Frankreich
 <em>[Anschrift aus dem AVV übernehmen]</em>; <strong>Website:</strong>
@@ -136,8 +148,12 @@ and invoice you. The form is received by our own registration service, which
 runs with the provider Fly.io in a data centre in Amsterdam. The service does
 not store your details. It forwards them by e-mail to our training office and
 sends you an e-mail with a confirmation link. Your registration counts as
-confirmed only once you open that link and confirm. The link contains your
-details in encrypted form and is valid for five days. We send these e-mails
+confirmed only once you open that link, or enter the code from the e-mail,
+and confirm. The link contains your details in encrypted form; link and code
+are valid for five days. So that a registration is confirmed only once, the
+service stores the registration number and the time of confirmation (and the
+number of wrongly entered codes) for at most six days in a database with the
+provider Turso; it stores no names or e-mail addresses there. We send these e-mails
 through the Mailjet service, with open and click tracking switched off.</p>
 <p>To protect against automated registrations, the service keeps your IP
 address in memory for at most one hour, to limit the number of registrations
@@ -173,6 +189,13 @@ location Amsterdam); <strong>provider:</strong> Fly.io, Inc., USA
 <strong>data processing agreement:</strong> in place.
 <strong>Basis for third-country transfer:</strong> EU-US Data Privacy
 Framework (DPF).</li>
+<li><strong>Turso:</strong> database in which the registration service keeps
+the registration numbers of confirmed registrations and the number of wrong
+code entries for at most six days (no names, no e-mail addresses; database
+located in the EU); <strong>provider:</strong> <em>[provider and address as in
+the DPA or on turso.tech]</em>; <strong>website:</strong>
+<a href="https://turso.tech" target="_blank">https://turso.tech</a>;
+<strong>data processing agreement:</strong> <em>[check]</em>.</li>
 <li><strong>Mailjet:</strong> sending the registration e-mails;
 <strong>provider:</strong> Mailjet SAS, Paris, France
 <em>[address as in the DPA]</em>; <strong>website:</strong>

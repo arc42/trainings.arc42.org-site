@@ -6,10 +6,15 @@ package token
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -61,9 +66,10 @@ const maxLen = 2048
 const maxNameInToken = 60
 
 type Sealer struct {
-	aead cipher.AEAD
-	ttl  time.Duration
-	now  func() time.Time
+	aead    cipher.AEAD
+	codeKey []byte // HMAC key for Code, derived from the token key
+	ttl     time.Duration
+	now     func() time.Time
 }
 
 func NewSealer(key []byte, ttl time.Duration, now func() time.Time) (*Sealer, error) {
@@ -75,7 +81,10 @@ func NewSealer(key []byte, ttl time.Duration, now func() time.Time) (*Sealer, er
 	if err != nil {
 		return nil, err
 	}
-	return &Sealer{aead: aead, ttl: ttl, now: now}, nil
+	// A separate key for the codes, so the same bytes are never used for
+	// AES-GCM and for HMAC. Derived, so there is still only one secret.
+	ck := sha256.Sum256(append([]byte("arc42-registration code v1:"), key...))
+	return &Sealer{aead: aead, codeKey: ck[:], ttl: ttl, now: now}, nil
 }
 
 // Seal stamps the issue time unless the claims already carry one: a token
@@ -129,4 +138,26 @@ func (s *Sealer) Open(tok string) (Claims, error) {
 // Age is how long ago the claims were first issued.
 func (s *Sealer) Age(c Claims) time.Duration {
 	return s.now().Sub(time.Unix(c.Issued, 0))
+}
+
+// Code is the 6-digit confirmation code for a registration, shown in the
+// registrant mail and typed on the "please confirm" page. It is computed,
+// not stored: an HMAC of registration id and address, so a corrected
+// address gets a new code, and nobody without the token key can derive one.
+// Six digits are guessable only by trying; the web layer counts wrong tries
+// per registration (store.Failure) and locks after a few.
+func (s *Sealer) Code(id, email string) string {
+	m := hmac.New(sha256.New, s.codeKey)
+	m.Write([]byte(id + "\x00" + strings.ToLower(email)))
+	return fmt.Sprintf("%06d", binary.BigEndian.Uint64(m.Sum(nil)[:8])%1_000_000)
+}
+
+// CheckCode compares a typed code with the right one, ignoring the spaces
+// and dashes people paste along ("482 913").
+func (s *Sealer) CheckCode(id, email, typed string) bool {
+	typed = strings.NewReplacer(" ", "", "-", "", "\u00a0", "").Replace(strings.TrimSpace(typed))
+	if len(typed) != 6 || strings.Trim(typed, "0123456789") != "" {
+		return false
+	}
+	return hmac.Equal([]byte(typed), []byte(s.Code(id, email)))
 }

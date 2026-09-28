@@ -13,6 +13,7 @@ import (
 	"arc42-registration/internal/feed"
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/send"
+	"arc42-registration/internal/store"
 	"arc42-registration/internal/token"
 	"arc42-registration/internal/web"
 )
@@ -45,6 +46,21 @@ func main() {
 		logger.Fatalf("token: %v", err)
 	}
 	courses := feed.New(cfg.FeedURL, nil, time.Now)
+	// The only state: confirmed registrations and wrong-code counts. Config
+	// has already refused production without Turso.
+	var st store.Store
+	if cfg.TursoURL != "" {
+		t, err := store.NewTurso(cfg.TursoURL, cfg.TursoToken, nil)
+		if err != nil {
+			logger.Fatalf("store: %v", err)
+		}
+		st = t
+		logger.Printf("store: turso")
+	} else {
+		st = store.NewMemory()
+		logger.Printf("store: in memory - forgets on restart, test deployments only")
+	}
+
 	srv := web.New(web.Deps{
 		Cfg: cfg,
 		Checker: &intake.Checker{
@@ -56,6 +72,7 @@ func main() {
 		Sealer: sealer,
 		Sender: sender,
 		Log:    logger,
+		Store:  st,
 		// Three confirmation requests per address and day are plenty for a
 		// person who mistyped twice; more is someone using us as a mailer.
 		RecipientLimiter: intake.NewLimiter(3, 24*time.Hour, time.Now),

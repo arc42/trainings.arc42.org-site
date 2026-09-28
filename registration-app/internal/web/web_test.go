@@ -19,6 +19,7 @@ import (
 	"arc42-registration/internal/feed"
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/send"
+	"arc42-registration/internal/store"
 	"arc42-registration/internal/token"
 )
 
@@ -54,12 +55,18 @@ type env struct {
 	sender *fakeSender
 	now    *time.Time
 	logs   *bytes.Buffer
+	store  store.Store
 }
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	now := time.Date(2026, 9, 30, 10, 0, 0, 0, time.UTC)
-	e := &env{sender: &fakeSender{}, now: &now, logs: &bytes.Buffer{}}
+	e := &env{sender: &fakeSender{}, now: &now, logs: &bytes.Buffer{}, store: store.NewMemory()}
+	return rebuild(e)
+}
+
+// rebuild (re)creates the server from the env, e.g. after swapping its store.
+func rebuild(e *env) *env {
 	sealer, _ := token.NewSealer([]byte("0123456789abcdef0123456789abcdef"), token.Valid, func() time.Time { return *e.now })
 	ff := fakeFeed{"26-12 MSA": feed.Bookable}
 	e.srv = New(Deps{
@@ -67,7 +74,7 @@ func newEnv(t *testing.T) *env {
 			SiteURL: "https://trainings.arc42.org", PublicURL: "https://register.example"},
 		Checker: &intake.Checker{Feed: ff, Limiter: intake.NewLimiter(100, time.Hour, time.Now),
 			AllowedOrigins: []string{"https://trainings.arc42.org"}},
-		Feed: ff, Sealer: sealer, Sender: e.sender,
+		Feed: ff, Sealer: sealer, Sender: e.sender, Store: e.store,
 		RecipientLimiter:  intake.NewLimiter(3, 24*time.Hour, time.Now),
 		CorrectionLimiter: intake.NewLimiter(maxCorrections, correctionWindow, func() time.Time { return *e.now }),
 		NewID:             func() string { return "R-TEST1" },
@@ -143,10 +150,16 @@ func TestTheWholeFlowInGerman(t *testing.T) {
 		t.Errorf("confirmed mail subject = %q", conf.Subject)
 	}
 
-	// Pressed twice: a second mail, accepted (spec 4.4).
-	e.post("/confirm", url.Values{"t": {tok}})
-	if len(e.sender.got) != 4 {
-		t.Errorf("double confirm sent %d mails in total, want 4", len(e.sender.got))
+	// Pressed twice: the link works once. The second press lands on the
+	// same confirmed page and sends nothing (changed 28 Sep 2026: the back
+	// office got one BESTÄTIGT mail per click).
+	again := e.post("/confirm", url.Values{"t": {tok}})
+	if len(e.sender.got) != 3 || again.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
+		t.Errorf("second confirm: %d mails in total (want 3), location %q", len(e.sender.got), again.Header().Get("Location"))
+	}
+	// Opening the link again goes straight to the confirmed page.
+	if page := e.get(link[1]); page.Code != http.StatusSeeOther || page.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
+		t.Errorf("opening a used link: %d %q", page.Code, page.Header().Get("Location"))
 	}
 }
 
@@ -505,5 +518,115 @@ func TestAnInvalidCorrectionDoesNotExtendTheWindow(t *testing.T) {
 	e.post("/correct", url.Values{"t": {tok}, "email": {"late@example.com"}})
 	if len(mailsTo(e, "late@example.com")) != 0 {
 		t.Error("an invalid correction restarted the correction window")
+	}
+}
+
+// A confirmation whose back-office mail failed is taken back, so the
+// registrant's retry is a first confirmation and the mail goes out then.
+func TestAFailedConfirmationCanBeRetried(t *testing.T) {
+	e := newEnv(t)
+	e.post("/submit", form("de"))
+	link := linkRe.FindStringSubmatch(e.sender.got[1].Text)
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
+	e.sender.fail = func(m send.Message) error {
+		if strings.Contains(m.Subject, "BESTÄTIGT") {
+			return errors.New("provider down")
+		}
+		return nil
+	}
+	if rec := e.post("/confirm", url.Values{"t": {tok}}); rec.Code != http.StatusBadGateway {
+		t.Fatalf("failed mail: status %d, want 502", rec.Code)
+	}
+	e.sender.fail = nil
+	e.post("/confirm", url.Values{"t": {tok}})
+	if n := len(e.sender.got); n != 3 || !strings.HasSuffix(e.sender.got[2].Subject, "(BESTÄTIGT)") {
+		t.Errorf("retry after a failed mail: %d mails, last %q", n, e.sender.got[n-1].Subject)
+	}
+}
+
+var codeRe = regexp.MustCompile(`Bestätigungscode:\s+(\d{3} \d{3})`)
+
+// The code from the mail, typed on the page that stayed open, confirms like
+// the link: one BESTÄTIGT mail, then the site's confirmed page. Typing it
+// again sends nothing.
+func TestTheCodeFromTheMailConfirms(t *testing.T) {
+	e := newEnv(t)
+	page := e.post("/submit", form("de")).Body.String()
+	if !strings.Contains(page, `action="/code"`) || !strings.Contains(page, `autocomplete="one-time-code"`) {
+		t.Fatalf("the sent page has no code form:\n%s", page)
+	}
+	code := codeRe.FindStringSubmatch(e.sender.got[1].Text)[1]
+	pageTok := correctionTokenRe.FindStringSubmatch(page)[1]
+	rec := e.post("/code", url.Values{"t": {pageTok}, "code": {code}})
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
+		t.Fatalf("code: %d %q\n%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	if n := len(e.sender.got); n != 3 || !strings.HasSuffix(e.sender.got[2].Subject, "(BESTÄTIGT)") {
+		t.Fatalf("after the code: %d mails", n)
+	}
+	e.post("/code", url.Values{"t": {pageTok}, "code": {code}})
+	if len(e.sender.got) != 3 {
+		t.Error("the code confirmed twice")
+	}
+}
+
+// Six digits are guessable only by trying, so wrong tries are counted per
+// registration and the field locks after five: from then on only the link
+// in the mail confirms, even with the right code.
+func TestWrongCodesLockAfterFive(t *testing.T) {
+	e := newEnv(t)
+	page := e.post("/submit", form("de")).Body.String()
+	code := strings.ReplaceAll(codeRe.FindStringSubmatch(e.sender.got[1].Text)[1], " ", "")
+	wrong := "000000"
+	if code == wrong {
+		wrong = "111111"
+	}
+	pageTok := correctionTokenRe.FindStringSubmatch(page)[1]
+	for i := 1; i <= 5; i++ {
+		body := e.post("/code", url.Values{"t": {pageTok}, "code": {wrong}}).Body.String()
+		if i < 5 && !strings.Contains(body, "Der Code stimmt nicht") {
+			t.Fatalf("wrong try %d: no wrong-code message", i)
+		}
+	}
+	body := e.post("/code", url.Values{"t": {pageTok}, "code": {code}}).Body.String()
+	if !strings.Contains(body, "Zu viele falsche Versuche") || strings.Contains(body, `action="/code"`) || len(e.sender.got) != 2 {
+		t.Errorf("after five wrong tries the right code still confirmed (%d mails) or the form is still there", len(e.sender.got))
+	}
+}
+
+type downStore struct{ store.Store }
+
+func (downStore) Failures(context.Context, string) (int, error) { return 0, errors.New("down") }
+
+// Without the store the tries cannot be counted, so the code is refused and
+// the page points to the link, which works without counting.
+func TestCodeEntryNeedsTheStore(t *testing.T) {
+	e := newEnv(t)
+	e.store = downStore{store.NewMemory()}
+	e = rebuild(e)
+	page := e.post("/submit", form("de")).Body.String()
+	code := codeRe.FindStringSubmatch(e.sender.got[1].Text)[1]
+	body := e.post("/code", url.Values{"t": {correctionTokenRe.FindStringSubmatch(page)[1]}, "code": {code}}).Body.String()
+	if !strings.Contains(body, "Link in der E-Mail") || len(e.sender.got) != 2 {
+		t.Errorf("code accepted without a store (%d mails):\n%s", len(e.sender.got), body)
+	}
+}
+
+// A dropped submission gets the same page, code form included, and no code
+// ever confirms it: a bot learns nothing and confirms nothing.
+func TestADroppedSubmissionNeverConfirms(t *testing.T) {
+	e := newEnv(t)
+	f := form("de")
+	f.Set("_gotcha", "bot")
+	page := e.post("/submit", f).Body.String()
+	if !strings.Contains(page, `action="/code"`) {
+		t.Fatal("the dropped page lacks the code form")
+	}
+	pageTok := correctionTokenRe.FindStringSubmatch(page)[1]
+	for _, c := range []string{"000000", "123456", "999999"} {
+		e.post("/code", url.Values{"t": {pageTok}, "code": {c}})
+	}
+	if len(e.sender.got) != 0 {
+		t.Errorf("a dropped submission sent %d mails", len(e.sender.got))
 	}
 }

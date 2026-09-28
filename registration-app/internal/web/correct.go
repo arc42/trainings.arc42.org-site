@@ -26,30 +26,44 @@ var sentText = map[string]map[string]string{
 	"de": {
 		"Title":     "Fast geschafft: bitte bestätigen Sie Ihre Anmeldung",
 		"Sent":      "Wir haben eine E-Mail an",
-		"SentTail":  " geschickt. Ihre Anmeldung ist erst vollständig, wenn Sie den Link darin öffnen und bestätigen. Der Link ist 5 Tage gültig.",
+		"SentTail":  " geschickt. Ihre Anmeldung ist erst vollständig, wenn Sie sie bestätigen: mit dem Code aus der E-Mail hier unten, oder mit dem Link darin. Beides gilt 5 Tage.",
 		"NoMail":    "Keine Mail da? Sehen Sie bitte auch im Spam-Ordner nach.",
 		"Wrong":     "Adresse falsch geschrieben? Tragen Sie die richtige ein, wir schicken die E-Mail dann dorthin:",
 		"Button":    "An diese Adresse schicken",
 		"Invalid":   "Das sieht nicht nach einer gültigen E-Mail-Adresse aus.",
 		"Exhausted": "Die Adresse lässt sich hier nicht mehr ändern. Schreiben Sie uns bitte an",
 		"Back":      "Zurück zu den Terminen",
+		"CodeLabel": "Bestätigungscode aus der E-Mail", "CodeButton": "Anmeldung bestätigen",
+		"CodeWrong":       "Der Code stimmt nicht. Bitte prüfen Sie ihn in der E-Mail.",
+		"CodeLocked":      "Zu viele falsche Versuche. Bitte bestätigen Sie mit dem Link in der E-Mail.",
+		"CodeUnavailable": "Die Code-Eingabe ist gerade nicht verfügbar. Bitte bestätigen Sie mit dem Link in der E-Mail.",
 	},
 	"en": {
 		"Title":     "Almost done: please confirm your registration",
 		"Sent":      "We have sent an e-mail to",
-		"SentTail":  ". Your registration is only complete once you open the link in it and confirm. The link is valid for 5 days.",
+		"SentTail":  ". Your registration is only complete once you confirm it: with the code from the e-mail below, or with the link in it. Both are valid for 5 days.",
 		"NoMail":    "No mail? Please also check your spam folder.",
 		"Wrong":     "Address mistyped? Enter the correct one and we will send the e-mail there:",
 		"Button":    "Send to this address",
 		"Invalid":   "That does not look like a valid e-mail address.",
 		"Exhausted": "The address cannot be changed here any more. Please write to us at",
 		"Back":      "Back to the training dates",
+		"CodeLabel": "Confirmation code from the e-mail", "CodeButton": "Confirm registration",
+		"CodeWrong":       "That code is not right. Please check it in the e-mail.",
+		"CodeLocked":      "Too many wrong tries. Please confirm with the link in the e-mail.",
+		"CodeUnavailable": "Code entry is not available just now. Please confirm with the link in the e-mail.",
 	},
 }
 
 // sentPage is shown after every accepted AND every dropped submission, so a
 // bot cannot tell the two apart. c is the correction token's content.
 func (s *Server) sentPage(w http.ResponseWriter, c token.Claims, email string, invalid bool) {
+	s.sentPageNote(w, c, email, invalid, "")
+}
+
+// sentPageNote is sentPage with a note on the code field: "wrong", "locked"
+// or "unavailable" (store down), from handleCode.
+func (s *Server) sentPageNote(w http.ResponseWriter, c token.Claims, email string, invalid bool, codeNote string) {
 	l := c.Lang
 	if l != "en" {
 		l = "de"
@@ -65,6 +79,7 @@ func (s *Server) sentPage(w http.ResponseWriter, c token.Claims, email string, i
 	_ = pages.ExecuteTemplate(w, "sent.html", s.frame(l, sentText[l]["Title"], map[string]any{
 		"T": sentText[l], "Email": email, "Token": tok, "Back": back,
 		"Invalid": invalid, "Exhausted": c.Corrections >= maxCorrections,
+		"CodeNote": codeNote, "CodeOpen": codeNote != "locked" && codeNote != "unavailable",
 	}))
 }
 
@@ -130,7 +145,7 @@ func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
 	tok, err := s.d.Sealer.Seal(confirm)
 	if err == nil {
 		var rm mail.Rendered
-		if rm, err = mail.Registrant(c.Lang, facts, c.Code == intake.Other, s.d.Cfg.PublicURL+"/confirm?t="+url.QueryEscape(tok)); err == nil {
+		if rm, err = mail.Registrant(c.Lang, facts, c.Code == intake.Other, s.d.Cfg.PublicURL+"/confirm?t="+url.QueryEscape(tok), s.d.Sealer.Code(c.ID, newEmail)); err == nil {
 			err = s.send(r.Context(), send.Message{To: []string{newEmail}, ReplyTo: s.d.Cfg.ReplyTo, Subject: rm.Subject, Text: rm.Text, HTML: rm.HTML, CustomID: c.ID})
 		}
 	}

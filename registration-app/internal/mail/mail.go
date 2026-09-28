@@ -74,9 +74,11 @@ func FactsFor(e feed.Entry, lang string) *Facts {
 var text = map[string]map[string]string{
 	"de": {
 		"Title": "Bitte bestätigen Sie Ihre Anmeldung", "Hello": "Guten Tag,",
-		"Intro":      "vielen Dank für Ihre Anmeldung bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen:",
-		"IntroOther": "vielen Dank für Ihre Anfrage bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen:",
-		"Button":     "Anmeldung bestätigen", "Valid": "Der Link ist 5 Tage gültig.",
+		"Intro":     "vielen Dank für Ihre Anmeldung bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen.",
+		"CodeLabel": "Ihr Bestätigungscode:", "CodeHint": "Geben Sie ihn auf der Seite ein, die sich nach dem Absenden geöffnet hat.",
+		"OrLink":     "Oder bestätigen Sie mit diesem Link:",
+		"IntroOther": "vielen Dank für Ihre Anfrage bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen.",
+		"Button":     "Anmeldung bestätigen", "Valid": "Code und Link sind 5 Tage gültig.",
 		"Course": "Kurs", "Dates": "Termin", "Where": "Ort", "Trainers": "Trainer", "Code": "Buchungscode",
 		"Other":     `Sie haben "Sonstige" gewählt. Wir melden uns persönlich bei Ihnen.`,
 		"NoFacts":   "Die Einzelheiten zu Ihrem Termin bestätigen wir Ihnen persönlich.",
@@ -87,9 +89,11 @@ var text = map[string]map[string]string{
 	},
 	"en": {
 		"Title": "Please confirm your registration", "Hello": "Hello,",
-		"Intro":      "thank you for your registration with arc42. It is only complete once you confirm it:",
-		"IntroOther": "thank you for your request with arc42. It is only complete once you confirm it:",
-		"Button":     "Confirm registration", "Valid": "The link is valid for 5 days.",
+		"Intro":     "thank you for your registration with arc42. It is only complete once you confirm it.",
+		"CodeLabel": "Your confirmation code:", "CodeHint": "Enter it on the page that opened after you submitted the form.",
+		"OrLink":     "Or confirm with this link:",
+		"IntroOther": "thank you for your request with arc42. It is only complete once you confirm it.",
+		"Button":     "Confirm registration", "Valid": "The code and the link are valid for 5 days.",
 		"Course": "Course", "Dates": "Dates", "Where": "Location", "Trainers": "Trainers", "Code": "Booking code",
 		"Other":     `You chose "other". We will get in touch with you personally.`,
 		"NoFacts":   "We will confirm the details of your date personally.",
@@ -133,9 +137,14 @@ func lang(l string) string {
 // Registrant renders the confirmation request. other says the registrant
 // chose "Sonstige"/"other"; facts is nil then, and also when the course list
 // could not be read, which must not read like "other".
-func Registrant(l string, facts *Facts, other bool, confirmURL string) (Rendered, error) {
+// code is the 6-digit confirmation code (token.Sealer.Code); it is shown
+// grouped 3+3 and leads the mail, the link follows as the fallback.
+func Registrant(l string, facts *Facts, other bool, confirmURL, code string) (Rendered, error) {
 	l = lang(l)
-	data := map[string]any{"Lang": l, "Facts": facts, "Other": other, "ConfirmURL": confirmURL, "T": text[l]}
+	if len(code) == 6 {
+		code = code[:3] + " " + code[3:]
+	}
+	data := map[string]any{"Lang": l, "Facts": facts, "Other": other, "ConfirmURL": confirmURL, "ConfirmCode": code, "T": text[l]}
 	var t, h bytes.Buffer
 	if err := textT.ExecuteTemplate(&t, "registrant_"+l+".txt", data); err != nil {
 		return Rendered{}, err

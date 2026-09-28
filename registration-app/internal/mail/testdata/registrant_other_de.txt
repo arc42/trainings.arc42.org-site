@@ -2,11 +2,16 @@ Bitte bestätigen Sie Ihre Anfrage
 
 Guten Tag,
 
-vielen Dank für Ihre Anfrage bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen:
+vielen Dank für Ihre Anfrage bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen.
 
+    Ihr Bestätigungscode:  482 913
+
+Geben Sie ihn auf der Seite ein, die sich nach dem Absenden geöffnet hat.
+
+Oder bestätigen Sie mit diesem Link:
 https://register.arc42.org/confirm?t=TOKEN
 
-Der Link ist 5 Tage gültig.
+Code und Link sind 5 Tage gültig.
 
 Sie haben "Sonstige" gewählt. Wir melden uns persönlich bei Ihnen.
 
