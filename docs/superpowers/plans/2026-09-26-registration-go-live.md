@@ -105,7 +105,7 @@ Title `Registrations go to register.arc42.org`. Description: the Review Focus it
 
 - [ ] **Step 1: Production settings**
 
-In `registration-app/fly.toml` set `ENVIRONMENT = "PRODUCTION"`, `PUBLIC_URL = "https://register.arc42.org"`, `ALLOWED_ORIGINS = "https://trainings.arc42.org"`. Gernot sets the secrets (never Claude): `fly secrets set -a arc42-registration BACKOFFICE_TO=<real back-office address>` and `fly secrets unset -a arc42-registration TEST_RECIPIENTS`. Commit the fly.toml change in the same PR as Task 1.
+In `registration-app/fly.toml` set `ENVIRONMENT = "PRODUCTION"`, `PUBLIC_URL = "https://register.arc42.org"` (already set since 28 Sep 2026, in test mode), `ALLOWED_ORIGINS = "https://trainings.arc42.org"`. Gernot sets the secrets (never Claude): `fly secrets set -a arc42-registration BACKOFFICE_TO=<real back-office address>` and `fly secrets unset -a arc42-registration TEST_RECIPIENTS`. Commit the fly.toml change in the same PR as Task 1.
 
 - [ ] **Step 2: Deploy and check**
 
