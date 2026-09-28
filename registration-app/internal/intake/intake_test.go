@@ -253,3 +253,33 @@ func TestWaitlistRegistrationIsMarkedForTheBackOffice(t *testing.T) {
 		t.Error("an open date is marked as waiting list")
 	}
 }
+
+// "How did you hear about this course?" is optional: a choice from the
+// dropdown plus free text, both field names readable in a Formspark
+// notification too, one pair per language.
+func TestReadsHowTheyHeardAboutTheCourse(t *testing.T) {
+	c := checker()
+	f := germanForm()
+	f.Set("Aufmerksam durch", "Buch")
+	f.Set("Aufmerksam durch (Details)", "arc42 by Example")
+	d := c.Check(context.Background(), Input{Form: f, IP: "h1"})
+	if d.Outcome != Accept || d.Reg.HeardVia != "Buch" || d.Reg.HeardViaDetail != "arc42 by Example" {
+		t.Errorf("DE: outcome %v, heard via %q / %q", d.Outcome, d.Reg.HeardVia, d.Reg.HeardViaDetail)
+	}
+	f = germanForm()
+	f.Set("language", "en")
+	f.Set("Heard via", "Other")
+	f.Set("Heard via (details)", "a podcast")
+	d = c.Check(context.Background(), Input{Form: f, IP: "h2"})
+	if d.Reg.HeardVia != "Other" || d.Reg.HeardViaDetail != "a podcast" {
+		t.Errorf("EN: heard via %q / %q", d.Reg.HeardVia, d.Reg.HeardViaDetail)
+	}
+	if d := c.Check(context.Background(), Input{Form: germanForm(), IP: "h3"}); d.Outcome != Accept || d.Reg.HeardVia != "" {
+		t.Errorf("without the fields: outcome %v, heard via %q", d.Outcome, d.Reg.HeardVia)
+	}
+	f = germanForm()
+	f.Set("Aufmerksam durch (Details)", strings.Repeat("x", 201))
+	if d := c.Check(context.Background(), Input{Form: f, IP: "h4"}); d.Outcome != Reject {
+		t.Errorf("a 201-character detail: outcome %v, want Reject", d.Outcome)
+	}
+}

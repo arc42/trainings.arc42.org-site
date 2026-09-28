@@ -184,3 +184,25 @@ func TestRegistrantMailLeadsWithTheCode(t *testing.T) {
 		}
 	}
 }
+
+// "How did you hear about this course?" reaches the back office as one line,
+// the choice with its details in brackets, and stays out of the way when the
+// registrant left both empty.
+func TestBackofficeMailSaysHowTheyHeard(t *testing.T) {
+	reg := intake.Registration{ID: "R-7F3KQ", LastName: "Müller", Email: "anna@example.org", Code: "26-12 MSA",
+		Billing: "X", HeardVia: "Buch", HeardViaDetail: "arc42 by Example"}
+	for l, want := range map[string]string{
+		"de": "Aufmerksam durch:  Buch (arc42 by Example)",
+		"en": "Heard via:                Buch (arc42 by Example)",
+	} {
+		reg.Lang = l
+		r, _ := Backoffice(reg, FactsFor(dez, l), nil)
+		if !strings.Contains(r.Text, want) {
+			t.Errorf("%s: missing %q in\n%s", l, want, r.Text)
+		}
+	}
+	reg.HeardVia, reg.HeardViaDetail, reg.Lang = "", "", "de"
+	if r, _ := Backoffice(reg, FactsFor(dez, "de"), nil); strings.Contains(r.Text, "Aufmerksam durch") {
+		t.Error("an empty answer still printed the line")
+	}
+}

@@ -32,6 +32,11 @@ type Registration struct {
 	Billing  string
 	Comments string
 
+	// How the registrant heard about the course: a dropdown value in the
+	// form's language ("Buch", "Conference", ...) and optional free text.
+	// Both optional; for the back office only.
+	HeardVia, HeardViaDetail string
+
 	Via        string
 	FormSource string
 }
@@ -85,12 +90,17 @@ var fieldNames = map[string][]string{
 	"p_email":  {"EmailTN"},
 	"billing":  {"Rechnungsadresse", "Billing address"},
 	"comments": {"Bemerkungen", "Comments"},
+	// Names readable as they are: Formspark lists fields by name in its
+	// notification, and the live forms still post there until go-live.
+	"heard":        {"Aufmerksam durch", "Heard via"},
+	"heard_detail": {"Aufmerksam durch (Details)", "Heard via (details)"},
 }
 
 var maxLen = map[string]int{
 	"last": 200, "first": 200, "email": 320, "code": 64,
 	"p_last": 200, "p_first": 200, "p_email": 320,
 	"billing": 1000, "comments": 4000,
+	"heard": 60, "heard_detail": 200,
 }
 
 // MaxFormBytes is the body cap for /submit, derived from maxLen so the two
@@ -130,6 +140,8 @@ func (c *Checker) Check(ctx context.Context, in Input) Decision {
 		ParticipantEmail: get(f, "p_email"),
 		Billing:          get(f, "billing"),
 		Comments:         get(f, "comments"),
+		HeardVia:         get(f, "heard"),
+		HeardViaDetail:   get(f, "heard_detail"),
 		Via:              clip(f.Get("via"), 100),
 		FormSource:       clip(f.Get("form_source"), 300),
 	}
