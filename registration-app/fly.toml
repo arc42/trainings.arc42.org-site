@@ -20,7 +20,11 @@ primary_region = "ams"
   # ENVIRONMENT=PRODUCTION the app refuses to start unless TEST_RECIPIENTS is
   # set, so this deployment cannot mail anyone outside the list.
   ENVIRONMENT = "TEST"
-  PUBLIC_URL = "https://arc42-registration.fly.dev"
+  # Confirm links go out under register.arc42.org already in test mode
+  # (certificate issued 27 Sep 2026): a mail from trainings@arc42.org whose
+  # button leads to *.fly.dev is the sender/link mismatch corporate filters
+  # flag, and the end-to-end test should measure what go-live will send.
+  PUBLIC_URL = "https://register.arc42.org"
   SITE_URL = "https://trainings.arc42.org"
   FEED_URL = "https://trainings.arc42.org/api/trainings.json"
   ALLOWED_ORIGINS = "https://trainings.arc42.org,http://localhost:4260"
