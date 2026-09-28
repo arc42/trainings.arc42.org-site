@@ -12,8 +12,6 @@ Ihre Auswahl
   Ort:           {{.Where}}
 {{- if .Trainers}}
   Trainer:       {{.Trainers}}{{end}}
-{{- if .Price}}
-  Preis:         {{.Price}}{{end}}
   Buchungscode:  {{.Code}}
 {{- if .Waitlist}}
 

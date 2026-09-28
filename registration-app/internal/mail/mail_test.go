@@ -99,11 +99,14 @@ func TestRegistrantMailEchoesNothingTyped(t *testing.T) {
 	}
 }
 
-func TestNoEarlyBirdOrAlumniInTheRegistrantMail(t *testing.T) {
+// No price at all in the mail the registrant receives, not even the regular
+// one: many clients have special agreements, and a price in writing from us
+// reads as a quote. Prices are settled with the invoice (Gernot, 28 Sep 2026).
+func TestNoPriceInTheRegistrantMail(t *testing.T) {
 	for _, l := range []string{"de", "en"} {
 		r, _ := Registrant(l, FactsFor(dez, l), false, confirmURL)
 		low := strings.ToLower(r.Text + r.HTML)
-		for _, banned := range []string{"früh", "early", "alumni", "2.690", "2,690"} {
+		for _, banned := range []string{"preis", "price", "€", "eur", "2.890", "2,890", "früh", "early", "alumni", "2.690", "2,690"} {
 			if strings.Contains(low, banned) {
 				t.Errorf("%s mail mentions %q", l, banned)
 			}

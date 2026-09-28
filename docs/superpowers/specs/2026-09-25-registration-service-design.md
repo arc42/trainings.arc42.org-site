@@ -45,8 +45,10 @@ registration is only confirmed once the registrant clicks a button reached
 from the confirmation mail.
 
 - The **registrant** gets a mail in the form's language that states course,
-  dates, location, trainers, the regular price and the booking code, all
-  looked up from the feed, and a link to confirm.
+  dates, location, trainers and the booking code, all looked up from the
+  feed, and a link to confirm. **No price, not even the regular one**
+  (changed 28 Sep 2026, Gernot): many clients have special agreements, and a
+  price in writing from us reads as a quote.
 - **No early bird anywhere in the registration process**, in either language:
   not in the mails, not in the booking summary on the form. Early-bird
   prices and the frequent special agreements with clients are applied by hand
@@ -116,8 +118,9 @@ sentence and the alumni clause, and neither belongs in the mails. The service re
 
 **Site change on the form:** the booking summary under the course select
 (`data-price` in `_includes/registration-form.html`) switches from
-`price-label.html` to `money.html` with the regular amount, so the form and
-the mail state the same price. The alumni clause goes with it; alumni terms
+`price-label.html` to `money.html` with the regular amount. (Since 28 Sep
+2026 the mail states no price at all; the form's summary still shows the
+regular amount.) The alumni clause goes with it; alumni terms
 are agreed by hand like early bird.
 
 ## 4. Flow in detail

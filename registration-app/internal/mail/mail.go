@@ -38,10 +38,11 @@ type Rendered struct {
 }
 
 // Facts are the course facts as the registrant sees them, already worded for
-// one language. Price is the regular amount only: early bird and alumni
-// prices are applied by hand (spec 2).
+// one language. Deliberately no price: many clients have special agreements,
+// and a price in writing from us reads as a quote. Prices are settled with
+// the invoice (Gernot, 28 Sep 2026).
 type Facts struct {
-	Title, ShortTitle, Code, Dates, Where, Trainers, Price string
+	Title, ShortTitle, Code, Dates, Where, Trainers string
 	// Waitlist: the date is fully booked. There is no flow of its own, only
 	// a note in the registrant mail (spec section 8).
 	Waitlist bool
@@ -67,9 +68,6 @@ func FactsFor(e feed.Entry, lang string) *Facts {
 		join = " und "
 	}
 	f.Trainers = strings.Join(e.Trainers, join)
-	if e.Price != nil && e.Price.Amount > 0 {
-		f.Price = labels.Money(e.Price.Amount, e.Price.Currency, lang)
-	}
 	return f
 }
 
@@ -79,7 +77,7 @@ var text = map[string]map[string]string{
 		"Intro":      "vielen Dank für Ihre Anmeldung bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen:",
 		"IntroOther": "vielen Dank für Ihre Anfrage bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen:",
 		"Button":     "Anmeldung bestätigen", "Valid": "Der Link ist 5 Tage gültig.",
-		"Course": "Kurs", "Dates": "Termin", "Where": "Ort", "Trainers": "Trainer", "Price": "Preis", "Code": "Buchungscode",
+		"Course": "Kurs", "Dates": "Termin", "Where": "Ort", "Trainers": "Trainer", "Code": "Buchungscode",
 		"Other":     `Sie haben "Sonstige" gewählt. Wir melden uns persönlich bei Ihnen.`,
 		"NoFacts":   "Die Einzelheiten zu Ihrem Termin bestätigen wir Ihnen persönlich.",
 		"Waitlist":  "Hinweis: Dieser Termin ist ausgebucht. Mit Ihrer Anmeldung kommen Sie auf die Warteliste; wir melden uns, sobald ein Platz frei wird.",
@@ -92,7 +90,7 @@ var text = map[string]map[string]string{
 		"Intro":      "thank you for your registration with arc42. It is only complete once you confirm it:",
 		"IntroOther": "thank you for your request with arc42. It is only complete once you confirm it:",
 		"Button":     "Confirm registration", "Valid": "The link is valid for 5 days.",
-		"Course": "Course", "Dates": "Dates", "Where": "Location", "Trainers": "Trainers", "Price": "Price", "Code": "Booking code",
+		"Course": "Course", "Dates": "Dates", "Where": "Location", "Trainers": "Trainers", "Code": "Booking code",
 		"Other":     `You chose "other". We will get in touch with you personally.`,
 		"NoFacts":   "We will confirm the details of your date personally.",
 		"Waitlist":  "Please note: this date is fully booked. Your registration puts you on the waiting list; we will get in touch as soon as a seat becomes available.",
