@@ -259,6 +259,39 @@ In case you register more than one person, please state their names in the comme
 <label for="comments">Comments (e.g. additional participants, order-numbers or similar)</label>
 <textarea id="comments" name="Comments" maxlength="4000" placeholder="Comments"></textarea>
 {% endif %}
+
+{%- comment -%}
+  "How did you hear about this course?", optional, for the back office only.
+  The field names are readable as they are ("Aufmerksam durch", "Heard via")
+  because Formspark lists fields by name in its notification, and the
+  registration service reads exactly these names (registration-app/internal/
+  intake, fieldNames: keep both in step). The option VALUE is the visible
+  label, so the notification shows "Buch", not a code. "Sonstiges/Other"
+  needs no field of its own: the details field below serves every choice.
+{%- endcomment -%}
+{% if include.lang == "de" %}
+  {%- assign rf_heard_name = "Aufmerksam durch" -%}
+  {%- assign rf_heard_label = "Wie haben Sie von diesem Kurs erfahren? (optional)" -%}
+  {%- assign rf_heard_pick = "Bitte wählen" -%}
+  {%- assign rf_heard_options = "Konferenz|Buch|Fachartikel|Meetup|iSAQB.org|Web-Suche|Kolleg:in|Sonstiges" | split: "|" -%}
+  {%- assign rf_heard_detail_name = "Aufmerksam durch (Details)" -%}
+  {%- assign rf_heard_detail_hint = "Details, z.B. welche Konferenz oder welches Buch (optional)" -%}
+{% else %}
+  {%- assign rf_heard_name = "Heard via" -%}
+  {%- assign rf_heard_label = "How did you hear about this course? (optional)" -%}
+  {%- assign rf_heard_pick = "Please choose" -%}
+  {%- assign rf_heard_options = "Conference|Book|Article|Meetup|iSAQB.org|Web search|Colleague|Other" | split: "|" -%}
+  {%- assign rf_heard_detail_name = "Heard via (details)" -%}
+  {%- assign rf_heard_detail_hint = "Details, e.g. which conference or book (optional)" -%}
+{% endif %}
+<label for="heard">{{ rf_heard_label }}</label>
+<select id="heard" name="{{ rf_heard_name }}">
+  <option value="">{{ rf_heard_pick }}</option>
+  {%- for rf_opt in rf_heard_options %}
+  <option value="{{ rf_opt }}">{{ rf_opt }}</option>
+  {%- endfor %}
+</select>
+<input type="text" id="heard-detail" name="{{ rf_heard_detail_name }}" maxlength="200" aria-label="{{ rf_heard_detail_hint }}" placeholder="{{ rf_heard_detail_hint }}" />
 <hr class="form-rule">
 
   <button type="submit" id="submit" class="btn btn--primary" >{% if include.lang == "de" %}Anmeldung absenden{% else %}Send registration{% endif %}</button>

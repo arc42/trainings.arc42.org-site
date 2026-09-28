@@ -13,6 +13,8 @@ Rechnungsadresse:
 {{indent .Reg.Billing}}
 Bemerkungen:
 {{indent .Reg.Comments}}
+{{- if or .Reg.HeardVia .Reg.HeardViaDetail}}
+Aufmerksam durch:  {{.Reg.HeardVia}}{{with .Reg.HeardViaDetail}} ({{.}}){{end}}{{end}}
 
 Sprache:           {{.Reg.Lang}}
 via:               {{.Reg.Via}}

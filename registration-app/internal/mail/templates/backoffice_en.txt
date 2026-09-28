@@ -13,6 +13,8 @@ Billing address:
 {{indent .Reg.Billing}}
 Comments:
 {{indent .Reg.Comments}}
+{{- if or .Reg.HeardVia .Reg.HeardViaDetail}}
+Heard via:                {{.Reg.HeardVia}}{{with .Reg.HeardViaDetail}} ({{.}}){{end}}{{end}}
 
 Language:                 {{.Reg.Lang}}
 via:                      {{.Reg.Via}}
