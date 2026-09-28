@@ -15,6 +15,7 @@ import (
 	"arc42-registration/internal/config"
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/send"
+	"arc42-registration/internal/store"
 	"arc42-registration/internal/token"
 )
 
@@ -59,6 +60,11 @@ type Deps struct {
 	// registration to maxCorrections. In memory: a restart forgets, and the
 	// correction window bounds what that can cost.
 	CorrectionLimiter *intake.Limiter
+	// Store remembers confirmed registrations and wrong codes (package
+	// store). nil behaves like a store that is down: links still confirm,
+	// codes are refused.
+	Store store.Store
+	Now   func() time.Time
 }
 
 type Server struct{ d Deps }
@@ -66,6 +72,9 @@ type Server struct{ d Deps }
 func New(d Deps) *Server {
 	if d.NewID == nil {
 		d.NewID = intake.NewID
+	}
+	if d.Now == nil {
+		d.Now = time.Now
 	}
 	return &Server{d: d}
 }
@@ -80,6 +89,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /confirm", s.handleConfirmPage)
 	mux.HandleFunc("POST /confirm", s.handleConfirm)
 	mux.HandleFunc("POST /correct", s.handleCorrect)
+	mux.HandleFunc("POST /code", s.handleCode)
 	return mux
 }
 

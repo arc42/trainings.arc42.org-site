@@ -1,9 +1,12 @@
 # Registration service
 
 Receives the registration form of trainings.arc42.org, mails the back office
-and the registrant through Mailjet, and confirms a registration when the
-registrant presses a button reached from their mail. Stateless: no database,
-no volume. The pending registration lives inside the confirm link.
+and the registrant through Mailjet or Brevo, and confirms a registration when
+the registrant types the 6-digit code from their mail on the page that stayed
+open, or presses the button reached from the link in it. The pending
+registration lives inside the sealed links; the only stored state is which
+registrations are confirmed and how many wrong codes each got (Turso, see
+"State" in the spec), so a registration confirms exactly once.
 
 Design: [spec](../docs/superpowers/specs/2026-09-25-registration-service-design.md),
 flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flow.svg).
@@ -32,6 +35,7 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `ALLOWED_ORIGINS` | no | comma list of form origins; others are dropped silently |
 | `MAIL_FROM`, `MAIL_FROM_NAME`, `REPLY_TO` | no | default `trainings@arc42.org`, `arc42 Trainings`, `info@arc42.de` |
 | `ENVIRONMENT` | no | `PRODUCTION` or anything else |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | yes | the Turso database for confirmed ids and wrong-code counts (`turso db show --url`, `turso db tokens create`). Required in production; without them a test deployment keeps this in memory and forgets it on every restart |
 | `MAILER` | no | `mailjet` (default), `brevo`, or `log`: print mails instead of sending |
 
 Outside `ENVIRONMENT=PRODUCTION` the service **refuses to start** unless

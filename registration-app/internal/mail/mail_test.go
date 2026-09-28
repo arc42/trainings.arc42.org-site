@@ -46,13 +46,13 @@ const confirmURL = "https://register.arc42.org/confirm?t=TOKEN"
 
 func TestRegistrantMails(t *testing.T) {
 	for _, l := range []string{"de", "en"} {
-		r, err := Registrant(l, FactsFor(dez, l), false, confirmURL)
+		r, err := Registrant(l, FactsFor(dez, l), false, confirmURL, "482913")
 		if err != nil {
 			t.Fatal(err)
 		}
 		golden(t, "registrant_"+l+".txt", r.Subject+"\n\n"+r.Text)
 		golden(t, "registrant_"+l+".html", r.HTML)
-		other, err := Registrant(l, nil, true, confirmURL)
+		other, err := Registrant(l, nil, true, confirmURL, "482913")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -90,7 +90,7 @@ func TestBackofficeMails(t *testing.T) {
 // language.
 func TestRegistrantMailEchoesNothingTyped(t *testing.T) {
 	for _, l := range []string{"de", "en"} {
-		r, _ := Registrant(l, FactsFor(dez, l), false, confirmURL)
+		r, _ := Registrant(l, FactsFor(dez, l), false, confirmURL, "482913")
 		for _, typed := range []string{"Müller", "Anna", "Firma X", "Straße 1"} {
 			if strings.Contains(r.Text, typed) || strings.Contains(r.HTML, typed) || strings.Contains(r.Subject, typed) {
 				t.Errorf("%s registrant mail contains typed text %q", l, typed)
@@ -104,7 +104,7 @@ func TestRegistrantMailEchoesNothingTyped(t *testing.T) {
 // reads as a quote. Prices are settled with the invoice (Gernot, 28 Sep 2026).
 func TestNoPriceInTheRegistrantMail(t *testing.T) {
 	for _, l := range []string{"de", "en"} {
-		r, _ := Registrant(l, FactsFor(dez, l), false, confirmURL)
+		r, _ := Registrant(l, FactsFor(dez, l), false, confirmURL, "482913")
 		low := strings.ToLower(r.Text + r.HTML)
 		for _, banned := range []string{"preis", "price", "€", "eur", "2.890", "2,890", "früh", "early", "alumni", "2.690", "2,690"} {
 			if strings.Contains(low, banned) {
@@ -125,7 +125,7 @@ func TestOnlineDateSaysOnline(t *testing.T) {
 func TestHTMLEscapesFacts(t *testing.T) {
 	e := dez
 	e.CourseTitle = `<script>alert(1)</script>`
-	r, _ := Registrant("en", FactsFor(e, "en"), false, confirmURL)
+	r, _ := Registrant("en", FactsFor(e, "en"), false, confirmURL, "482913")
 	if strings.Contains(r.HTML, "<script>") {
 		t.Error("HTML part did not escape a course title")
 	}
@@ -135,7 +135,7 @@ func TestHTMLEscapesFacts(t *testing.T) {
 // must not be told it chose "Sonstige"/"other".
 func TestRegistrantWithoutFactsIsNotOther(t *testing.T) {
 	for _, l := range []string{"de", "en"} {
-		r, err := Registrant(l, nil, false, confirmURL)
+		r, err := Registrant(l, nil, false, confirmURL, "482913")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -156,13 +156,31 @@ func TestWaitlistDateGetsANoteInTheRegistrantMail(t *testing.T) {
 	w.Status = "waitlist"
 	for _, l := range []string{"de", "en"} {
 		note := map[string]string{"de": "Warteliste", "en": "waiting list"}[l]
-		r, _ := Registrant(l, FactsFor(w, l), false, confirmURL)
+		r, _ := Registrant(l, FactsFor(w, l), false, confirmURL, "482913")
 		if !strings.Contains(r.Text, note) || !strings.Contains(r.HTML, note) {
 			t.Errorf("%s: waitlist date without a waiting-list note:\n%s", l, r.Text)
 		}
-		open, _ := Registrant(l, FactsFor(dez, l), false, confirmURL)
+		open, _ := Registrant(l, FactsFor(dez, l), false, confirmURL, "482913")
 		if strings.Contains(open.Text, note) {
 			t.Errorf("%s: an open date mentions the waiting list", l)
+		}
+	}
+}
+
+// The code leads the mail: it is what people type on the page that stayed
+// open, grouped 3+3 so it reads and types easily. The link stays as the
+// fallback for a closed tab or another device.
+func TestRegistrantMailLeadsWithTheCode(t *testing.T) {
+	for _, l := range []string{"de", "en"} {
+		r, err := Registrant(l, FactsFor(dez, l), false, confirmURL, "482913")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, body := range map[string]string{"text": r.Text, "html": r.HTML} {
+			code, link := strings.Index(body, "482 913"), strings.Index(body, confirmURL)
+			if code < 0 || link < 0 || code > link {
+				t.Errorf("%s %s: code at %d, link at %d; want both, code first", l, name, code, link)
+			}
 		}
 	}
 }

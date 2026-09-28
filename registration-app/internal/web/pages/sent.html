@@ -4,6 +4,21 @@
 {{template "steps" .}}
 <h1>{{.T.Title}}</h1>
 <p>{{.T.Sent}} <span class="addr">{{.Email}}</span>{{.T.SentTail}}</p>
+{{/* The code form comes first: it is what most people do next, without
+     leaving this page (handleCode). The address correction below is for the
+     few who mistyped. */}}
+<div class="card code">
+{{if .CodeOpen}}
+<form method="post" action="/code">
+<label for="code">{{.T.CodeLabel}}</label>
+{{if eq .CodeNote "wrong"}}<p class="err">{{.T.CodeWrong}}</p>{{end}}
+<input type="hidden" name="t" value="{{.Token}}">
+<input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 \-]{6,9}" maxlength="9" placeholder="123 456" required>
+<br><button type="submit" class="big">{{.T.CodeButton}}</button>
+</form>
+{{else if eq .CodeNote "locked"}}<p class="err">{{.T.CodeLocked}}</p>
+{{else}}<p class="err">{{.T.CodeUnavailable}}</p>{{end}}
+</div>
 <p class="muted">{{.T.NoMail}}</p>
 <div class="card">
 {{if .Exhausted}}

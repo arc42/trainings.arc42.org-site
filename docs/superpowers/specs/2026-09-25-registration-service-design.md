@@ -40,9 +40,11 @@ tidies the bot side and delivers neither goal.
 
 ## 2. Decision
 
-A small stateless Go service receives the form instead of Formspark, and a
-registration is only confirmed once the registrant clicks a button reached
-from the confirmation mail.
+A small Go service receives the form instead of Formspark, and a
+registration is only confirmed once the registrant confirms it: with the
+6-digit code from the mail on the page that stayed open, or with the button
+reached from the link in the mail (the code was added on 28 Sep 2026; see
+"State"). A registration confirms exactly once.
 
 - The **registrant** gets a mail in the form's language that states course,
   dates, location, trainers and the booking code, all looked up from the
@@ -399,6 +401,33 @@ titles describe the change in words ("fully booked, waiting list").
 **Rollout:** this part does not depend on the service. It ships first, as
 its own PR, and works with Formspark too: a `waitlist` date simply becomes
 selectable in the current form.
+
+## 8a. State (added 28 Sep 2026)
+
+Until 28 Sep 2026 the service kept no state at all: everything about a
+registration travels inside its sealed links. Testing in test mode showed two
+things that need memory surviving restarts and scale-to-zero:
+
+- **A confirm link works once.** Every press of the confirm button sent the
+  back office another BESTÄTIGT mail. Now the first confirmation records the
+  registration id; later presses land on the confirmed page and send nothing.
+  If the BESTÄTIGT mail fails, the record is taken back so a retry goes
+  through. If the store is down, the link confirms anyway: a possible
+  duplicate mail is better than a registration that cannot be confirmed.
+- **A 6-digit code instead of a second browser window.** The mail leads with
+  a code; the "please confirm" page has a field for it. The code is computed
+  (HMAC of registration id and address under the service key), not stored.
+  Wrong tries are counted per registration and the field locks after five;
+  without the store the code is refused and the link is the way. A code also
+  sidesteps corporate link scanners, which open links but cannot type.
+
+**Where:** Turso (hosted libSQL), spoken to over its HTTP API so the service
+still depends on the standard library only. Chosen over a fly volume because
+it is not tied to one machine and survives deploys; free tier.
+**What:** two tables, `confirmed (id, at)` and `code_failures (id, n, at)`.
+Registration ids and times only, nothing personal; everything older than a
+link's lifetime plus a day is pruned. Production refuses to start without
+Turso; a test deployment without it uses an in-memory store that forgets.
 
 ## 9. Explicitly out of scope
 

@@ -115,3 +115,47 @@ func TestAnotherKeyCannotOpen(t *testing.T) {
 		t.Errorf("err = %v, want ErrInvalid (rotated key)", err)
 	}
 }
+
+// The 6-digit code in the registrant mail is computed, not stored: an HMAC
+// of registration id and address under the service's key. The same pair
+// always gives the same code, a corrected address gives a new one, and
+// nobody without the key can derive it.
+func TestCodeIsSixDigitsAndBoundToIdAndAddress(t *testing.T) {
+	now := time.Now()
+	s := sealer(&now)
+	c := s.Code("R-7F3KQ", "anna@example.org")
+	if len(c) != 6 || strings.Trim(c, "0123456789") != "" {
+		t.Fatalf("code %q is not six digits", c)
+	}
+	if s.Code("R-7F3KQ", "anna@example.org") != c {
+		t.Error("the same registration gave two codes")
+	}
+	if s.Code("R-7F3KQ", "anna@example.com") == c || s.Code("R-7F3KX", "anna@example.org") == c {
+		t.Error("the code does not depend on both id and address")
+	}
+	other, _ := NewSealer([]byte("another 32-byte key for this t!!"), Valid, time.Now)
+	if other.Code("R-7F3KQ", "anna@example.org") == c {
+		t.Error("another key gave the same code")
+	}
+}
+
+// People paste codes with spaces or type them from a mail showing "482 913".
+func TestCheckCodeAcceptsSpacesAndRejectsTheRest(t *testing.T) {
+	now := time.Now()
+	s := sealer(&now)
+	c := s.Code("R-7F3KQ", "anna@example.org")
+	for _, typed := range []string{c, c[:3] + " " + c[3:], " " + c + " ", c[:3] + "-" + c[3:]} {
+		if !s.CheckCode("R-7F3KQ", "anna@example.org", typed) {
+			t.Errorf("%q was rejected", typed)
+		}
+	}
+	wrong := "000000"
+	if c == wrong {
+		wrong = "111111"
+	}
+	for _, typed := range []string{wrong, "", c[:5], c + "0", "abcdef"} {
+		if s.CheckCode("R-7F3KQ", "anna@example.org", typed) {
+			t.Errorf("%q was accepted", typed)
+		}
+	}
+}

@@ -72,6 +72,8 @@ func TestLoadAllowsProductionWithoutAllowList(t *testing.T) {
 	base(t)
 	t.Setenv("TEST_RECIPIENTS", "")
 	t.Setenv("ENVIRONMENT", "PRODUCTION")
+	t.Setenv("TURSO_DATABASE_URL", "libsql://arc42-registration-org.turso.io")
+	t.Setenv("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.test")
 	if _, err := Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -125,5 +127,29 @@ func TestLogMailerNeedsNoKeysAndNoAllowList(t *testing.T) {
 	t.Setenv("TEST_RECIPIENTS", "")
 	if _, err := Load(); err != nil {
 		t.Fatalf("Load: %v", err)
+	}
+}
+
+// Turso holds the single-use and code state. Production refuses to start
+// without it; a test deployment may run on the in-memory store, which
+// forgets on every restart. Half a configuration is always an error.
+func TestTursoIsRequiredInProductionOnly(t *testing.T) {
+	base(t)
+	if c, err := Load(); err != nil || c.TursoURL != "" {
+		t.Fatalf("test setup without Turso: %v", err)
+	}
+	t.Setenv("ENVIRONMENT", "PRODUCTION")
+	t.Setenv("TEST_RECIPIENTS", "")
+	if _, err := Load(); err == nil {
+		t.Error("production without Turso was accepted")
+	}
+	t.Setenv("TURSO_DATABASE_URL", "libsql://arc42-registration-org.turso.io")
+	t.Setenv("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.test")
+	if c, err := Load(); err != nil || c.TursoToken == "" {
+		t.Errorf("production with Turso: %v", err)
+	}
+	t.Setenv("TURSO_AUTH_TOKEN", "")
+	if _, err := Load(); err == nil {
+		t.Error("a Turso URL without a token was accepted")
 	}
 }

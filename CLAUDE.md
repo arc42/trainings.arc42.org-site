@@ -10,7 +10,8 @@ disagree, the README wins — and fix this file.
 Three programs, three lifecycles: **the site** (Jekyll, static, GitHub Pages),
 **the admin app** (Go, one container on fly.io, source under `admin-app/`), and
 **the registration service** (Go, its own fly app `arc42-registration`, source
-under `registration-app/`, in test mode until the go-live).
+under `registration-app/`, in test mode until the go-live; its only state,
+confirmed ids and wrong-code counts, is in Turso).
 [`admin-app/README.md`](/admin-app/README.md#how-it-works) and
 [`registration-app/README.md`](/registration-app/README.md) cover the two apps.
 

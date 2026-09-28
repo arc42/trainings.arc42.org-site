@@ -20,6 +20,10 @@ type Config struct {
 	MailjetPublic  string
 	MailjetPrivate string
 	BrevoKey       string
+	// Turso holds which registrations are confirmed and how many wrong
+	// codes each got (package store). Required in production; a test
+	// deployment without it uses an in-memory store that forgets.
+	TursoURL, TursoToken string
 
 	TokenKey []byte // 32 bytes, AES-256
 
@@ -48,6 +52,8 @@ func Load() (Config, error) {
 		MailjetPublic:  os.Getenv("MJ_APIKEY_PUBLIC"),
 		MailjetPrivate: os.Getenv("MJ_APIKEY_PRIVATE"),
 		BrevoKey:       os.Getenv("BREVO_API_KEY"),
+		TursoURL:       os.Getenv("TURSO_DATABASE_URL"),
+		TursoToken:     os.Getenv("TURSO_AUTH_TOKEN"),
 		MailFrom:       env("MAIL_FROM", "trainings@arc42.org"),
 		MailFromName:   env("MAIL_FROM_NAME", "arc42 Trainings"),
 		BackofficeTo:   list(os.Getenv("BACKOFFICE_TO")),
@@ -97,6 +103,12 @@ func Load() (Config, error) {
 	}
 	if c.PublicURL == "" {
 		return Config{}, errors.New("PUBLIC_URL is required: it is the base of every confirm link")
+	}
+	if (c.TursoURL == "") != (c.TursoToken == "") {
+		return Config{}, errors.New("TURSO_DATABASE_URL and TURSO_AUTH_TOKEN go together: set both or neither")
+	}
+	if c.Environment == "PRODUCTION" && c.TursoURL == "" {
+		return Config{}, errors.New("refusing to start: production needs TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, or confirm links would work more than once")
 	}
 	if c.Environment != "PRODUCTION" && c.Mailer != "log" && !c.TestMode() {
 		return Config{}, errors.New("refusing to start: outside ENVIRONMENT=PRODUCTION, TEST_RECIPIENTS must list who may receive mail")
