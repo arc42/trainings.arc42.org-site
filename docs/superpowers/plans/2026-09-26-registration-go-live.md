@@ -35,7 +35,7 @@
 - Modify: `_includes/registration-form.html`, `_includes/head.html`, `_pages/anmeldung.md`, `_pages/registration.md`, `_pages/anmeldung-erfolg.md`, `_pages/registration-success.md`, `_pages/anmeldung-fail.md`, `_pages/registration-fail.md`, `_pages/imprint-privacy.md`, `CLAUDE.md`, `README.md`
 - Delete: `_pages/anmeldung-test-8r4tqz.md`, `_pages/registration-test-8r4tqz.md`
 
-- [ ] **Step 1: The form**
+- [x] **Step 1: The form**
 
 In `_includes/registration-form.html`:
 
@@ -60,11 +60,11 @@ and make the form tag `<form action="{{ rf_action }}" method="post" class="regis
 
 3. Delete the Formspark-only hidden fields: `_source`, `_redirect`, `_error`, `_append`, `_email.subject`, `_email.from`, `_email.template.title`, and the HTML comment "custom REDIRECT / SOURCE / EMAIL configuration for Formspark". Keep `_gotcha`, `company_website`, `form_source`, `via`, `language`. In the honeypot comment, replace the Formspark explanation with: the service drops a submission whose `_gotcha` or `company_website` is non-empty (`intake.Check`), without mail and with the normal success page.
 
-- [ ] **Step 2: Botpoison out**
+- [x] **Step 2: Botpoison out**
 
 Delete the Botpoison `<script>` block and its comment from `_includes/head.html`, and the `botpoison: nospam` line from `_pages/anmeldung.md` and `_pages/registration.md`.
 
-- [ ] **Step 3: Success and fail pages**
+- [x] **Step 3: Success and fail pages**
 
 Since 2026-09-27 the service shows its own page after submitting (the typed
 address plus a correction form, spec 4.2 step 5 and 4.6), so nothing redirects
@@ -75,15 +75,15 @@ benötigt JavaScript..." / "Our registration page requires JavaScript...") with
 "Beim Absenden ist etwas schiefgegangen." / "Something went wrong while
 sending your registration." and keep the mailto button.
 
-- [ ] **Step 4: Privacy statement**
+- [x] **Step 4: Privacy statement**
 
 Add a section to `_pages/imprint-privacy.md` after "Kontakt- und Anfragenverwaltung", using the wording Gernot approved in Todoist ("Privacy policy: name Mailjet and fly.io"). The facts it must state: registration data (names, e-mail, billing address, comments) is received by a service hosted by Fly.io, Inc. on a server in Amsterdam, which stores nothing after the request; two e-mails are sent through Mailjet SAS (Sinch group, processing in the EU); no tracking pixels or click tracking; the confirmation link carries the registration id, booking code, e-mail and last name in encrypted form and expires after 5 days. Formspark stays listed until Task 5.
 
-- [ ] **Step 5: Test pages out, docs in**
+- [x] **Step 5: Test pages out, docs in**
 
 Delete the two `*-test-8r4tqz.md` pages. In `CLAUDE.md`, replace the bullet "One Formspark form per language" with a bullet "The form posts to the registration service" carrying the field-name mapping rule from the Global Constraints above and the note that the language of every mail comes from the hidden `language` field. Update the matching README section the same way.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 ```bash
 make site
@@ -95,7 +95,7 @@ make check-links
 
 Expected: both forms post to `https://register.arc42.org/submit`; the count is `0` everywhere; `test-page-gone`; the link check passes.
 
-- [ ] **Step 7: Open the PR, do not merge yet**
+- [x] **Step 7: Open the PR, do not merge yet**
 
 Title `Registrations go to register.arc42.org`. Description: the Review Focus items, the rollback (revert this PR), and "merge only after Task 2 step 2".
 
@@ -103,7 +103,7 @@ Title `Registrations go to register.arc42.org`. Description: the Review Focus it
 
 ### Task 2: Service to production, then merge
 
-- [ ] **Step 1: Production settings**
+- [x] **Step 1: Production settings** (fly.toml done in the go-live PR; the secrets are Gernot's)
 
 In `registration-app/fly.toml` set `ENVIRONMENT = "PRODUCTION"`, `PUBLIC_URL = "https://register.arc42.org"` (already set since 28 Sep 2026, in test mode), `ALLOWED_ORIGINS = "https://trainings.arc42.org"`. Gernot sets the secrets (never Claude): `fly secrets set -a arc42-registration BACKOFFICE_TO=<real back-office address>` and `fly secrets unset -a arc42-registration TEST_RECIPIENTS`. Commit the fly.toml change in the same PR as Task 1.
 

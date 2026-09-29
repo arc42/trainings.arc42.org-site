@@ -1,6 +1,3 @@
-# Overrides for `make reg-demo`: the test pages post to the registration
-# service running locally on :8099 instead of the fly.io test deployment.
-registration_test_endpoint: http://localhost:8099/submit
-# Every form of the demo site, not only the test pages: a registration made
-# through the normal pages must not reach the real Formspark.
+# Overrides for `make reg-demo`: every form of the demo site posts to the
+# registration service running locally on :8099, never to the real one.
 registration_endpoint: http://localhost:8099/submit

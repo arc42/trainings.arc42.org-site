@@ -11,8 +11,9 @@ translation_url: /registration-fail/
 <div class="form-outcome form-outcome--fail" markdown="1">
 ### das hat leider NICHT funktioniert!
 
-Unsere Anmeldeseite benötigt JavaScript, und wie immer bei IT-Systemen
-könnten auch noch x andere Dinge schieflaufen...
+Beim Absenden ist etwas schiefgegangen. Meist fehlt eine Pflichtangabe,
+oder die E-Mail-Adresse ist nicht gültig. Gehen Sie mit "Zurück" zum
+Formular, Ihre Eingaben sind in der Regel noch da.
 </div>
 
 Wir bitten das zu entschuldigen - aber senden Sie uns Ihre Anmeldung doch einfach per Email:

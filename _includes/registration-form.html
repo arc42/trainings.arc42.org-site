@@ -6,81 +6,21 @@
 {%- endcomment -%}
 
 {%- comment -%}
-  ONE FORMSPARK FORM PER LANGUAGE — the duplication below is load-bearing.
-  The confirmation mail a registrant receives is Formspark's *autoresponder*,
-  and Formspark allows exactly ONE autoresponder template per form, with no
-  hidden field that overrides it per submission (the _email.* fields further
-  down shape only the notification that comes to us). So the form a submission
-  lands in IS the choice of confirmation language: AIKiYyJP carries the German
-  template, Tq1M7LqmX ("registration-EN") the English one. Point both languages
-  at one id and half the registrants get a confirmation they cannot read.
-  Each form has its own Botpoison project, so the public key travels with the
-  id; the matching secret (sk_...) lives in that form's Formspark
-  spam-protection settings — a form without it accepts unverified submissions.
-  A third language means a third Formspark form, not another branch here.
+  The form posts to the registration service (registration-app/, fly app
+  arc42-registration, https://register.arc42.org). One endpoint for both
+  languages: the hidden `language` field decides the language of every mail.
+  The visible field names differ per language and are mapped in
+  registration-app/internal/intake/intake.go (fieldNames); rename a field
+  here only together with that map.
+  include.endpoint, or site.registration_endpoint (`make reg-demo` sets it),
+  overrides the target for local runs, so no demo page can post to the real
+  service. rf_ prefix: includes share the caller's scope.
+  Until the go-live (Sep 2026) the forms posted to Formspark, one form per
+  language, because Formspark allowed one autoresponder template per form;
+  reverting the go-live PR brings that back.
 {%- endcomment -%}
-{%- if include.lang == "de" -%}
-  {%- assign formspark_id = "AIKiYyJP" -%}
-  {%- assign botpoison_key = "pk_8e195655-38ed-4eec-a445-a1e0d68a488d" -%}
-{%- else -%}
-  {%- assign formspark_id = "Tq1M7LqmX" -%}
-  {%- assign botpoison_key = "pk_4ae4fe64-afbe-448d-979f-f73475d89a08" -%}
-{%- endif -%}
-
-{% if include.lang == "de" %}
-<noscript>
-     <h1>Zur Anmeldung muss Ihr Browser JavaScript erlauben!</h1>
-     Aktuell ist das ausgeschaltet... Sie können uns entweder die Anmeldung
-     per Email senden,
-     oder aber JavaScript einschalten und dann diese Seite im Browser erneut laden.
-    <br><br>
-     <a class="btn btn--primary" href='mailto:info@arc42.de?subject=[arc42] Anmeldung&body=Ihr Name:%0A%0AFür%20welchen%20Kurs%20melden%20Sie an:%0A-----------------------%0AKursbezeichnung:%0ADatum%20Kursbeginn:%0A%0ATeilnehmende%20Person(en):%0A-----------------------%0AVorname,%20Nachname:%0AEmail:%0A%0ARechnungsadresse:%0A%0A%0A-----------------------%0ABemerkungen:%0A'>Anmeldung<br>per E-Mail</a>
-
-</noscript>
-{% else %}
-<noscript>
-     <h1>Your browser needs to have JavaScript enabled!</h1>
-     Currently, it seems to be deactivated... You may send your registration via email, or
-activate JavaScript and reload this page.
-    <br><br>
-     <a class="btn btn--primary" href='mailto:info@arc42.de?subject=[arc42] registration&body=your name :%0A%0AFür%20which%20course%20?%0AEmail:%0A%0Abilling adress:%0A%0A%0A-----------------------%0Aremarks:%0A'>Registration<br>via E-Mail</a>
-
-</noscript>
-{% endif %}
-
-<div id="main_body" style="display: none;">
-
-{%- comment -%}
-  include.endpoint: where the form posts when it is NOT Formspark. Set only by
-  the hidden test pages while the registration service runs in test mode
-  (spec 2026-09-25, section 7.2 stage 4); the go-live PR makes it the default.
-  With an endpoint there is no Botpoison attribute: the service does its own
-  checks, and the Botpoison script would otherwise try to attach a challenge
-  the service never verifies. method="post" only with an endpoint: the
-  service accepts POST only, and the production Formspark form keeps its
-  exact current attributes. rf_ prefix: includes share the caller's scope.
-{%- endcomment -%}
-{%- comment -%}
-  site.registration_endpoint (empty in _config.yml) does the same for every
-  form on a site built with it: `make reg-demo` sets it, so no page of the
-  local demo can post to the real Formspark by accident.
-{%- endcomment -%}
-{%- assign rf_endpoint = include.endpoint | default: site.registration_endpoint -%}
-{%- comment -%}
-  Explicit "" check, not a bare if: an empty string is truthy in Liquid, and
-  `registration_endpoint: ""` would otherwise give every form action="" and
-  drop Botpoison, silently breaking every registration. (`!= blank` does not
-  work here: this Liquid version treats nil != blank as true.)
-{%- endcomment -%}
-{%- if rf_endpoint and rf_endpoint != "" -%}
-  {%- assign rf_action = rf_endpoint -%}
-{%- else -%}
-  {%- capture rf_action -%}https://submit-form.com/{{ formspark_id }}{%- endcapture -%}
-{%- endif -%}
-<form action="{{ rf_action }}"
-      {% if rf_endpoint and rf_endpoint != "" %}method="post"{% else %}data-botpoison-public-key="{{ botpoison_key }}"{% endif %}
-      class="registration-form"
-      id="arc42anmeldung">
+{%- assign rf_action = include.endpoint | default: site.registration_endpoint | default: "https://register.arc42.org/submit" -%}
+<form action="{{ rf_action }}" method="post" class="registration-form" id="arc42anmeldung">
 
 <strong>{% if include.lang == "de" %}Wer meldet an?{% else %}Who registers?{% endif %}</strong>
   <br>
@@ -96,7 +36,7 @@ activate JavaScript and reload this page.
 <input type="text" id="nachname" name="Nachname" maxlength="200" aria-label="Nachname (Pflichtfeld)" placeholder="* Nachname" size="20" required  />
 <input type="text" id="vorname" name="Vorname" maxlength="200" aria-label="Vorname" placeholder="Vorname" size="20"  />
 
-<label for="email">E-Mail (für Anmeldebestätigung und Ähnliches)</label>
+<label for="email">E-Mail (dorthin schicken wir den Code, mit dem Sie Ihre Adresse bestätigen)</label>
 <input type="email" id="email" name="Email" maxlength="320" placeholder="* E-Mail" required multiple  />
 
 <label for="kurs">Für welchen Kurs melden Sie an?</label>
@@ -104,7 +44,7 @@ activate JavaScript and reload this page.
 <input type="text" id="nachname" name="last name" maxlength="200" aria-label="Last name (required)" placeholder="* last name" size="20" required  />
 <input type="text" id="vorname" name="first name" maxlength="200" aria-label="First name" placeholder="first name" size="20"  />
 
-<label for="email">E-Mail </label>
+<label for="email">E-Mail (we send the code to confirm your address here)</label>
 <input type="email" id="email" name="Email" maxlength="320" placeholder="* E-Mail" required multiple  />
 
 <label for="kurs">Which training?</label>
@@ -147,12 +87,13 @@ activate JavaScript and reload this page.
       {%- unless d.status == "open" or d.status == "waitlist" -%}{%- continue -%}{%- endunless -%}
       {%- if d.end < today -%}{%- continue -%}{%- endif -%}
       {%- comment -%}
-        value = the Formspark booking code, byte-for-byte. Never decorate it.
+        value = the booking code, byte-for-byte: the service looks it up in the
+        feed and the back office books on it. Never decorate it.
         The delivery hint is label-only, and only when the delivery language
         differs from the form's language.
 
-        The data-* attributes feed the summary panel below and never reach
-        Formspark. data-id additionally matches ?kurs= for preselection.
+        The data-* attributes feed the summary panel below and are never
+        submitted. data-id additionally matches ?kurs= for preselection.
         langhint is captured once and used for BOTH the visible label and
         data-where, so the dropdown and the panel can never disagree about
         which language a date is held in.
@@ -262,11 +203,10 @@ In case you register more than one person, please state their names in the comme
 
 {%- comment -%}
   "How did you hear about this course?", optional, for the back office only.
-  The field names are readable as they are ("Aufmerksam durch", "Heard via")
-  because Formspark lists fields by name in its notification, and the
-  registration service reads exactly these names (registration-app/internal/
-  intake, fieldNames: keep both in step). The option VALUE is the visible
-  label, so the notification shows "Buch", not a code. "Sonstiges/Other"
+  The registration service reads exactly these field names
+  (registration-app/internal/intake, fieldNames: keep both in step). The
+  option VALUE is the visible label, so the back-office mail shows "Buch",
+  not a code. "Sonstiges/Other"
   needs no field of its own: the details field below serves every choice.
 {%- endcomment -%}
 {% if include.lang == "de" %}
@@ -297,30 +237,22 @@ In case you register more than one person, please state their names in the comme
   <button type="submit" id="submit" class="btn btn--primary" data-busy="{% if include.lang == "de" %}Wird gesendet …{% else %}Sending …{% endif %}">{% if include.lang == "de" %}Anmeldung absenden{% else %}Send registration{% endif %}</button>
   <input type="button" value="{% if include.lang == "de" %}Zurück{% else %}back{% endif %}" class="btn btn--inverse" onclick="history.back()" style="float: right;">
 
-<!--
- The following is the custom REDIRECT / SOURCE / EMAIL configuration for Formspark
- =================================================================
--->
-
 {%- comment -%}
   Spam traps and provenance. Nothing here is visible and nothing here affects
   a real registration.
 
-  Honeypot: Formspark discards a submission where a honeypot field came back
-  non-empty. "_gotcha" is caught unconditionally, so it works with no dashboard
-  setting at all; "company_website" only works once that exact string is entered
-  under Spam protection > Honeypot > Custom field name, on BOTH Formspark forms
-  (AIKiYyJP and Tq1M7LqmX). Two names on purpose: a bot that knows to skip
-  Formspark's built-in names will still fill a plausible-looking one.
+  Honeypot: the registration service drops a submission whose `_gotcha` or
+  `company_website` came back non-empty (intake.Check), without mail and with
+  the normal page, so a bot learns nothing. Two names on purpose: a bot that
+  knows to skip the classic "_gotcha" will still fill a plausible-looking one.
   display:none takes them out of the accessibility tree entirely, and
   tabindex/autocomplete keep them out of the keyboard and autofill paths, so a
   human cannot fill them by accident. If either ever arrives non-empty from a
   real person, that is the bug to chase.
 
-  form_source: deliberately NO leading underscore. Formspark strips
-  "_"-prefixed fields from the notification email, which is exactly why
-  "_source" was no help when we tried to trace a spam submission back to the
-  page it was sent from. This field is echoed. Like every other field it is
+  form_source: the page the registration was sent from, shown in the
+  back-office mail. (No leading underscore: under Formspark, "_"-prefixed
+  fields never reached the notification.) Like every other field it is
   attacker-controlled, so it identifies honest traffic and lazy replays, not
   attackers.
 {%- endcomment -%}
@@ -340,16 +272,10 @@ In case you register more than one person, please state their names in the comme
   attacker-controlled, and an allow-list keeps arbitrary text from being
   echoed into the notification email.
 
-  No leading underscore, for the same reason as form_source: Formspark strips
-  "_"-prefixed fields from the email, and this one is only useful if it shows
-  up there.
+  Shown in the back-office mail as "via".
 {%- endcomment -%}
 <input type="hidden" name="via" id="registration-via" value="trainings.arc42.org" />
 
-<input type="hidden" name="_source" value="trainings.arc42.org" />
-<input type="hidden" name="_redirect" value="{% if include.lang == "de" %}{{ '/anmeldung-erfolg/' | absolute_url }}{% else %}{{ '/registration-success/' | absolute_url }}{% endif %}" />
-<input type="hidden" name="_error" value="{% if include.lang == "de" %}{{ '/anmeldung-fail/' | absolute_url }}{% else %}{{ '/registration-fail/' | absolute_url }}{% endif %}" />
-<input type="hidden" name="_append" value="false" />
 {%- comment -%}
   Submitted as data, not just implied by the form id: the language the
   registrant actually read and answered in. Deliberately the SAME field name in
@@ -357,13 +283,8 @@ In case you register more than one person, please state their names in the comme
   later automation can read it without knowing which form it came from.
 {%- endcomment -%}
 <input type="hidden" name="language" value="{% if include.lang == "de" %}de{% else %}en{% endif %}" />
-<input type="hidden" name="_email.subject" value="[trainings.arc42.org] {% if include.lang == "de" %}ANMELDUNG{% else %}REGISTRATION{% endif %}" />
-<input type="hidden" name="_email.from" value="trainings.arc42.org Website (via formspark.io)" />
-<input type="hidden" name="_email.template.title" value="{% if include.lang == "de" %}Anmeldung{% else %}Registration{% endif %} (via trainings.arc42.org)" />
 
 </form>
-
-</div>
 
 <script type="text/javascript">
 /* Busy button. Sending takes a few seconds (the registration service may be
@@ -372,9 +293,8 @@ In case you register more than one person, please state their names in the comme
    the form (a submit event only fires for a valid form), the button is
    disabled and shows a spinner and "Wird gesendet …". A disabled default
    button also stops Enter from submitting again.
-   Deferred by a tick, and never preventDefault: on the Formspark forms
-   Botpoison listens to the same event and submits by itself afterwards;
-   disabling the button does not stop a submission already under way.
+   Deferred by a tick and never preventDefault, so the submission itself
+   goes ahead; disabling the button does not stop one already under way.
    It unlocks when the page is shown again (Back button, bfcache), and after
    20 s in case nothing was sent at all (e.g. a failed spam check). */
 (function () {
@@ -402,7 +322,6 @@ In case you register more than one person, please state their names in the comme
 </script>
 
 <script type="text/javascript">
-document.getElementById("main_body").style.display="block";
 
 /* Three jobs. The first two are about keeping the decision the visitor
    already made; the third records where that decision started.
@@ -426,7 +345,7 @@ document.getElementById("main_body").style.display="block";
    /anmeldung/ and /anmeldungEN/ were redirected here, so the redirect did not
    cost the flow that file was written to fix.
 
-   Matching is on data-id, so the value submitted to Formspark is still d.code
+   Matching is on data-id, so the value submitted is still d.code
    and nothing downstream changes. Deliberately a loop rather than arc42.de's
    querySelector('option[data-id="..."]'): the id comes from the URL, and
    comparing strings cannot be broken by a value containing selector syntax.

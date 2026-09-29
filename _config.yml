@@ -56,12 +56,9 @@ include:
 #   - admin-app: the Go source of the trainings admin app. Without this line
 #     https://trainings.arc42.org/admin-app/main.go serves the app's source.
 #   - docs: the design specs. Repository documents, not site content.
-# Where the hidden registration test pages post (_pages/*-test-8r4tqz.md):
-# the registration service in test mode. `make reg-demo` overrides it with
-# _config.regdemo.yml to try the whole flow on this machine.
-registration_test_endpoint: https://arc42-registration.fly.dev/submit
-# Where ALL registration forms post. Empty: Formspark (production until the
-# go-live). `make reg-demo` sets it so the local demo never reaches Formspark.
+# Where ALL registration forms post. Empty: the registration service,
+# https://register.arc42.org/submit (the default in registration-form.html).
+# `make reg-demo` sets it so the local demo never reaches the real service.
 registration_endpoint:
 
 exclude:

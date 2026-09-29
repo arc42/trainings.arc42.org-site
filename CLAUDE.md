@@ -10,7 +10,7 @@ disagree, the README wins — and fix this file.
 Three programs, three lifecycles: **the site** (Jekyll, static, GitHub Pages),
 **the admin app** (Go, one container on fly.io, source under `admin-app/`), and
 **the registration service** (Go, its own fly app `arc42-registration`, source
-under `registration-app/`, in test mode until the go-live; its only state,
+under `registration-app/`, live since the go-live in Sep 2026; its only state,
 confirmed ids and wrong-code counts, is in Turso).
 [`admin-app/README.md`](/admin-app/README.md#how-it-works) and
 [`registration-app/README.md`](/registration-app/README.md) cover the two apps.
@@ -37,13 +37,13 @@ includes (`.github/workflows/validate-trainings.yml`).
 These are the ones where a wrong edit produces a page that looks perfectly fine
 and is wrong anyway.
 
-- **One Formspark form per language.** `_includes/registration-form.html` posts
-  to `AIKiYyJP` (DE) or `Tq1M7LqmX` (EN), each with its own Botpoison public
-  key. Formspark allows exactly one autoresponder template per form and no
-  hidden field overrides it per submission, so the form id decides which
-  language of confirmation email the registrant receives. The templates live in
-  the Formspark dashboard, not in this repo. Never collapse the two ids into one
-  "to remove duplication".
+- **The form posts to the registration service** (`https://register.arc42.org/submit`).
+  The visible field names differ per language and are mapped in
+  `registration-app/internal/intake/intake.go` (`fieldNames`); rename a field in
+  `_includes/registration-form.html` only together with that map, or the
+  service silently loses it. The language of every mail comes from the hidden
+  `language` field. (Until the go-live, Sep 2026: one Formspark form per
+  language; reverting the go-live PR brings that back.)
 - **The `<option value>` is the booking code, byte-for-byte.** It is what
   reaches the back office. Never decorate it; language hints go in the label.
 - **`_data/trainings.yml` is the single source of truth** for dates, and the
@@ -105,7 +105,7 @@ and is wrong anyway.
 Follow the surrounding file. Two habits this repo does keep:
 
 - Comments explain **why**, especially where a constraint is external
-  (Formspark, Botpoison, fly.io) and cannot be inferred from the code. The
+  (Brevo, Turso, fly.io) and cannot be inferred from the code. The
   Liquid `{%- comment -%}` blocks in `_includes/` are the pattern.
 - Design decisions are written down under `docs/superpowers/specs/`. Read the
   relevant spec before reworking a feature it covers.
