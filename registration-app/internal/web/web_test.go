@@ -132,7 +132,7 @@ func TestTheWholeFlowInGerman(t *testing.T) {
 		t.Fatalf("no confirm link in:\n%s", reg.Text)
 	}
 	page := e.get(link[1])
-	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "Anmeldung bestätigen") ||
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "E-Mail-Adresse bestätigen") ||
 		page.Header().Get("Referrer-Policy") != "no-referrer" {
 		t.Fatalf("confirm page: %d %s", page.Code, page.Body.String())
 	}
@@ -628,5 +628,24 @@ func TestADroppedSubmissionNeverConfirms(t *testing.T) {
 	}
 	if len(e.sender.got) != 0 {
 		t.Errorf("a dropped submission sent %d mails", len(e.sender.got))
+	}
+}
+
+// The service's pages ask for the e-mail address to be confirmed, too.
+func TestPagesAskToConfirmTheAddress(t *testing.T) {
+	e := newEnv(t)
+	sent := e.post("/submit", form("de")).Body.String()
+	link := linkRe.FindStringSubmatch(e.sender.got[1].Text)
+	confirm := e.get(link[1]).Body.String()
+	sentEN := e.post("/submit", form("en")).Body.String()
+	for name, body := range map[string]string{"sent": sent, "confirm": confirm, "sent-en": sentEN} {
+		if !strings.Contains(body, "E-Mail-Adresse bestätigen") && !strings.Contains(body, "Confirm e-mail address") {
+			t.Errorf("%s page has no confirm-address button", name)
+		}
+		for _, banned := range []string{"Anmeldung bestätigen", "bestätigen Sie Ihre Anmeldung", "confirm your registration", "Confirm registration"} {
+			if strings.Contains(body, banned) {
+				t.Errorf("%s page still says %q", name, banned)
+			}
+		}
 	}
 }

@@ -1,14 +1,14 @@
-Please confirm your request
+Please confirm your e-mail address
 
 Hello,
 
-thank you for your request with arc42. It is only complete once you confirm it.
+thank you for your request with arc42. Please confirm your e-mail address to complete it.
 
     Your confirmation code:  482 913
 
 Enter it on the page that opened after you submitted the form.
 
-Or confirm with this link:
+Or confirm your address with this link:
 https://register.arc42.org/confirm?t=TOKEN
 
 The code and the link are valid for 5 days.

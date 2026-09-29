@@ -73,31 +73,31 @@ func FactsFor(e feed.Entry, lang string) *Facts {
 
 var text = map[string]map[string]string{
 	"de": {
-		"Title": "Bitte bestätigen Sie Ihre Anmeldung", "Hello": "Guten Tag,",
-		"Intro":     "vielen Dank für Ihre Anmeldung bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen.",
+		"Title": "Bitte bestätigen Sie Ihre E-Mail-Adresse", "Hello": "Guten Tag,",
+		"Intro":     "vielen Dank für Ihre Anmeldung bei arc42. Bitte bestätigen Sie noch Ihre E-Mail-Adresse, dann ist Ihre Anmeldung vollständig.",
 		"CodeLabel": "Ihr Bestätigungscode:", "CodeHint": "Geben Sie ihn auf der Seite ein, die sich nach dem Absenden geöffnet hat.",
-		"OrLink":     "Oder bestätigen Sie mit diesem Link:",
-		"IntroOther": "vielen Dank für Ihre Anfrage bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen.",
-		"Button":     "Anmeldung bestätigen", "Valid": "Code und Link sind 5 Tage gültig.",
+		"OrLink":     "Oder bestätigen Sie Ihre Adresse mit diesem Link:",
+		"IntroOther": "vielen Dank für Ihre Anfrage bei arc42. Bitte bestätigen Sie noch Ihre E-Mail-Adresse, dann ist Ihre Anfrage vollständig.",
+		"Button":     "E-Mail-Adresse bestätigen", "Valid": "Code und Link sind 5 Tage gültig.",
 		"Course": "Kurs", "Dates": "Termin", "Where": "Ort", "Trainers": "Trainer", "Code": "Buchungscode",
 		"Other":     `Sie haben "Sonstige" gewählt. Wir melden uns persönlich bei Ihnen.`,
 		"NoFacts":   "Die Einzelheiten zu Ihrem Termin bestätigen wir Ihnen persönlich.",
-		"Waitlist":  "Hinweis: Dieser Termin ist ausgebucht. Mit Ihrer Anmeldung kommen Sie auf die Warteliste; wir melden uns, sobald ein Platz frei wird.",
+		"Waitlist":  "Hinweis: Dieser Termin ist ausgebucht. Mit Ihrer Anmeldung kommen Sie auf die Warteliste; wir melden uns, um das weitere Vorgehen zu klären.",
 		"ByHand":    "Wir bearbeiten Anmeldungen von Hand und melden uns persönlich, meist innerhalb von ein bis zwei Werktagen.",
 		"NotYou":    "Sie haben sich nicht angemeldet? Dann ignorieren Sie diese Mail einfach. Ohne Bestätigung geschieht nichts.",
 		"Questions": "Fragen? Antworten Sie einfach auf diese Mail.",
 	},
 	"en": {
-		"Title": "Please confirm your registration", "Hello": "Hello,",
-		"Intro":     "thank you for your registration with arc42. It is only complete once you confirm it.",
+		"Title": "Please confirm your e-mail address", "Hello": "Hello,",
+		"Intro":     "thank you for your registration with arc42. Please confirm your e-mail address to complete it.",
 		"CodeLabel": "Your confirmation code:", "CodeHint": "Enter it on the page that opened after you submitted the form.",
-		"OrLink":     "Or confirm with this link:",
-		"IntroOther": "thank you for your request with arc42. It is only complete once you confirm it.",
-		"Button":     "Confirm registration", "Valid": "The code and the link are valid for 5 days.",
+		"OrLink":     "Or confirm your address with this link:",
+		"IntroOther": "thank you for your request with arc42. Please confirm your e-mail address to complete it.",
+		"Button":     "Confirm e-mail address", "Valid": "The code and the link are valid for 5 days.",
 		"Course": "Course", "Dates": "Dates", "Where": "Location", "Trainers": "Trainers", "Code": "Booking code",
 		"Other":     `You chose "other". We will get in touch with you personally.`,
 		"NoFacts":   "We will confirm the details of your date personally.",
-		"Waitlist":  "Please note: this date is fully booked. Your registration puts you on the waiting list; we will get in touch as soon as a seat becomes available.",
+		"Waitlist":  "Please note: this date is fully booked. Your registration puts you on the waiting list; we will get in touch to agree on the next steps.",
 		"ByHand":    "We process registrations by hand and will get back to you personally, usually within one or two business days.",
 		"NotYou":    "You did not register? Then simply ignore this mail. Nothing happens without confirmation.",
 		"Questions": "Questions? Just reply to this mail.",
@@ -155,7 +155,7 @@ func Registrant(l string, facts *Facts, other bool, confirmURL, code string) (Re
 	subject := text[l]["Title"]
 	switch {
 	case other:
-		subject = map[string]string{"de": "Bitte bestätigen Sie Ihre Anfrage", "en": "Please confirm your request"}[l]
+		subject = map[string]string{"de": "Bitte bestätigen Sie Ihre E-Mail-Adresse", "en": "Please confirm your e-mail address"}[l]
 	case facts == nil:
 	default:
 		subject += ": " + facts.ShortTitle + ", " + facts.Dates

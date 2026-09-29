@@ -416,3 +416,41 @@ noscript {
     }
   }
 }
+
+/* ==========================================================================
+   Busy submit button (script under the form in _includes/registration-form.html)
+
+   Disabled and spinning while the registration is on its way, so it is not
+   pressed twice. The spinner is the text colour, so it works on every
+   button variant.
+   ========================================================================== */
+
+.btn.is-busy {
+  cursor: progress;
+  opacity: 0.85;
+
+  &::before {
+    content: "";
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.5em;
+    vertical-align: -0.15em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btn-busy-spin 0.8s linear infinite;
+  }
+}
+
+@keyframes btn-busy-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn.is-busy::before {
+    animation-duration: 2.4s;
+  }
+}

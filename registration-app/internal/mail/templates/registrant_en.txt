@@ -1,12 +1,12 @@
 Hello,
 
-thank you for your {{if .Other}}request{{else}}registration{{end}} with arc42. It is only complete once you confirm it.
+thank you for your {{if .Other}}request{{else}}registration{{end}} with arc42. Please confirm your e-mail address to complete it.
 
     Your confirmation code:  {{.ConfirmCode}}
 
 Enter it on the page that opened after you submitted the form.
 
-Or confirm with this link:
+Or confirm your address with this link:
 {{.ConfirmURL}}
 
 The code and the link are valid for 5 days.

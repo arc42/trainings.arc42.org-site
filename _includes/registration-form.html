@@ -294,7 +294,7 @@ In case you register more than one person, please state their names in the comme
 <input type="text" id="heard-detail" name="{{ rf_heard_detail_name }}" maxlength="200" aria-label="{{ rf_heard_detail_hint }}" placeholder="{{ rf_heard_detail_hint }}" />
 <hr class="form-rule">
 
-  <button type="submit" id="submit" class="btn btn--primary" >{% if include.lang == "de" %}Anmeldung absenden{% else %}Send registration{% endif %}</button>
+  <button type="submit" id="submit" class="btn btn--primary" data-busy="{% if include.lang == "de" %}Wird gesendet …{% else %}Sending …{% endif %}">{% if include.lang == "de" %}Anmeldung absenden{% else %}Send registration{% endif %}</button>
   <input type="button" value="{% if include.lang == "de" %}Zurück{% else %}back{% endif %}" class="btn btn--inverse" onclick="history.back()" style="float: right;">
 
 <!--
@@ -364,6 +364,42 @@ In case you register more than one person, please state their names in the comme
 </form>
 
 </div>
+
+<script type="text/javascript">
+/* Busy button. Sending takes a few seconds (the registration service may be
+   starting up, then it mails twice), and a button that looks idle invites a
+   second press: a duplicate registration. So once the browser has accepted
+   the form (a submit event only fires for a valid form), the button is
+   disabled and shows a spinner and "Wird gesendet …". A disabled default
+   button also stops Enter from submitting again.
+   Deferred by a tick, and never preventDefault: on the Formspark forms
+   Botpoison listens to the same event and submits by itself afterwards;
+   disabling the button does not stop a submission already under way.
+   It unlocks when the page is shown again (Back button, bfcache), and after
+   20 s in case nothing was sent at all (e.g. a failed spam check). */
+(function () {
+  var form = document.getElementById("arc42anmeldung");
+  var btn = document.getElementById("submit");
+  if (!form || !btn) return;
+  var idle = btn.innerHTML;
+  function reset() {
+    btn.disabled = false;
+    btn.classList.remove("is-busy");
+    btn.removeAttribute("aria-busy");
+    btn.innerHTML = idle;
+  }
+  form.addEventListener("submit", function () {
+    setTimeout(function () {
+      btn.disabled = true;
+      btn.classList.add("is-busy");
+      btn.setAttribute("aria-busy", "true");
+      btn.textContent = btn.getAttribute("data-busy");
+      setTimeout(reset, 20000);
+    }, 0);
+  });
+  window.addEventListener("pageshow", reset);
+})();
+</script>
 
 <script type="text/javascript">
 document.getElementById("main_body").style.display="block";

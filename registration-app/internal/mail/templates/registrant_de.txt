@@ -1,12 +1,12 @@
 Guten Tag,
 
-vielen Dank für Ihre {{if .Other}}Anfrage{{else}}Anmeldung{{end}} bei arc42. Sie ist erst vollständig, wenn Sie sie bestätigen.
+vielen Dank für Ihre {{if .Other}}Anfrage{{else}}Anmeldung{{end}} bei arc42. Bitte bestätigen Sie noch Ihre E-Mail-Adresse, dann ist Ihre {{if .Other}}Anfrage{{else}}Anmeldung{{end}} vollständig.
 
     Ihr Bestätigungscode:  {{.ConfirmCode}}
 
 Geben Sie ihn auf der Seite ein, die sich nach dem Absenden geöffnet hat.
 
-Oder bestätigen Sie mit diesem Link:
+Oder bestätigen Sie Ihre Adresse mit diesem Link:
 {{.ConfirmURL}}
 
 Code und Link sind 5 Tage gültig.
