@@ -10,9 +10,8 @@ const goodKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=" // 32 bytes
 func base(t *testing.T) {
 	t.Helper()
 	t.Setenv("TOKEN_KEY", goodKey)
-	t.Setenv("MAILER", "mailjet")
-	t.Setenv("MJ_APIKEY_PUBLIC", "0123456789abcdef0123456789abcdef")
-	t.Setenv("MJ_APIKEY_PRIVATE", "fedcba9876543210fedcba9876543210")
+	t.Setenv("MAILER", "")
+	t.Setenv("BREVO_API_KEY", "xkeysib-0123456789abcdef0123456789abcdef-AbCdEf")
 	t.Setenv("BACKOFFICE_TO", "office@example.org")
 	t.Setenv("PUBLIC_URL", "https://arc42-registration.fly.dev/")
 	t.Setenv("ENVIRONMENT", "")
@@ -38,7 +37,7 @@ func TestLoadAcceptsATestSetup(t *testing.T) {
 
 // The back office can be more than one mailbox (info@arc42.de and
 // trainings@arc42.org). Same syntax as TEST_RECIPIENTS: commas. A semicolon
-// is refused rather than handed to Mailjet as one broken address, which
+// is refused rather than handed to Brevo as one broken address, which
 // would fail every back-office mail.
 func TestBackofficeToIsACommaSeparatedList(t *testing.T) {
 	base(t)
@@ -79,18 +78,15 @@ func TestLoadAllowsProductionWithoutAllowList(t *testing.T) {
 	}
 }
 
-// Brevo is the second provider, chosen with MAILER=brevo. Its key is one
-// string starting "xkeysib-"; a placeholder must stop the start, like a
-// placeholder Mailjet key does, instead of failing at the first real send.
-func TestBrevoNeedsARealLookingKey(t *testing.T) {
+// Brevo is the only provider since 29 Sep 2026 (Mailjet removed: the account
+// never passed review). MAILER defaults to brevo; "mailjet" is now an
+// unknown mailer. Its key is one string starting "xkeysib-", and a
+// placeholder stops the start instead of failing at the first real send.
+func TestBrevoIsTheDefaultAndNeedsARealLookingKey(t *testing.T) {
 	base(t)
-	t.Setenv("MAILER", "brevo")
-	t.Setenv("MJ_APIKEY_PUBLIC", "")
-	t.Setenv("MJ_APIKEY_PRIVATE", "")
-	t.Setenv("BREVO_API_KEY", "xkeysib-0123456789abcdef0123456789abcdef-AbCdEf")
 	c, err := Load()
 	if err != nil || c.Mailer != "brevo" || c.BrevoKey == "" {
-		t.Fatalf("Load with a Brevo key: %v %+v", err, c.Mailer)
+		t.Fatalf("default setup: %v, mailer %q", err, c.Mailer)
 	}
 	for _, bad := range []string{"", "x", "sk-0123456789abcdef0123456789abcdef"} {
 		t.Setenv("BREVO_API_KEY", bad)
@@ -98,16 +94,21 @@ func TestBrevoNeedsARealLookingKey(t *testing.T) {
 			t.Errorf("BREVO_API_KEY %q was accepted", bad)
 		}
 	}
+	t.Setenv("BREVO_API_KEY", "xkeysib-0123456789abcdef0123456789abcdef-AbCdEf")
+	t.Setenv("MAILER", "mailjet")
+	if _, err := Load(); err == nil {
+		t.Error("MAILER=mailjet was accepted; Mailjet is gone")
+	}
 }
 
 func TestLoadRejectsBadSettings(t *testing.T) {
 	cases := map[string][2]string{
-		"short token key":     {"TOKEN_KEY", "c2hvcnQ="},
-		"token key not b64":   {"TOKEN_KEY", "!!!"},
-		"placeholder mailjet": {"MJ_APIKEY_PRIVATE", "x"},
-		"unknown mailer":      {"MAILER", "smtp"},
-		"no back office":      {"BACKOFFICE_TO", ""},
-		"no public url":       {"PUBLIC_URL", ""},
+		"short token key":   {"TOKEN_KEY", "c2hvcnQ="},
+		"token key not b64": {"TOKEN_KEY", "!!!"},
+		"placeholder brevo": {"BREVO_API_KEY", "x"},
+		"unknown mailer":    {"MAILER", "smtp"},
+		"no back office":    {"BACKOFFICE_TO", ""},
+		"no public url":     {"PUBLIC_URL", ""},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -123,7 +124,7 @@ func TestLoadRejectsBadSettings(t *testing.T) {
 func TestLogMailerNeedsNoKeysAndNoAllowList(t *testing.T) {
 	base(t)
 	t.Setenv("MAILER", "log")
-	t.Setenv("MJ_APIKEY_PUBLIC", "")
+	t.Setenv("BREVO_API_KEY", "")
 	t.Setenv("TEST_RECIPIENTS", "")
 	if _, err := Load(); err != nil {
 		t.Fatalf("Load: %v", err)

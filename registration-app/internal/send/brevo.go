@@ -13,12 +13,11 @@ import (
 const brevoEndpoint = "https://api.brevo.com/v3/smtp/email"
 
 // Brevo sends through the transactional email API (developers.brevo.com,
-// "Send a transactional email"). It is the second provider next to Mailjet,
-// chosen with MAILER=brevo, because Mailjet's account review stalled in
-// September 2026; either one can carry production.
+// "Send a transactional email"). It is the only provider: Mailjet, the
+// first choice, was removed on 29 Sep 2026 after its account review stalled
+// (spec, section 5).
 //
-// Unlike Mailjet, the API has no per-message switch for open and click
-// tracking. Both must be off in the Brevo account (transactional settings):
+// The API has no per-message switch for open and click tracking. Both must be off in the Brevo account (transactional settings):
 // click tracking would rewrite the confirm link into a Brevo redirect.
 type Brevo struct {
 	APIKey         string

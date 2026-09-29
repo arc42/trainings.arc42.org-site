@@ -126,7 +126,7 @@ in [How a change reaches production](/admin-app/README.md#how-a-change-reaches-p
 
 A third program: it receives the registration form (instead of Formspark,
 since the go-live in Sep 2026), mails the back office and sends the registrant
-a mail from `trainings@arc42.org` through Brevo (or Mailjet), with a 6-digit
+a mail from `trainings@arc42.org` through Brevo, with a 6-digit
 code and a link to confirm their e-mail address, exactly once. Own fly app
 (`arc42-registration`); its only state, confirmed ids and wrong-code counts,
 is in Turso. [`registration-app/README.md`](/registration-app/README.md)

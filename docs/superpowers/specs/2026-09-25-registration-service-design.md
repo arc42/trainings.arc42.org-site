@@ -62,11 +62,11 @@ reached from the link in the mail (the code was added on 28 Sep 2026; see
   back office: book on BESTÄTIGT; after a few days, follow up on an
   UNBESTÄTIGT that looks like a real company. Nothing is lost when a corporate
   filter swallows the confirmation mail, and a fake stays visibly unconfirmed.
-- Mail is sent **as `trainings@arc42.org` through Mailjet**, the provider
-  arc42.org's DNS already authorizes (SPF `include:spf.mailjet.com`, DKIM at
-  `mailjet._domainkey.arc42.org`). Mailjet is Sinch, processing in the EU. No
-  subdomain is involved. Replies go to `info@arc42.de`, because arc42.org
-  cannot receive mail (its MX `mail.arc42.org` does not resolve).
+- Mail is sent **as `trainings@arc42.org` through Brevo** (Sendinblue SAS,
+  EU). arc42.org authorizes it in DNS: SPF `include:spf.brevo.com`, DKIM
+  CNAMEs `brevo1._domainkey`/`brevo2._domainkey`, the `brevo-code` TXT, and
+  DMARC `p=none` with reports to arc42.org and Brevo. (Mailjet was the first
+  choice; removed on 29 Sep 2026, see section 5.)
 - **One form** for both languages. The hidden `language` field, which the form
   already submits, selects the mail language. The two Formspark ids and the
   two Botpoison keys disappear, and with them the "one form per language"
@@ -82,8 +82,8 @@ and as three slides (text and diagram) in `registration-flow.pptx` next to it.
 trainings.arc42.org (GitHub Pages)          arc42-registration (fly.io, ams)
   /anmeldung/, /registration/   --POST-->   /submit
                                              |  checks, seal token
-                                             |--> Mailjet --> back office: UNBESTÄTIGT
-                                             |--> Mailjet --> registrant: details + link
+                                             |--> Brevo   --> back office: UNBESTÄTIGT
+                                             |--> Brevo   --> registrant: code + link  
   /anmeldung-erfolg/            <--303----   '
   (registrant clicks link)      --GET--->   /confirm?t=...   page with a button
                                 --POST-->   /confirm         --> back office: BESTÄTIGT
@@ -106,7 +106,7 @@ Units, each testable alone:
 | `intake` | parse and check a submission, return a `Registration` or a reason to drop it | `feed`, rate limiter |
 | `token` | seal and open a confirmation token (AES-256-GCM, expiry) | key from env |
 | `mail` | render the three mails (DE/EN registrant, back office UNBESTÄTIGT and BESTÄTIGT) from templates | `feed` facts |
-| `mailjet` | send one message via Mailjet Send API v3.1, sandbox switch, allow-list in test mode | HTTP |
+| `send` | send one message via the Brevo transactional API, sandbox switch, allow-list in test mode | HTTP |
 | `web` | the four handlers and the confirm page | all of the above |
 
 The money and date formatting rules of `_includes/money.html` and
@@ -252,35 +252,44 @@ correct it.
   nothing, so a bot cannot tell a drop from an accept.
 - Showing the typed address leaks nothing: the browser sent it seconds
   before. Whether an address exists is not known at this point anyway; a
-  bounce reaches Mailjet minutes later.
+  bounce reaches Brevo minutes later.
 - Rejected in review: a second "repeat your e-mail" field (copy and paste
   defeats it, friction for everyone) and typo suggestions while typing
   ("gmial.com").
 
-## 5. Mailjet
+## 5. Mail provider: Brevo
 
-- Send API v3.1, `POST https://api.mailjet.com/v3.1/send`, basic auth with an
-  API key pair created for this service only (sub-account key), so it can be
-  revoked and its statistics read separately.
-- **Click and open tracking off, per message** (`TrackClicks: "disabled"`,
-  `TrackOpens: "disabled"`). Click tracking would rewrite the confirm link into
-  a Mailjet redirect: longer, on a foreign domain, more likely to be flagged,
-  and it hands every click to a tracker. Open tracking adds a pixel for no
-  purpose here.
-- Plain text and HTML part both, HTML kept simple.
-- `SandboxMode: true` in the automated tests against the real API (optional,
-  guarded by the presence of credentials), so a template error is caught
-  without delivering anything.
-- Deliverability: arc42.org has SPF and DKIM for Mailjet but **no DMARC
-  record**. Add `v=DMARC1; p=none` before go-live. DMARC alignment comes from
-  DKIM (`d=arc42.org`); SPF aligns only with a custom return path, which is
-  not needed.
+- Transactional API, `POST https://api.brevo.com/v3/smtp/email`, one
+  `api-key` header (`BREVO_API_KEY`, "xkeysib-..."; config refuses a
+  placeholder).
+- **Open and click tracking off in the Brevo account.** The API has no
+  per-message switch. Click tracking would rewrite the confirm link into a
+  Brevo redirect: longer, on a foreign domain, more likely to be flagged, and
+  it hands every click to a tracker. No branded tracking subdomain needed.
+- The registration id goes in as a tag, so a mail can be found in Brevo's
+  transactional log. Plain text and HTML part both, HTML kept simple.
+- Sandbox header `X-Sib-Sandbox: drop` in the automated test against the real
+  API (skipped without a key), so a request error is caught without
+  delivering anything.
+- One retry, only for a server-side or network failure.
+
+**Decision record, 29 Sep 2026: Brevo replaces Mailjet.** Mailjet was the
+first choice because arc42.org's DNS already authorized it. Its account never
+passed the manual review (flagged as a free-webmail sender, then handed on to
+another team, support silent for days), so a Brevo sender was added on
+28 Sep and went live with the service on 29 Sep. The Mailjet code, its
+settings (`MJ_APIKEY_PUBLIC/PRIVATE`, `MAILER=mailjet`) and its DNS records
+were then removed rather than kept as a fallback nobody runs: an untested
+second provider is exactly the switch that fails when someone flips it in an
+incident. Both are EU processors, so data protection did not decide it.
+Bringing Mailjet back is about an hour (git history, commit before
+"remove Mailjet").
 
 ## 6. Configuration
 
 | Env | Secret | Meaning |
 |---|---|---|
-| `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` | yes | Mailjet key pair |
+| `BREVO_API_KEY` | yes | Brevo API key |
 | `TOKEN_KEY` | yes | 32 bytes, base64 |
 | `MAIL_FROM` | no | `trainings@arc42.org` |
 | `BACKOFFICE_TO` | yes (personal address, public repo) | where UNBESTÄTIGT/BESTÄTIGT go |
@@ -320,9 +329,10 @@ one PR.
 
 1. **Waiting list** (section 8). Independent of the service, ships first,
    works with Formspark.
-2. **Mailjet by hand.** Domain validated, key created, one curl send to a
-   private and a corporate Outlook address, SPF/DKIM/DMARC checked in the
-   headers.
+2. **Mail provider by hand.** Domain authenticated, sender and key created,
+   tracking off; SPF/DKIM/DMARC checked in the headers of a private and a
+   corporate Outlook inbox. (Done with Brevo; Mailjet's review stalled,
+   section 5.)
 3. **Service built and tested locally.** Unit tests per unit; handler tests
    with a fake feed and a fake mailer; golden tests for all mails in both
    languages; the money/date cross-check against the Jekyll output.
@@ -338,7 +348,7 @@ one PR.
    inbox to prove the link scanner does not confirm.
 5. **trainings.arc42.org goes live.** `register.arc42.org` set up (CNAME,
    certificate), then one PR: both real forms point there, success pages
-   reworded, new confirmed pages, privacy policy names Mailjet and fly.io,
+   reworded, new confirmed pages, privacy policy names Brevo and fly.io,
    Botpoison script and page flag removed. Deploy with `BACKOFFICE_TO` real
    and `TEST_RECIPIENTS` removed. Back office briefed beforehand. Rollback:
    revert the PR, and the forms post to Formspark again.
@@ -444,3 +454,6 @@ Turso; a test deployment without it uses an in-memory store that forgets.
 - No early-bird and no alumni prices anywhere in the registration process.
 - Confirmation token valid 5 days.
 - arc42.de migrates after trainings.arc42.org has run a few weeks.
+- Mail provider Brevo, not Mailjet (29 Sep 2026, section 5).
+- The registrant confirms their e-mail address, with a 6-digit code or a link,
+  exactly once; state in Turso, ids and counts only (28/29 Sep 2026, 8a).

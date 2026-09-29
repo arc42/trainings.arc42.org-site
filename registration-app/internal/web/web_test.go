@@ -198,7 +198,7 @@ func TestRejectsGoToTheFailPage(t *testing.T) {
 
 func TestBackOfficeFailureIsAFailure(t *testing.T) {
 	e := newEnv(t)
-	e.sender.fail = func(m send.Message) error { return errors.New("mailjet down") }
+	e.sender.fail = func(m send.Message) error { return errors.New("provider down") }
 	if rec := e.post("/submit", form("de")); rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-fail/" {
 		t.Errorf("Location = %q, want the fail page", rec.Header().Get("Location"))
 	}

@@ -194,8 +194,8 @@ check-flyctl:
 
 # ---------------------------------------------- registration service (Go)
 #
-# A third program: receives the registration form, mails via Mailjet, confirms
-# from a sealed link. Stateless, own fly app. See registration-app/README.md
+# A third program: receives the registration form, mails via Brevo, confirms the
+# registrant's address once (code or link; state in Turso). Own fly app. See registration-app/README.md
 # and docs/superpowers/specs/2026-09-25-registration-service-design.md.
 
 reg-test: check-go ## Run the registration service's Go tests
