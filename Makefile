@@ -226,8 +226,8 @@ reg-demo: check-go ## Try the whole registration flow locally: test form on :426
 	@docker rm -f trainings-regdemo >/dev/null 2>&1 || true
 	docker compose run -d --name trainings-regdemo --service-ports jekyll \
 		bundle exec jekyll serve --host 0.0.0.0 --port $(SITE_PORT) --force_polling --config _config.yml,_config.regdemo.yml
-	@printf "\n==> Form (DE): http://localhost:$(SITE_PORT)/anmeldung-test-8r4tqz/\n"
-	@printf "==> Form (EN): http://localhost:$(SITE_PORT)/registration-test-8r4tqz/\n"
+	@printf "\n==> Form (DE): http://localhost:$(SITE_PORT)/anmeldung/\n"
+	@printf "==> Form (EN): http://localhost:$(SITE_PORT)/registration/\n"
 	@printf "==> The site needs ~20 s to build. Mails appear below; open the confirm link from there.\n"
 	@printf "==> Ctrl-C stops the service; 'docker rm -f trainings-regdemo' stops the site.\n\n"
 	@# FEED_URL is the local site's feed, so the courses the service accepts are

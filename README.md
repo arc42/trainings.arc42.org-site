@@ -32,19 +32,17 @@ which registration form they point at (`/registration/` vs `/anmeldung/`).
 - The masthead nav is per language: [`_data/navigation.yml`](/_data/navigation.yml)
   holds `main` (English) and `main_de` (German); `page.lang == "de"` selects the
   latter.
-- **The registration form posts to a different Formspark form per language**, and
-  that is what decides the language of the confirmation email the registrant
-  gets. Formspark allows exactly one autoresponder template per form and no
-  hidden field overrides it per submission, so the form id *is* the language
-  choice: `AIKiYyJP` (German) and `Tq1M7LqmX` / "registration-EN" (English), both
-  declared at the top of
-  [`_includes/registration-form.html`](/_includes/registration-form.html). The
-  two autoresponder templates live in the Formspark dashboard, not in this repo —
-  editing the confirmation wording is dashboard work, and it has to be done
-  twice. Each form also carries its own Botpoison project (public key next to the
-  id here, secret key in that form's Formspark spam-protection settings). Adding
-  a language means adding a Formspark form, its autoresponder and its Botpoison
-  secret before touching this file.
+- **The registration form posts to the registration service**
+  (`https://register.arc42.org/submit`, source in
+  [`registration-app/`](/registration-app/README.md)), one endpoint for both
+  languages. The hidden `language` field decides the language of every mail;
+  the mail wording lives in `registration-app/internal/mail/templates`, not in a
+  dashboard. The visible field names differ per language (`Nachname` /
+  `last name`, `Rechnungsadresse` / `Billing address`, ...) and are mapped in
+  `registration-app/internal/intake/intake.go` (`fieldNames`): rename a field
+  in [`_includes/registration-form.html`](/_includes/registration-form.html)
+  only together with that map. Until the go-live (Sep 2026) the forms posted to
+  Formspark, one form per language; reverting the go-live PR brings that back.
 - [`_includes/head.html`](/_includes/head.html) emits the `hreflang` triple
   (`en`, `de`, `x-default`) from the same front matter. (Not
   `_includes/head/custom.html` — that one holds favicons, `theme-color` and
@@ -126,11 +124,12 @@ in [How a change reaches production](/admin-app/README.md#how-a-change-reaches-p
 
 ### The registration service
 
-A third program, in test mode until the go-live: it will receive the
-registration form instead of Formspark, send a specific confirmation mail from
-`trainings@arc42.org` through Mailjet, and confirm a registration when the
-registrant presses a button reached from that mail. Stateless, own fly app
-(`arc42-registration`). [`registration-app/README.md`](/registration-app/README.md)
+A third program: it receives the registration form (instead of Formspark,
+since the go-live in Sep 2026), mails the back office and sends the registrant
+a mail from `trainings@arc42.org` through Brevo (or Mailjet), with a 6-digit
+code and a link to confirm their e-mail address, exactly once. Own fly app
+(`arc42-registration`); its only state, confirmed ids and wrong-code counts,
+is in Turso. [`registration-app/README.md`](/registration-app/README.md)
 explains it; the design is in
 [the spec](/docs/superpowers/specs/2026-09-25-registration-service-design.md),
 the flow in [`docs/registration-flow/`](/docs/registration-flow/).
@@ -142,9 +141,9 @@ the flow in [`docs/registration-flow/`](/docs/registration-flow/).
 | `make reg-deploy` | Deploy the current working tree to fly.io (asks first) |
 | `make reg-status` / `make reg-logs` | Machines and health checks / production logs |
 
-Until the go-live the real forms still post to Formspark; only the hidden test
-pages `/anmeldung-test-8r4tqz/` and `/registration-test-8r4tqz/` post to the
-service.
+Both registration forms post to the service at
+`https://register.arc42.org/submit` (since the go-live, Sep 2026; before that,
+Formspark).
 
 ## Design
 

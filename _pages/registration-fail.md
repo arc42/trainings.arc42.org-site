@@ -9,8 +9,9 @@ translation_url: /anmeldung-fail/
 <div class="form-outcome form-outcome--fail" markdown="1">
 ### unfortunately, that did NOT work!
 
-Our registration page requires JavaScript, and as always with IT systems,
-various other things could have gone wrong as well...
+Something went wrong while sending your registration. Usually a required
+field is missing, or the e-mail address is not valid. Go "back" to the form,
+your entries are usually still there.
 </div>
 
 We apologize for the inconvenience - please just send us your registration via email instead:

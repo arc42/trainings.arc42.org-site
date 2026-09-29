@@ -21,21 +21,23 @@ primary_region = "ams"
   min_machines_running = 0
 
 [env]
-  # TEST MODE until the switch-over PR (spec 7.2, stage 5). Without
-  # ENVIRONMENT=PRODUCTION the app refuses to start unless TEST_RECIPIENTS is
-  # set, so this deployment cannot mail anyone outside the list.
-  ENVIRONMENT = "TEST"
-  # Confirm links go out under register.arc42.org already in test mode
-  # (certificate issued 27 Sep 2026): a mail from trainings@arc42.org whose
-  # button leads to *.fly.dev is the sender/link mismatch corporate filters
-  # flag, and the end-to-end test should measure what go-live will send.
+  # PRODUCTION since the go-live (Plan 3, Task 2). Production refuses to
+  # start without Turso (TURSO_DATABASE_URL/TURSO_AUTH_TOKEN) and has no
+  # allow-list: TEST_RECIPIENTS must be unset, or every subject would carry
+  # [TEST] and strangers' confirmation mails would be withheld.
+  ENVIRONMENT = "PRODUCTION"
+  # Confirm links under register.arc42.org (certificate since 27 Sep 2026):
+  # a mail from trainings@arc42.org whose button led to *.fly.dev would be the
+  # sender/link mismatch corporate filters flag.
   PUBLIC_URL = "https://register.arc42.org"
   SITE_URL = "https://trainings.arc42.org"
   FEED_URL = "https://trainings.arc42.org/api/trainings.json"
-  ALLOWED_ORIGINS = "https://trainings.arc42.org,http://localhost:4260"
-  # Set with `fly secrets import`, never here: MJ_APIKEY_PUBLIC,
-  # MJ_APIKEY_PRIVATE and TOKEN_KEY are secret; BACKOFFICE_TO and
-  # TEST_RECIPIENTS are personal mail addresses, and this repository is public.
+  # Only the real site: a local page (make reg-demo) posts to a local service.
+  ALLOWED_ORIGINS = "https://trainings.arc42.org"
+  # Set with `fly secrets import`, never here: TOKEN_KEY, BREVO_API_KEY (or
+  # the MJ_ pair), TURSO_AUTH_TOKEN are secret; BACKOFFICE_TO is a personal
+  # mail address, and this repository is public. MAILER and
+  # TURSO_DATABASE_URL are secrets too, so a switch needs no commit.
 
 [[http_service.checks]]
   interval = "30s"
