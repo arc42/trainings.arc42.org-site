@@ -206,3 +206,29 @@ func TestBackofficeMailSaysHowTheyHeard(t *testing.T) {
 		t.Error("an empty answer still printed the line")
 	}
 }
+
+// People confirm their e-mail address, not their registration: the
+// registration is what they sent; the address is what we check (Gernot,
+// 29 Sep 2026). And a waitlist registration hears that we will get in
+// touch about the next steps, not a promise of a free seat.
+func TestRegistrantMailAsksToConfirmTheAddress(t *testing.T) {
+	for l, want := range map[string][]string{
+		"de": {"E-Mail-Adresse", "um das weitere Vorgehen zu klären"},
+		"en": {"e-mail address", "to agree on the next steps"},
+	} {
+		w := dez
+		w.Status = "waitlist"
+		r, _ := Registrant(l, FactsFor(w, l), false, confirmURL, "482913")
+		all := r.Subject + r.Text + r.HTML
+		for _, s := range want {
+			if !strings.Contains(all, s) {
+				t.Errorf("%s: missing %q", l, s)
+			}
+		}
+		for _, banned := range []string{"Anmeldung bestätigen", "bestätigen Sie Ihre Anmeldung", "confirm your registration", "Confirm registration", "sobald ein Platz", "as soon as a seat"} {
+			if strings.Contains(all, banned) {
+				t.Errorf("%s: still says %q", l, banned)
+			}
+		}
+	}
+}

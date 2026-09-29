@@ -12,9 +12,9 @@ sitemap: false
 {% include registration-steps.html lang="de" %}
 
 <div class="form-outcome form-outcome--success" markdown="1">
-### Danke, Ihre Anmeldung ist bestätigt.
+### Danke, Ihre E-Mail-Adresse ist bestätigt.
 
-Wir bearbeiten Anmeldungen _von Hand_ und melden uns persönlich bei Ihnen, meist innerhalb von ein bis zwei Werktagen.
+Damit ist Ihre Anmeldung vollständig. Wir bearbeiten Anmeldungen _von Hand_ und melden uns persönlich bei Ihnen, meist innerhalb von ein bis zwei Werktagen.
 </div>
 
 ### und nun...

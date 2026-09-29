@@ -11,12 +11,12 @@ import (
 )
 
 var confirmText = map[string]map[string]string{
-	"de": {"Title": "Anmeldung bestätigen", "Course": "Kurs", "Dates": "Termin", "Where": "Ort", "Code": "Buchungscode",
-		"Explain": "Mit dem Knopf bestätigen Sie diese Anmeldung. Wir melden uns danach persönlich bei Ihnen.",
-		"Button":  "Anmeldung bestätigen"},
-	"en": {"Title": "Confirm registration", "Course": "Course", "Dates": "Dates", "Where": "Location", "Code": "Booking code",
-		"Explain": "This button confirms the registration. We will then get in touch with you personally.",
-		"Button":  "Confirm registration"},
+	"de": {"Title": "E-Mail-Adresse bestätigen", "Course": "Kurs", "Dates": "Termin", "Where": "Ort", "Code": "Buchungscode",
+		"Explain": "Mit dem Knopf bestätigen Sie Ihre E-Mail-Adresse; damit ist Ihre Anmeldung vollständig. Wir melden uns danach persönlich bei Ihnen.",
+		"Button":  "E-Mail-Adresse bestätigen"},
+	"en": {"Title": "Confirm e-mail address", "Course": "Course", "Dates": "Dates", "Where": "Location", "Code": "Booking code",
+		"Explain": "This button confirms your e-mail address, which completes your registration. We will then get in touch with you personally.",
+		"Button":  "Confirm e-mail address"},
 }
 
 // handleConfirmPage shows the course and a button. It confirms NOTHING:

@@ -10,9 +10,9 @@ sitemap: false
 {% include registration-steps.html lang="en" %}
 
 <div class="form-outcome form-outcome--success" markdown="1">
-### Thank you, your registration is confirmed.
+### Thank you, your e-mail address is confirmed.
 
-We process registrations _by hand_ and will get back to you personally, usually within one or two business days.
+This completes your registration. We process registrations _by hand_ and will get back to you personally, usually within one or two business days.
 </div>
 
 ### and now...
