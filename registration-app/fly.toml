@@ -9,10 +9,14 @@ primary_region = "ams"
 [http_service]
   internal_port = 8080
   force_https = true
-  # Scale to zero. A cold start costs about 1.6 s on the first submit after an
-  # idle spell (measured on the admin app, 2026-09-25); fly's proxy holds the
-  # request meanwhile, so nothing is lost. "suspend" would be faster if needed.
-  auto_stop_machines = "stop"
+  # Scale to zero by suspending, not stopping: a stopped machine boots again
+  # in about 1.7 s on the first submit after an idle spell, which with the two
+  # mails made "Anmeldung absenden" take 3 to 5 s (test, 29 Sep 2026). A
+  # suspended one resumes from a memory snapshot. Same cost: suspended
+  # machines are billed for storage only (docs.fly.io/reference/suspend-resume,
+  # "Billing"). Nothing is kept on disk, so the disk not being reset on
+  # suspend does not matter.
+  auto_stop_machines = "suspend"
   auto_start_machines = true
   min_machines_running = 0
 
