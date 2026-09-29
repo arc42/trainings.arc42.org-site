@@ -93,7 +93,7 @@ func (s *Server) Routes() http.Handler {
 	return mux
 }
 
-// sendTimeout bounds one mail send including its retry, so a Mailjet outage
+// sendTimeout bounds one mail send including its retry, so a mail provider outage
 // turns into the fail page within seconds rather than a hanging browser.
 const sendTimeout = 15 * time.Second
 

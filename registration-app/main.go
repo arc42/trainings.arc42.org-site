@@ -29,10 +29,8 @@ func main() {
 	switch cfg.Mailer {
 	case "log":
 		sender = &send.LogSender{W: os.Stdout}
-	case "brevo":
+	default: // "brevo"; config has refused anything else
 		sender = &send.Brevo{APIKey: cfg.BrevoKey, From: cfg.MailFrom, FromName: cfg.MailFromName}
-	default:
-		sender = &send.Mailjet{Public: cfg.MailjetPublic, Private: cfg.MailjetPrivate, From: cfg.MailFrom, FromName: cfg.MailFromName}
 	}
 	if cfg.TestMode() {
 		// The back office address is always allowed, so test mode still

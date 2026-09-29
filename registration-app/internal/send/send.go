@@ -1,15 +1,17 @@
-// Package send delivers a rendered mail. Mailjet or Brevo does it in
-// production (MAILER); the allow-list wrapper keeps a test deployment from mailing anyone else; the log
+// Package send delivers a rendered mail. Brevo does it in production; the
+// allow-list wrapper keeps a test deployment from mailing anyone else; the log
 // sender prints mails for local runs.
 package send
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Message struct {
@@ -18,7 +20,7 @@ type Message struct {
 	Subject  string
 	Text     string
 	HTML     string // optional
-	CustomID string // registration id, shows up in Mailjet's message log
+	CustomID string // registration id, a tag in Brevo's log
 }
 
 type Sender interface {
@@ -70,5 +72,24 @@ func (l *LogSender) Send(_ context.Context, m Message) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	_, err := fmt.Fprintf(l.W, "----- mail %s\nTo: %s\nReply-To: %s\nSubject: %s\n\n%s\n", m.CustomID, strings.Join(m.To, ", "), m.ReplyTo, m.Subject, m.Text)
+	return err
+}
+
+type retryable struct{ error }
+
+// retryOnce is the retry rule both providers share: one more try, only for
+// a server-side or network failure. A 4xx is our mistake (bad key,
+// unvalidated sender) and will not improve.
+func retryOnce(ctx context.Context, post func() error) error {
+	err := post()
+	var retry retryable
+	if errors.As(err, &retry) {
+		select {
+		case <-time.After(500 * time.Millisecond):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		err = post()
+	}
 	return err
 }

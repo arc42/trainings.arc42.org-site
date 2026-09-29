@@ -16,10 +16,8 @@ type Config struct {
 	Addr        string
 	Environment string // "PRODUCTION" or anything else
 
-	Mailer         string // "mailjet" (default), "brevo", or "log" (no provider: mails go to the log)
-	MailjetPublic  string
-	MailjetPrivate string
-	BrevoKey       string
+	Mailer   string // "brevo" (default) or "log" (no provider: mails go to the log)
+	BrevoKey string
 	// Turso holds which registrations are confirmed and how many wrong
 	// codes each got (package store). Required in production; a test
 	// deployment without it uses an in-memory store that forgets.
@@ -48,9 +46,7 @@ func Load() (Config, error) {
 	c := Config{
 		Addr:           ":" + env("PORT", "8080"),
 		Environment:    os.Getenv("ENVIRONMENT"),
-		Mailer:         env("MAILER", "mailjet"),
-		MailjetPublic:  os.Getenv("MJ_APIKEY_PUBLIC"),
-		MailjetPrivate: os.Getenv("MJ_APIKEY_PRIVATE"),
+		Mailer:         env("MAILER", "brevo"),
 		BrevoKey:       os.Getenv("BREVO_API_KEY"),
 		TursoURL:       os.Getenv("TURSO_DATABASE_URL"),
 		TursoToken:     os.Getenv("TURSO_AUTH_TOKEN"),
@@ -73,28 +69,23 @@ func Load() (Config, error) {
 
 	switch c.Mailer {
 	case "log":
-	case "mailjet":
-		// Same lesson as the admin app's config: a placeholder that is merely
-		// non-empty sails through a presence check and fails only at the
-		// first real send, in production, with a 401 nobody sees.
-		if len(c.MailjetPublic) < 20 || len(c.MailjetPrivate) < 20 {
-			return Config{}, errors.New("MJ_APIKEY_PUBLIC and MJ_APIKEY_PRIVATE are missing or too short to be real Mailjet keys")
-		}
 	case "brevo":
 		// Brevo API keys are one string, "xkeysib-" and about 80 more
-		// characters. Same reason as above for refusing a placeholder.
+		// characters. A placeholder that is merely non-empty would sail
+		// through a presence check and fail only at the first real send, in
+		// production, with a 401 nobody sees.
 		if !strings.HasPrefix(c.BrevoKey, "xkeysib-") || len(c.BrevoKey) < 40 {
 			return Config{}, errors.New("BREVO_API_KEY is missing or does not look like a Brevo API key (xkeysib-...)")
 		}
 	default:
-		return Config{}, fmt.Errorf("MAILER must be mailjet, brevo or log, not %q", c.Mailer)
+		return Config{}, fmt.Errorf("MAILER must be brevo or log, not %q", c.Mailer)
 	}
 
 	if len(c.BackofficeTo) == 0 {
 		return Config{}, errors.New("BACKOFFICE_TO is required")
 	}
 	// Mail clients separate with semicolons, this list with commas. A
-	// semicolon here would reach Mailjet as one broken address and fail
+	// semicolon here would reach Brevo as one broken address and fail
 	// every back-office mail, silently, in the logs.
 	for _, a := range c.BackofficeTo {
 		if strings.ContainsAny(a, "; ") || !strings.Contains(a, "@") {

@@ -10,7 +10,7 @@
 <rect x="0" y="260" width="1640" height="310" fill="#fafafa" stroke="#d0d0d0"/>
 <text x="14" y="402.0" font-size="15" font-weight="bold" fill="#222"><tspan x="14" dy="0">Registration</tspan><tspan x="14" dy="18">service</tspan><tspan x="14" dy="18">(fly.io)</tspan></text>
 <rect x="0" y="580" width="1640" height="180" fill="#f3f3f3" stroke="#d0d0d0"/>
-<text x="14" y="666.0" font-size="15" font-weight="bold" fill="#222"><tspan x="14" dy="0">Mail</tspan><tspan x="14" dy="18">(Mailjet)</tspan></text>
+<text x="14" y="666.0" font-size="15" font-weight="bold" fill="#222"><tspan x="14" dy="0">Mail</tspan><tspan x="14" dy="18">(Brevo)</tspan></text>
 <rect x="0" y="770" width="1640" height="142" fill="#fafafa" stroke="#d0d0d0"/>
 <text x="14" y="837.0" font-size="15" font-weight="bold" fill="#222"><tspan x="14" dy="0">Back office</tspan><tspan x="14" dy="18">(inbox)</tspan></text>
 <text x="14" y="32" font-size="18" font-weight="bold" fill="#222">Registration flow (planned)</text>
@@ -54,11 +54,11 @@
 <rect x="1420" y="285" width="180" height="76" rx="6" fill="#ffffff" stroke="#b03a2e" stroke-dasharray="5 4" stroke-width="1.5"/>
 <text x="1510.0" y="312.2" font-size="12" fill="#222" text-anchor="middle"><tspan x="1510.0" dy="0">Pressed twice:</tspan><tspan x="1510.0" dy="15">second CONFIRMED,</tspan><tspan x="1510.0" dy="15">harmless</tspan></text>
 <rect x="755" y="592" width="180" height="156" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
-<text x="845.0" y="618.55" font-size="13" fill="#222" text-anchor="middle"><tspan x="845.0" dy="0" font-weight="bold">Send via Mailjet</tspan><tspan x="845.0" dy="16">from trainings@arc42.org</tspan><tspan x="845.0" dy="16"></tspan><tspan x="845.0" dy="16">1  UNCONFIRMED</tspan><tspan x="845.0" dy="16">to back office</tspan><tspan x="845.0" dy="16">2  course details +</tspan><tspan x="845.0" dy="16">confirm link (+ waiting-</tspan><tspan x="845.0" dy="16">list note) to registrant</tspan></text>
+<text x="845.0" y="618.55" font-size="13" fill="#222" text-anchor="middle"><tspan x="845.0" dy="0" font-weight="bold">Send via Brevo</tspan><tspan x="845.0" dy="16">from trainings@arc42.org</tspan><tspan x="845.0" dy="16"></tspan><tspan x="845.0" dy="16">1  UNCONFIRMED</tspan><tspan x="845.0" dy="16">to back office</tspan><tspan x="845.0" dy="16">2  course details +</tspan><tspan x="845.0" dy="16">confirm link (+ waiting-</tspan><tspan x="845.0" dy="16">list note) to registrant</tspan></text>
 <rect x="550" y="600" width="180" height="100" rx="6" fill="#ffffff" stroke="#b03a2e" stroke-dasharray="5 4" stroke-width="1.5"/>
 <text x="640.0" y="624.2" font-size="12" fill="#222" text-anchor="middle"><tspan x="640.0" dy="0">Back-office mail fails:</tspan><tspan x="640.0" dy="15">fail page shown.</tspan><tspan x="640.0" dy="15">Registrant mail fails:</tspan><tspan x="640.0" dy="15">success page anyway,</tspan><tspan x="640.0" dy="15">back office follows up</tspan></text>
 <rect x="1200" y="620" width="180" height="64" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
-<text x="1290.0" y="648.55" font-size="13" fill="#222" text-anchor="middle"><tspan x="1290.0" dy="0" font-weight="bold">Send via Mailjet</tspan><tspan x="1290.0" dy="16">CONFIRMED to back office</tspan></text>
+<text x="1290.0" y="648.55" font-size="13" fill="#222" text-anchor="middle"><tspan x="1290.0" dy="0" font-weight="bold">Send via Brevo</tspan><tspan x="1290.0" dy="16">CONFIRMED to back office</tspan></text>
 <rect x="755" y="790" width="180" height="100" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
 <text x="845.0" y="828.55" font-size="13" fill="#222" text-anchor="middle"><tspan x="845.0" dy="0" font-weight="bold">UNCONFIRMED arrives</tspan><tspan x="845.0" dy="16">full data, R- id,</tspan><tspan x="845.0" dy="16">suspicion notes</tspan></text>
 <rect x="1010" y="790" width="160" height="100" rx="6" fill="#ffffff" stroke="#b03a2e" stroke-dasharray="5 4" stroke-width="1.5"/>
