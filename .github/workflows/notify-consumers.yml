@@ -54,7 +54,7 @@ jobs:
           # dates, it just waits for its weekly cron instead of refreshing
           # within minutes: examples.arc42.org did exactly that until 2026-09.
           failed=""
-          for repo in arc42.de-site docs.arc42.org-site faq.arc42.org-site arc42.org-site examples.arc42.org-site; do
+          for repo in arc42.de-site docs.arc42.org-site faq.arc42.org-site arc42.org-site examples.arc42.org-site softwareknigge.de-site; do
             if curl --fail -X POST \
                  -H "Accept: application/vnd.github+json" \
                  -H "Authorization: Bearer $TOKEN" \

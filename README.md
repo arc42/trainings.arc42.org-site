@@ -279,7 +279,7 @@ this; arc42.de and arc42.org are the consumers that show them.
 
 ### Consumers
 
-Five sites render the training dates at build time from this feed. Each pulls
+Six sites render the training dates at build time from this feed. Each pulls
 it weekly via its own `.github/workflows/refresh-trainings.yml` and commits an
 expiry-filtered `_data/trainings.json` into its own repository:
 
@@ -288,6 +288,7 @@ expiry-filtered `_data/trainings.json` into its own repository:
 - faq.arc42.org-site
 - arc42.org-site
 - examples.arc42.org-site
+- softwareknigge.de-site (serves softwareknigge.arc42.org)
 
 This list, the `for repo in ...` loop in
 [`notify-consumers.yml`](/.github/workflows/notify-consumers.yml) and the
@@ -302,10 +303,10 @@ refresh workflow means "dates at most one week stale" — never a broken page.
 That guarantee has a condition worth spelling out: committing is not
 publishing, and something has to rebuild the consumer afterwards. A repo on
 GitHub's legacy Pages builder rebuilds on any push, a bot's included, so four
-of the five need nothing. A repo that builds Pages from its own Actions
+of the six need nothing. A repo that builds Pages from its own Actions
 workflow does not, because a push made with `GITHUB_TOKEN` fires no `on: push`
-trigger. faq.arc42.org-site is the one built that way, so its
-`refresh-trainings.yml` starts the deploy explicitly as its last step. Before
+trigger. faq.arc42.org-site and softwareknigge.de-site are built that way, so
+their `refresh-trainings.yml` starts the deploy explicitly as its last step. Before
 it did, faq.arc42.org served a withdrawn Req4Arc date for a week in September
 2026 while its committed `_data/trainings.json` was already correct and every
 workflow in the chain was green.

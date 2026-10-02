@@ -33,7 +33,8 @@
 # rule everywhere, so $SITES carries it per site:
 #
 #   chrono      the next 8 dates across all courses, in date order
-#               (faq, docs, arc42.org; arc42.de shows all of them, uncapped)
+#               (faq, docs, arc42.org; softwareknigge the next 5;
+#               arc42.de shows all of them, uncapped)
 #   per-course  one row per course, its earliest upcoming date
 #               (examples.arc42.org)
 #
@@ -64,7 +65,8 @@ SITES="faq.arc42.org|chrono|https://faq.arc42.org/questions/A-3/
 docs.arc42.org|chrono|https://docs.arc42.org/section-1/
 arc42.org|chrono|https://arc42.org/
 examples.arc42.org|per-course|https://examples.arc42.org/
-www.arc42.de|chrono|https://www.arc42.de/termine"
+www.arc42.de|chrono|https://www.arc42.de/termine
+softwareknigge.arc42.org|chrono|https://softwareknigge.arc42.org/05-diktator.html"
 
 # Ids that begin with a course id but are not dates. Empty today: every such id
 # on all four sites is a date. If a consumer ever adds one (say id="msa-intro"),
