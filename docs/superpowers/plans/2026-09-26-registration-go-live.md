@@ -107,15 +107,15 @@ Title `Registrations go to register.arc42.org`. Description: the Review Focus it
 
 In `registration-app/fly.toml` set `ENVIRONMENT = "PRODUCTION"`, `PUBLIC_URL = "https://register.arc42.org"` (already set since 28 Sep 2026, in test mode), `ALLOWED_ORIGINS = "https://trainings.arc42.org"`. Gernot sets the secrets (never Claude): `fly secrets set -a arc42-registration BACKOFFICE_TO=<real back-office address>` and `fly secrets unset -a arc42-registration TEST_RECIPIENTS`. Commit the fly.toml change in the same PR as Task 1.
 
-- [ ] **Step 2: Deploy and check**
+- [x] **Step 2: Deploy and check** (29 Sep 2026: healthz 200, `store: turso`, no `test mode:` line)
 
 Run: `make reg-deploy`, then `curl -sI https://register.arc42.org/healthz` (expect 200) and `make reg-logs` (expect no `test mode:` line at start-up).
 
-- [ ] **Step 3: Merge and one real registration**
+- [x] **Step 3: Merge and one real registration** (29 Sep 2026: PR #61; Peter Hruschka tested in production, then two real confirmations)
 
 Merge the PR. After GitHub Pages has built (check `https://trainings.arc42.org/anmeldung/` shows the new form action), Gernot registers once for a real date with his own address and a note "TEST, bitte ignorieren", confirms, and checks that the back office received UNBESTÄTIGT then BESTÄTIGT and the registrant mail came from `trainings@arc42.org`. Tell the back office: for a few weeks, a Formspark notification can still arrive (an old open tab, a cached page); it is a real registration.
 
-- [ ] **Step 4: Rollback, if needed**
+- [x] **Step 4: Rollback, if needed** (not needed)
 
 Revert the site PR. The forms post to Formspark again within one Pages build. Leave the service running: any page still open with the new form keeps working through it.
 
@@ -123,8 +123,8 @@ Revert the site PR. The forms post to Formspark again within one Pages build. Le
 
 ### Task 3: Observation (2 to 4 weeks)
 
-- [ ] **Step 1:** Weekly, Gernot looks at: UNBESTÄTIGT without BESTÄTIGT (how many, how many were real after follow-up), mails reported in spam folders, anything in `make reg-logs` with `mail failed`. More than one real registrant a week without confirmation means the confirmation mail has a deliverability problem: check Mailjet's message log for bounces and blocks before anything else.
-- [ ] **Step 2:** At the end, write three lines into the Todoist task "Switch-over trainings.arc42.org" as a comment: counts and whether to continue with Task 4.
+- [ ] **Step 1:** Weekly, Gernot looks at: UNBESTÄTIGT without BESTÄTIGT (how many, how many were real after follow-up), mails reported in spam folders, anything in `make reg-logs` with `mail failed`. More than one real registrant a week without confirmation means the confirmation mail has a deliverability problem: check Brevo > Transactional > Logs for bounces and blocks before anything else (each mail carries its R- id as a tag; Mailjet was dropped on 29 Sep 2026).
+- [ ] **Step 2:** At the end, write three lines into the Todoist task "Registration service: observe for 2–4 weeks after go-live" as a comment: counts and whether to continue with Task 4.
 
 ---
 

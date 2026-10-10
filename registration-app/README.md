@@ -18,6 +18,8 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `POST /submit` | the form posts here; checks, two mails, 303 to the success or fail page |
 | `GET /confirm?t=…` | shows the course and one button. **Sends nothing**: corporate link scanners open every link in a mail |
 | `POST /confirm` | sends the BESTÄTIGT / CONFIRMED mail, 303 to the confirmed page |
+| `POST /code` | the 6-digit code typed on the page that stayed open; same effect as `POST /confirm`, locked after 5 wrong codes |
+| `POST /correct` | corrects a mistyped address (at most 2 per registration, within 30 minutes) and sends the registrant mail, with a new code, to the corrected address |
 | `GET /healthz` | fly's health check |
 
 ## Configuration
