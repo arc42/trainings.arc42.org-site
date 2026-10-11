@@ -37,6 +37,8 @@
 #               arc42.de shows all of them, uncapped)
 #   per-course  one row per course, its earliest upcoming date
 #               (examples.arc42.org)
+#   trainer=X   chrono, but only the dates trainer X teaches
+#               (www.gernotstarke.de, Gernot Starke's personal site)
 #
 # The distinction is not pedantry. examples.arc42.org shows four rows for four
 # courses, so the three globally earliest dates are the right expectation only
@@ -60,13 +62,22 @@ LEAD="${LEAD:-3}"
 # Consumers section and the dispatch loop in notify-consumers.yml. A consumer
 # missing here is not checked at all, which is the failure this script exists to
 # prevent, so add it when you add the other two.
-# name | rendering rule (chrono or per-course) | page to read
+# name | rendering rule (chrono, per-course or trainer=NAME) | page to read
+# [| daily]
+#
+# An optional fourth field "daily" marks a consumer outside the dispatch loop
+# in notify-consumers.yml (www.gernotstarke.de: its repo belongs to a personal
+# account, not to the arc42 organisation the dispatch token reaches). It
+# refreshes on its own daily schedule, so right after a notify run it is
+# legitimately behind: such a site is checked in the scheduled and manual runs
+# only, never in the run that follows a notify.
 SITES="faq.arc42.org|chrono|https://faq.arc42.org/questions/A-3/
 docs.arc42.org|chrono|https://docs.arc42.org/section-1/
 arc42.org|chrono|https://arc42.org/
 examples.arc42.org|per-course|https://examples.arc42.org/
 www.arc42.de|chrono|https://www.arc42.de/termine
-softwareknigge.arc42.org|chrono|https://softwareknigge.arc42.org/05-diktator.html"
+softwareknigge.arc42.org|chrono|https://softwareknigge.arc42.org/05-diktator.html
+www.gernotstarke.de|trainer=Gernot Starke|https://www.gernotstarke.de/training|daily"
 
 # Ids that begin with a course id but are not dates. Empty today: every such id
 # on all four sites is a date. If a consumer ever adds one (say id="msa-intro"),
@@ -124,10 +135,20 @@ page_date_ids() {
 
 check_all() {
   failures=0
-  printf '%s\n' "$SITES" | while IFS='|' read -r name rule url; do
+  printf '%s\n' "$SITES" | while IFS='|' read -r name rule url cadence; do
     [ -n "$name" ] || continue
+    if [ "$cadence" = "daily" ] && [ "${GITHUB_EVENT_NAME:-}" = "workflow_run" ]; then
+      note "skip  $name (refreshes daily, not dispatched; checked in the scheduled run)"
+      continue
+    fi
     case "$rule" in
       per-course) expect="$lead_per_course" ;;
+      trainer=*)
+        expect=$(printf '%s' "$feed" | jq -r --arg t "$today" --arg who "${rule#trainer=}" '
+          [ .courses[] as $c | $c.dates[]
+            | select(.end >= $t and .status != "cancelled" and .status != "full")
+            | select((.trainers // $c.trainers) | index($who)) ]
+          | sort_by(.start) | .[].id' | head -"$LEAD") ;;
       *)          expect="$lead_chrono" ;;
     esac
     if ! html=$(curl --fail --silent --show-error --location "$url"); then

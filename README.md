@@ -279,8 +279,8 @@ this; arc42.de and arc42.org are the consumers that show them.
 
 ### Consumers
 
-Six sites render the training dates at build time from this feed. Each pulls
-it weekly via its own `.github/workflows/refresh-trainings.yml` and commits an
+Seven sites render the training dates at build time from this feed. Each pulls
+it on a schedule (weekly; gernotstarke.de-site daily) via its own `.github/workflows/refresh-trainings.yml` and commits an
 expiry-filtered `_data/trainings.json` into its own repository:
 
 - arc42.de-site
@@ -289,6 +289,8 @@ expiry-filtered `_data/trainings.json` into its own repository:
 - arc42.org-site
 - examples.arc42.org-site
 - softwareknigge.de-site (serves softwareknigge.arc42.org)
+- gernotstarke/gernotstarke.de-site (serves www.gernotstarke.de, Gernot
+  Starke's personal site; shows only the dates he teaches)
 
 This list, the `for repo in ...` loop in
 [`notify-consumers.yml`](/.github/workflows/notify-consumers.yml) and the
@@ -297,14 +299,21 @@ are the three places that have to name a new consumer. Miss the second and the
 site refreshes only on its weekly cron; miss the third and nothing ever checks
 that its pages actually show the dates.
 
+The one deliberate exception is gernotstarke.de-site. Its repository belongs to
+a personal GitHub account, which the dispatch token (scoped to the arc42
+organisation) cannot reach, so it is not in the dispatch loop. It pulls the feed
+daily instead, and `verify_consumers.sh` marks it `daily`: it is checked in the
+scheduled and manual runs, not in the run right after a notify, when it is
+legitimately still behind.
+
 Because the dates are baked into the consumers' HTML at build time, a failing
 refresh workflow means "dates at most one week stale" — never a broken page.
 
 That guarantee has a condition worth spelling out: committing is not
 publishing, and something has to rebuild the consumer afterwards. A repo on
-GitHub's legacy Pages builder rebuilds on any push, a bot's included, so four
-of the six need nothing. A repo that builds Pages from its own Actions
-workflow does not, because a push made with `GITHUB_TOKEN` fires no `on: push`
+GitHub's legacy Pages builder rebuilds on any push, a bot's included, and so
+does Netlify, which builds gernotstarke.de-site: five of the seven need
+nothing. A repo that builds Pages from its own Actions workflow does not, because a push made with `GITHUB_TOKEN` fires no `on: push`
 trigger. faq.arc42.org-site and softwareknigge.de-site are built that way, so
 their `refresh-trainings.yml` starts the deploy explicitly as its last step. Before
 it did, faq.arc42.org served a withdrawn Req4Arc date for a week in September
