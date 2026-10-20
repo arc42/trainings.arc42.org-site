@@ -50,9 +50,10 @@
 {{end}}
 
 {{if not .Problems}}
-<form method="post" action="/propose" class="detail">
+<form method="post" action="/propose" class="detail" data-submit-once>
 <label>Pull request title<input name="title" value="{{.PRTitle}}" required></label>
 <label>Description<textarea name="body" rows="12">{{.PRBody}}</textarea></label>
-<div class="actions"><button type="submit">Open pull request</button> <a href="/">Keep editing</a></div>
-</form>{{end}}
+<div class="actions"><button type="submit" data-idle="Open pull request" data-busy="Opening pull request…">Open pull request</button> <a href="/">Keep editing</a></div>
+</form>
+<script src="/static/form.js" defer></script>{{end}}
 {{end}}

@@ -1,4 +1,4 @@
-// Progressive enhancement for the date and course forms. Nothing here is
+// Progressive enhancement for the date, course and propose forms. Nothing here is
 // load-bearing: every value it fills in is editable, every check it runs is
 // repeated on the server, and with scripting off the hints are simply visible
 // all the time instead of behind a "?" button.
@@ -196,6 +196,32 @@
 
     if (start.value) end.min = start.value;
   }
+
+  /* --------------------------------------------------------- submit once --
+     A form marked data-submit-once disables its button the moment it is
+     sent: opening a pull request takes a few seconds of GitHub round trips,
+     long enough for a second click. The server serialises submits per session
+     and would answer a second one with the same PR anyway; this just stops
+     the second request from being sent. The submit event only fires once the
+     browser's own validation passed, so an invalid form stays clickable. */
+
+  Array.prototype.forEach.call(document.querySelectorAll("form[data-submit-once]"), function (form) {
+    form.addEventListener("submit", function () {
+      Array.prototype.forEach.call(form.querySelectorAll('button[type="submit"]'), function (btn) {
+        btn.disabled = true;
+        if (btn.dataset.busy) btn.textContent = btn.dataset.busy;
+      });
+    });
+  });
+  // Back from the result page restores this page from the bfcache with the
+  // button still disabled; give it back.
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    Array.prototype.forEach.call(document.querySelectorAll("form[data-submit-once] button[disabled]"), function (btn) {
+      btn.disabled = false;
+      if (btn.dataset.idle) btn.textContent = btn.dataset.idle;
+    });
+  });
 
   /* ------------------------------------------------------- course form -- */
 
