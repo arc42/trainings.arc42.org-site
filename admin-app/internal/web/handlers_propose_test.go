@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -69,6 +70,8 @@ func TestProposeShowsAReadableReport(t *testing.T) {
 		`<td class="was">open</td>`,
 		`<td class="now">few seats</td>`,
 		`value="MSA 26-01 MSA:`,
+		// The button disables itself on the first click; see form.js.
+		`data-submit-once`, `src="/static/form.js"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the report is missing %q:\n%s", want, body)
@@ -106,6 +109,43 @@ func TestProposeSubmitOpensOnePR(t *testing.T) {
 	}
 	if _, ok := s.drafts.Get("sid"); ok {
 		t.Error("draft was not cleared after publishing")
+	}
+}
+
+// A double click on "Open pull request" sends the same form twice, the second
+// before the first has come back. Both used to find the draft still dirty —
+// it is only discarded once GitHub has answered — and both opened a PR. The
+// browser shows whichever response it is still waiting for, so every one of
+// them has to carry the link to the one PR that exists.
+func TestProposeDoubleSubmitOpensOnePR(t *testing.T) {
+	gh, fake := fakeGitHub(t)
+	defer gh.Close()
+	s := dirtyServer(t, gh.URL)
+
+	const clicks = 3
+	bodies := make([]string, clicks)
+	var wg sync.WaitGroup
+	for i := range bodies {
+		req := signedIn(t, s, http.MethodPost, "/propose", url.Values{
+			"title": {"Training dates: 1 change"}, "body": {"b"},
+		})
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			rec := httptest.NewRecorder()
+			s.Routes().ServeHTTP(rec, req)
+			bodies[i] = rec.Body.String()
+		}(i)
+	}
+	wg.Wait()
+
+	if n := fake.Proposals(); n != 1 {
+		t.Errorf("opened %d PRs, want exactly 1", n)
+	}
+	for i, body := range bodies {
+		if !strings.Contains(body, "/pull/1") {
+			t.Errorf("response %d does not link the PR:\n%s", i, body)
+		}
 	}
 }
 

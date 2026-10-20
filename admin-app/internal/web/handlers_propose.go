@@ -296,8 +296,16 @@ func (s *Server) schemaProblems(r *http.Request, client *gh.Client, d *Draft) []
 }
 
 func (s *Server) handleProposeSubmit(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
+	unlock := s.drafts.Submitting(sess.ID)
+	defer unlock()
 	d, ok := s.drafts.Get(sess.ID)
 	if !ok || !d.Dirty() {
+		// The same form submitted again — a double click, or a reload of the
+		// POST — after the first one already opened the PR.
+		if prURL, done := s.drafts.Published(sess.ID); done {
+			s.renderPublished(w, prURL, sess)
+			return
+		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
@@ -341,8 +349,12 @@ func (s *Server) handleProposeSubmit(w http.ResponseWriter, r *http.Request, ses
 		s.fail(w, "could not open the pull request", err)
 		return
 	}
-	s.drafts.Discard(sess.ID)
+	s.drafts.Publish(sess.ID, url)
+	s.renderPublished(w, url, sess)
+}
+
+func (s *Server) renderPublished(w http.ResponseWriter, prURL string, sess Session) {
 	s.render(w, "published.gohtml", map[string]any{
-		"Title": "Pull request opened", "URL": url, "Login": sess.Login,
+		"Title": "Pull request opened", "URL": prURL, "Login": sess.Login,
 	})
 }

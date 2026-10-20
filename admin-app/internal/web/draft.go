@@ -199,11 +199,54 @@ func (d *Draft) UpdateCourse(id string, nc model.Course) error {
 
 // Drafts holds one draft per session.
 type Drafts struct {
-	mu sync.Mutex
-	m  map[string]*Draft
+	mu        sync.Mutex
+	m         map[string]*Draft
+	submit    map[string]*sync.Mutex
+	published map[string]string
 }
 
-func NewDrafts() *Drafts { return &Drafts{m: map[string]*Draft{}} }
+func NewDrafts() *Drafts {
+	return &Drafts{
+		m:         map[string]*Draft{},
+		submit:    map[string]*sync.Mutex{},
+		published: map[string]string{},
+	}
+}
+
+// Submitting holds the session's proposal lock until unlock is called. A
+// double click sends the form twice, the second while the first is still
+// waiting on GitHub; without the lock both find the draft dirty and both open a
+// PR. Waiting rather than refusing matters: the browser abandons the first
+// response and shows the second, so the second has to wait for the outcome and
+// report it (see Published).
+func (s *Drafts) Submitting(sessionID string) (unlock func()) {
+	s.mu.Lock()
+	l, ok := s.submit[sessionID]
+	if !ok {
+		l = &sync.Mutex{}
+		s.submit[sessionID] = l
+	}
+	s.mu.Unlock()
+	l.Lock()
+	return l.Unlock
+}
+
+// Publish discards the draft and remembers the PR it became, so a repeated
+// submit of the same form can show that PR instead of opening another.
+func (s *Drafts) Publish(sessionID, prURL string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.m, sessionID)
+	s.published[sessionID] = prURL
+}
+
+// Published is the PR this session's last draft became, if any.
+func (s *Drafts) Published(sessionID string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.published[sessionID]
+	return u, ok
+}
 
 func (s *Drafts) Get(sessionID string) (*Draft, bool) {
 	s.mu.Lock()
@@ -222,4 +265,5 @@ func (s *Drafts) Discard(sessionID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.m, sessionID)
+	delete(s.published, sessionID)
 }

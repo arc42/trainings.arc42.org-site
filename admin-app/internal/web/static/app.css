@@ -142,6 +142,9 @@ table.dates { max-width: none; width: 100%; } /* tables are a documented wider-m
   align-items: center;
 }
 .button:hover, button:hover { background: var(--deep); border-color: var(--deep); } /* white 9.08:1 on --deep */
+/* A submit-once button after its click: visibly busy, and no hover that would
+   suggest it can be pressed again. */
+button:disabled, button:disabled:hover { opacity: 0.6; cursor: progress; background: var(--band); border-color: var(--band); }
 
 button.link {
   background: none;
