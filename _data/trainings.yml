@@ -301,21 +301,6 @@ courses:
     url: "https://www.arc42.de/info-adoc/"
     trainers: ["Peter Hruschka", "Gernot Starke"]
     dates:
-      - id: adoc-oct-2026
-        code: "26-10 ADOC"
-        start: "2026-10-27"
-        end: "2026-10-28"
-        city: "Zürich"
-        country: "CH"
-        language: de
-        format: public
-        trainers: ["Gernot Starke"]
-        price:
-          amount: 1500
-          currency: EUR
-          alumni: 1350
-        url: "https://trainings.arc42.org/#adoc-oct-2026"
-        status: open
       - id: adoc-jun-2027
         code: "27-06 ADOC"
         start: "2027-06-02"
