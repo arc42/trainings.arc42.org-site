@@ -65,7 +65,8 @@ reached from the link in the mail (the code was added on 28 Sep 2026; see
 - Mail is sent **as `trainings@arc42.org` through Brevo** (Sendinblue SAS,
   EU). arc42.org authorizes it in DNS: SPF `include:spf.brevo.com`, DKIM
   CNAMEs `brevo1._domainkey`/`brevo2._domainkey`, the `brevo-code` TXT, and
-  DMARC `p=none` with reports to arc42.org and Brevo. (Mailjet was the first
+  DMARC `p=none` with aggregate reports to dmarcguard and Brevo, not to an
+  arc42.org mailbox (changed 21 Oct 2026). (Mailjet was the first
   choice; removed on 29 Sep 2026, see section 5.)
 - **One form** for both languages. The hidden `language` field, which the form
   already submits, selects the mail language. The two Formspark ids and the
