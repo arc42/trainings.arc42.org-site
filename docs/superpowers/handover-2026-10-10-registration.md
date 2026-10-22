@@ -50,8 +50,12 @@ in progress: `main` is clean, no open branches for this work.
 - **DNS arc42.org** (HostEurope KIS), checked after the Mailjet cleanup:
   SPF `v=spf1 include:mailbox.org include:spf.brevo.com ~all`; DKIM CNAMEs
   `brevo1._domainkey`, `brevo2._domainkey`; `brevo-code` TXT; DMARC
-  `v=DMARC1; p=none; rua=mailto:dmarc@arc42.org,mailto:rua@dmarc.brevo.com`;
-  MX mailbox.org; CNAME `register` to fly with certificate.
+  `v=DMARC1; p=none; rua=mailto:0dyvpw4fmy92p@reports.dmarcguard.io,mailto:rua@dmarc.brevo.com`
+  (TTL 1 h); MX mailbox.org; CNAME `register` to fly with certificate.
+  Updated 21 Oct 2026: aggregate reports used to go to `dmarc@arc42.org` and
+  flooded the inbox, so they now go to dmarcguard and Brevo only. No `ruf`:
+  the big providers send no failure reports, the few that do send copied
+  headers (personal data), and `p=none` needs only the daily aggregates.
 
 ## 4. What is left, in order (all in Todoist)
 
