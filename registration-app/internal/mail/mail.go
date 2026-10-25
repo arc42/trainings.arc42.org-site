@@ -1,7 +1,7 @@
-// Package mail renders the two mails: the registrant's confirmation request
-// and the back office's one BESTÄTIGT mail, sent once the registrant
-// confirmed (spec 2026-10-25). Every mail is in the language of the
-// registration.
+// Package mail renders the mails: the registrant's confirmation request, the
+// back office's one BESTÄTIGT mail, sent once the registrant confirmed (spec
+// 2026-10-25), and the weekly summary (summary.go). Every mail about one
+// registration is in its language; the summary is German.
 //
 // The registrant mail never contains text the registrant typed: not the name,
 // not the comments, not the billing address. The address it goes to was typed

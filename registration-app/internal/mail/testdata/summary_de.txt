@@ -1,0 +1,62 @@
+[trainings.arc42.org] Wochenübersicht Anmeldungen KW 44 (2 bestätigt, 2 offen, 1 verworfen)
+
+Wochenübersicht der Anmeldungen, KW 44
+
+Zeitraum: 19.10.2026, 07:00 Uhr bis 26.10.2026, 07:00 Uhr
+
+Bestätigt: 2
+Offen:     2 (davon 1 ohne Bestätigungsmail)
+Verworfen: 1
+
+
+BESTÄTIGT (2)
+Die vollständigen Angaben stehen jeweils in der BESTÄTIGT-Mail.
+
+R-OLD01  Sa 17.10. 08:00  26-12 MSA
+  Name:       Weber, Eva
+  E-Mail:     eva@example.org
+  Rechnung:   Weber GmbH ...
+  Bemerkung:  -
+  Bestätigt:  Di 20.10. 22:00 (letzte Woche noch offen)
+
+R-CONF1  Do 22.10. 04:00  26-12 MSA
+  Name:       Müller, Anna
+  E-Mail:     anna@example.org
+  Rechnung:   Firma X ...
+  Bemerkung:  Bitte Rechnung an die Einkaufsabteilung, Bestellnummer folgt. Siehe auch hxxps:/ ...
+  Hinweise:   several-emails
+  Bestätigt:  Do 22.10. 05:00, per Code
+
+
+OFFEN (2)
+Nicht bestätigt. Solange der Link gilt, kann die Bestätigung noch kommen;
+die Anmeldung steht dann nächste Woche unter BESTÄTIGT.
+
+R-PEND2  Di 20.10. 08:00  26-12 MSA
+  Name:       Klein, Ute
+  E-Mail:     ute@example.de
+  Rechnung:   -
+  Bemerkung:  -
+  Link:       abgelaufen, nicht bestätigt
+  Achtung:    die Bestätigungsmail an die Person ist fehlgeschlagen.
+              Sie hat eine Fehlerseite gesehen; ggf. selbst anschreiben.
+
+R-PEND1  So 25.10. 02:00  sonstige
+  Name:       Smith
+  E-Mail:     jo@example.com
+  Rechnung:   ACME Ltd, 1 Main Street, London
+  Bemerkung:  -
+  Link:       gültig bis Fr 30.10. 01:00
+
+
+VERWORFEN (1)
+Als Spam eingestuft, ohne Mail an die Adresse. Steht hier eine echte
+Anmeldung, bitte die Person anschreiben.
+
+R-DROP1  Di 20.10. 12:00  26-12 MSA
+  Name:       AllenHeavy, AllenHeavy
+  E-Mail:     allen@mail.com.de
+  Rechnung:   Cusco
+  Bemerkung:  -
+  Grund:      score: same-name,short-billing,double-tld
+

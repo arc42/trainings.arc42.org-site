@@ -154,3 +154,20 @@ func TestTursoIsRequiredInProductionOnly(t *testing.T) {
 		t.Error("a Turso URL without a token was accepted")
 	}
 }
+
+// SUMMARY_NOW sends a summary at every start; in production that would be
+// one per restart and deploy.
+func TestSummaryNowIsForTestDeploymentsOnly(t *testing.T) {
+	base(t)
+	t.Setenv("SUMMARY_NOW", "1")
+	if c, err := Load(); err != nil || !c.SummaryNow {
+		t.Fatalf("test setup with SUMMARY_NOW: %v %v", c.SummaryNow, err)
+	}
+	t.Setenv("ENVIRONMENT", "PRODUCTION")
+	t.Setenv("TEST_RECIPIENTS", "")
+	t.Setenv("TURSO_DATABASE_URL", "libsql://arc42-registration-org.turso.io")
+	t.Setenv("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.test")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "SUMMARY_NOW") {
+		t.Errorf("production with SUMMARY_NOW: %v", err)
+	}
+}

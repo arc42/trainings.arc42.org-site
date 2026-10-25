@@ -128,7 +128,9 @@ A third program: it receives the registration form (instead of Formspark,
 since the go-live in Sep 2026), stores it and sends the registrant
 a mail from `trainings@arc42.org` through Brevo, with a 6-digit
 code and a link to confirm their e-mail address, exactly once; the back office
-gets one mail, after the confirmation. Own fly app
+gets one mail, after the confirmation, and a summary of all attempts every
+Monday (sent by the service on the first request after 07:00; a
+cron-job.org job pings `/healthz` so there is one). Own fly app
 (`arc42-registration`); its state, the registrations until they are reported,
 confirmed ids and wrong-code counts, is in Turso (EU). [`registration-app/README.md`](/registration-app/README.md)
 explains it; the design is in

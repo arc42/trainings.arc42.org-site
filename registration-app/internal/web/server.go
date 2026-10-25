@@ -64,7 +64,10 @@ type Deps struct {
 	// confirmed, and wrong codes (package store). nil behaves like a store
 	// that is down: submits fail, links still confirm, codes are refused.
 	Store store.Store
-	Now   func() time.Time
+	// Summary is asked on every request whether the weekly summary is due
+	// (package summary). nil: no summaries, as in most handler tests.
+	Summary interface{ Kick() }
+	Now     func() time.Time
 }
 
 type Server struct{ d Deps }
@@ -90,7 +93,16 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /confirm", s.handleConfirm)
 	mux.HandleFunc("POST /correct", s.handleCorrect)
 	mux.HandleFunc("POST /code", s.handleCode)
-	return mux
+	if s.d.Summary == nil {
+		return mux
+	}
+	// Every request, /healthz included, is the summary's clock: there is no
+	// scheduler, and the Monday ping from cron-job.org is a plain GET
+	// /healthz (spec 2026-10-25, 7.1). Kick returns at once.
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.d.Summary.Kick()
+		mux.ServeHTTP(w, r)
+	})
 }
 
 // sendTimeout bounds one mail send including its retry, so a mail provider outage

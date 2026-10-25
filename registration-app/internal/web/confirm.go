@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/mail"
@@ -120,11 +119,6 @@ func (s *Server) confirm(w http.ResponseWriter, r *http.Request, c token.Claims,
 		// confirmed table (spec 4.3).
 		if err := s.d.Store.MarkConfirmed(ctx, c.ID, s.d.Now(), via); err != nil {
 			s.d.Log.Printf("confirm %s: could not mark the row confirmed: %v", c.ID, err)
-		}
-		// Housekeeping on the rare write path: nothing older than a link's
-		// lifetime (plus a day) is worth keeping.
-		if err := s.d.Store.Prune(ctx, s.d.Now().Add(-token.Valid-24*time.Hour)); err != nil {
-			s.d.Log.Printf("store prune: %v", err)
 		}
 	}
 	s.redirect(w, r, "confirmed", c.Lang)

@@ -4,12 +4,14 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	"arc42-registration/internal/feed"
 	"arc42-registration/internal/intake"
+	"arc42-registration/internal/store"
 	"arc42-registration/internal/token"
 )
 
@@ -239,4 +241,41 @@ func TestRegistrantMailAsksToConfirmTheAddress(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestSummaryMail(t *testing.T) {
+	mon := time.Date(2026, 10, 26, 6, 0, 30, 0, time.UTC) // 07:00:30 in Berlin
+	at := func(d time.Duration) time.Time { return mon.Add(-d) }
+	rows := []store.Record{ // sorted below, as store.All returns them
+		{Reg: intake.Registration{ID: "R-DROP1", Code: "26-12 MSA", LastName: "AllenHeavy", FirstName: "AllenHeavy",
+			Email: "allen@mail.com.de", Billing: "Cusco"}, Status: store.StatusDropped,
+			DropReason: "score: same-name,short-billing,double-tld", CreatedAt: at(140 * time.Hour)},
+		{Reg: intake.Registration{ID: "R-OLD01", Code: "26-12 MSA", LastName: "Weber", FirstName: "Eva",
+			Email: "eva@example.org", Billing: "Weber GmbH\nHauptstr. 3"}, Status: store.StatusConfirmed,
+			CreatedAt: at(9 * 24 * time.Hour), ConfirmedAt: at(130 * time.Hour), ReportedAt: at(7 * 24 * time.Hour)},
+		{Reg: intake.Registration{ID: "R-CONF1", Code: "26-12 MSA", LastName: "Müller", FirstName: "Anna",
+			Email: "anna@example.org", Billing: "Firma X\nStraße 1\n12345 Ort",
+			Comments: "Bitte Rechnung an die Einkaufsabteilung, Bestellnummer folgt. Siehe auch https://example.org/po und www.example.org"},
+			Hints: []string{"several-emails"}, Status: store.StatusConfirmed, CreatedAt: at(100 * time.Hour),
+			ConfirmedAt: at(99 * time.Hour), ConfirmedVia: "code"},
+		{Reg: intake.Registration{ID: "R-PEND1", Code: "sonstige", LastName: "Smith", Email: "jo@example.com",
+			Billing: "ACME Ltd, 1 Main Street, London"}, Status: store.StatusPending, CreatedAt: at(30 * time.Hour)},
+		{Reg: intake.Registration{ID: "R-PEND2", Code: "26-12 MSA", LastName: "Klein", FirstName: "Ute",
+			Email: "ute@example.de"}, Status: store.StatusPending, MailFailed: true, CreatedAt: at(6 * 24 * time.Hour)},
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].CreatedAt.Before(rows[j].CreatedAt) })
+	r, err := Summary(Week{Number: 44, From: time.Date(2026, 10, 19, 5, 0, 30, 0, time.UTC), To: mon, Due: mon, Rows: rows})
+	if err != nil {
+		t.Fatal(err)
+	}
+	golden(t, "summary_de.txt", r.Subject+"\n\n"+r.Text)
+	if strings.Contains(r.Text, "http") || strings.Contains(r.Text, "www.") || strings.Contains(r.Text, "—") {
+		t.Error("a link or an em-dash in the summary")
+	}
+
+	empty, err := Summary(Week{Number: 44, To: mon.Add(26 * time.Hour), Due: mon, Late: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	golden(t, "summary_empty_de.txt", empty.Subject+"\n\n"+empty.Text)
 }

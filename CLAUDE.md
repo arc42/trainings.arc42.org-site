@@ -13,7 +13,9 @@ Three programs, three lifecycles: **the site** (Jekyll, static, GitHub Pages),
 under `registration-app/`, live since the go-live in Sep 2026; its state, registrations until they are
 reported, confirmed ids and wrong-code counts, is in Turso, EU region). Since
 the confirm-gated redesign (Oct 2026) the back office gets one mail per
-registration, after the registrant confirmed.
+registration, after the registrant confirmed, plus a weekly summary that
+the service sends itself on the first request after Monday 07:00 (no
+scheduler; a cron-job.org job pings `/healthz` then).
 [`admin-app/README.md`](/admin-app/README.md#how-it-works) and
 [`registration-app/README.md`](/registration-app/README.md) cover the two apps.
 

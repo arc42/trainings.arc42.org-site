@@ -1,0 +1,61 @@
+Wochenübersicht der Anmeldungen, KW {{.Number}}
+
+Zeitraum: {{with .From}}{{.}}{{else}}seit Inbetriebnahme{{end}} bis {{.To}}
+{{- if .Late}}
+Verspätet: fällig war {{.Due}}.
+{{- end}}
+
+Bestätigt: {{.C}}
+Offen:     {{.P}}{{if .Failed}} (davon {{.Failed}} ohne Bestätigungsmail){{end}}
+Verworfen: {{.D}}
+{{- if .Empty}}
+
+Keine Anmeldeversuche in diesem Zeitraum. Diese Mail kommt trotzdem: bleibt
+sie an einem Montag aus, läuft der Anmeldedienst nicht.
+{{- end}}
+{{- with .Confirmed}}
+
+
+BESTÄTIGT ({{len .}})
+Die vollständigen Angaben stehen jeweils in der BESTÄTIGT-Mail.
+{{- range .}}
+
+{{template "summaryRow" .}}
+  Bestätigt:  {{.Confirmed}}{{if .Again}} (letzte Woche noch offen){{end}}
+{{- end}}
+{{- end}}
+{{- with .Pending}}
+
+
+OFFEN ({{len .}})
+Nicht bestätigt. Solange der Link gilt, kann die Bestätigung noch kommen;
+die Anmeldung steht dann nächste Woche unter BESTÄTIGT.
+{{- range .}}
+
+{{template "summaryRow" .}}
+  Link:       {{.Link}}{{if .Again}} (stand schon in der letzten Übersicht){{end}}
+{{- if .MailFailed}}
+  Achtung:    die Bestätigungsmail an die Person ist fehlgeschlagen.
+              Sie hat eine Fehlerseite gesehen; ggf. selbst anschreiben.
+{{- end}}
+{{- end}}
+{{- end}}
+{{- with .Dropped}}
+
+
+VERWORFEN ({{len .}})
+Als Spam eingestuft, ohne Mail an die Adresse. Steht hier eine echte
+Anmeldung, bitte die Person anschreiben.
+{{- range .}}
+
+{{template "summaryRow" .}}
+  Grund:      {{.Reason}}
+{{- end}}
+{{- end}}
+{{define "summaryRow"}}{{.ID}}  {{.When}}  {{.Code}}
+  Name:       {{.Name}}
+  E-Mail:     {{.Email}}
+  Rechnung:   {{.Billing}}
+  Bemerkung:  {{.Comments}}
+{{- with .Hints}}
+  Hinweise:   {{.}}{{end}}{{end}}

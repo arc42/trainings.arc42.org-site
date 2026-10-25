@@ -47,6 +47,11 @@ var schema = []string{
 		billing TEXT, comments TEXT, heard TEXT, heard_detail TEXT,
 		via TEXT, form_source TEXT, hints TEXT,
 		sheet_at INTEGER, reported_at INTEGER)`,
+	// One row per summary week. The primary key is the claim that keeps two
+	// machines from both sending; sent_at NULL means claimed, not yet sent.
+	`CREATE TABLE IF NOT EXISTS summaries (
+		week TEXT PRIMARY KEY, claimed_at INTEGER NOT NULL,
+		sent_at INTEGER, from_at INTEGER, to_at INTEGER, rows INTEGER)`,
 }
 
 // NewTurso takes the database URL as `turso db show --url` prints it
@@ -195,11 +200,11 @@ func (t *Turso) Prune(ctx context.Context, cutoff time.Time) error {
 // regColumns is the order Save writes and Registration reads.
 const regColumns = "id, created_at, status, confirmed_at, confirmed_via, drop_reason, mail_failed, " +
 	"lang, code, last_name, first_name, email, emails, corrected_from, " +
-	"p_last, p_first, p_email, billing, comments, heard, heard_detail, via, form_source, hints"
+	"p_last, p_first, p_email, billing, comments, heard, heard_detail, via, form_source, hints, reported_at"
 
 func (t *Turso) Save(ctx context.Context, r Record) error {
 	g := r.Reg
-	_, err := t.run(ctx, stmt("INSERT INTO registrations ("+regColumns+") VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	_, err := t.run(ctx, stmt("INSERT INTO registrations ("+regColumns+") VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
 		text(g.ID), integer(r.CreatedAt.Unix()), text(r.Status), text(r.DropReason), flag(r.MailFailed),
 		text(g.Lang), text(g.Code), text(g.LastName), text(g.FirstName), text(g.Email), text(strings.Join(g.Emails, ",")),
 		text(g.ParticipantLast), text(g.ParticipantFirst), text(g.ParticipantEmail), text(g.Billing), text(g.Comments),
@@ -212,11 +217,32 @@ func (t *Turso) Registration(ctx context.Context, id string) (Record, bool, erro
 	if err != nil || len(res.Rows) == 0 {
 		return Record{}, false, err
 	}
-	v := res.Rows[0]
-	if len(v) != strings.Count(regColumns, ",")+1 {
-		return Record{}, false, fmt.Errorf("turso: registrations row has %d columns", len(v))
+	r, err := scan(res.Rows[0])
+	return r, err == nil, err
+}
+
+func (t *Turso) All(ctx context.Context) ([]Record, error) {
+	res, err := t.run(ctx, stmt("SELECT "+regColumns+" FROM registrations ORDER BY created_at, id"))
+	if err != nil {
+		return nil, err
 	}
-	r := Record{
+	out := make([]Record, 0, len(res.Rows))
+	for _, v := range res.Rows {
+		r, err := scan(v)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+// scan reads one row in regColumns order.
+func scan(v []arg) (Record, error) {
+	if len(v) != strings.Count(regColumns, ",")+1 {
+		return Record{}, fmt.Errorf("turso: registrations row has %d columns", len(v))
+	}
+	return Record{
 		Reg: intake.Registration{
 			ID: v[0].Value, Lang: v[7].Value, Code: v[8].Value,
 			LastName: v[9].Value, FirstName: v[10].Value, Email: v[11].Value, Emails: split(v[12].Value),
@@ -226,9 +252,8 @@ func (t *Turso) Registration(ctx context.Context, id string) (Record, bool, erro
 		},
 		Status: v[2].Value, ConfirmedVia: v[4].Value, DropReason: v[5].Value, MailFailed: v[6].Value == "1",
 		CorrectedFrom: v[13].Value, Hints: split(v[23].Value),
-		CreatedAt: unix(v[1]), ConfirmedAt: unix(v[3]),
-	}
-	return r, true, nil
+		CreatedAt: unix(v[1]), ConfirmedAt: unix(v[3]), ReportedAt: unix(v[24]),
+	}, nil
 }
 
 func (t *Turso) MailFailed(ctx context.Context, id string) error {
@@ -248,6 +273,68 @@ func (t *Turso) Corrected(ctx context.Context, id, email string) error {
 func (t *Turso) MarkConfirmed(ctx context.Context, id string, at time.Time, via string) error {
 	_, err := t.run(ctx, stmt("UPDATE registrations SET status = ?, confirmed_at = ?, confirmed_via = ? WHERE id = ? AND status = ?",
 		text(StatusConfirmed), integer(at.Unix()), text(via), text(id), text(StatusPending)))
+	return err
+}
+
+// Reconcile takes the time from the confirmed table; how the registrant
+// confirmed is not recorded there, so confirmed_via stays NULL.
+func (t *Turso) Reconcile(ctx context.Context) (int, error) {
+	r, err := t.run(ctx, stmt(`UPDATE registrations
+		SET status = ?, confirmed_at = (SELECT at FROM confirmed WHERE confirmed.id = registrations.id)
+		WHERE status = ? AND id IN (SELECT id FROM confirmed)`, text(StatusConfirmed), text(StatusPending)))
+	return r.Affected, err
+}
+
+// Reported and Delete send one statement per id in a single pipeline: a
+// week holds dozens of rows, and this keeps every id a parameter.
+func (t *Turso) Reported(ctx context.Context, ids []string, at time.Time) error {
+	return t.each(ctx, ids, "UPDATE registrations SET reported_at = ? WHERE id = ?", integer(at.Unix()))
+}
+
+func (t *Turso) Delete(ctx context.Context, ids []string) error {
+	return t.each(ctx, ids, "DELETE FROM registrations WHERE id = ?")
+}
+
+// each runs sql once per id, with the id as the last argument.
+func (t *Turso) each(ctx context.Context, ids []string, sql string, a ...arg) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	stmts := make([]map[string]any, 0, len(ids))
+	for _, id := range ids {
+		stmts = append(stmts, stmt(sql, append(append([]arg(nil), a...), text(id))...))
+	}
+	_, err := t.run(ctx, stmts...)
+	return err
+}
+
+func (t *Turso) LastSummary(ctx context.Context) (time.Time, bool, error) {
+	r, err := t.run(ctx, stmt("SELECT to_at FROM summaries WHERE sent_at IS NOT NULL ORDER BY to_at DESC LIMIT 1"))
+	if err != nil || len(r.Rows) == 0 || len(r.Rows[0]) == 0 {
+		return time.Time{}, false, err
+	}
+	return unix(r.Rows[0][0]), true, nil
+}
+
+// Claim inserts the week's row; the upsert takes over only a claim that is
+// stale and was never sent. SQLite counts an upsert whose WHERE fails as no
+// change, so the affected-row count says who won.
+func (t *Turso) Claim(ctx context.Context, week string, at, stale time.Time) (bool, error) {
+	r, err := t.run(ctx, stmt(`INSERT INTO summaries (week, claimed_at) VALUES (?, ?)
+		ON CONFLICT (week) DO UPDATE SET claimed_at = excluded.claimed_at
+		WHERE summaries.sent_at IS NULL AND summaries.claimed_at < ?`,
+		text(week), integer(at.Unix()), integer(stale.Unix())))
+	return err == nil && r.Affected == 1, err
+}
+
+func (t *Turso) Release(ctx context.Context, week string) error {
+	_, err := t.run(ctx, stmt("DELETE FROM summaries WHERE week = ? AND sent_at IS NULL", text(week)))
+	return err
+}
+
+func (t *Turso) SummarySent(ctx context.Context, week string, at, from, to time.Time, rows int) error {
+	_, err := t.run(ctx, stmt("UPDATE summaries SET sent_at = ?, from_at = ?, to_at = ?, rows = ? WHERE week = ?",
+		integer(at.Unix()), integer(from.Unix()), integer(to.Unix()), integer(int64(rows)), text(week)))
 	return err
 }
 

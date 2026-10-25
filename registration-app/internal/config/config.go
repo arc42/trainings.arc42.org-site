@@ -36,6 +36,12 @@ type Config struct {
 
 	AllowedOrigins []string
 	TestRecipients []string // non-empty means test mode
+
+	// SummaryNow sends a weekly summary at start, whatever the week
+	// (SUMMARY_NOW=1), so a test deployment can show one without waiting
+	// for Monday. Refused in production, where it would send one on every
+	// restart.
+	SummaryNow bool
 }
 
 // TestMode is on whenever an allow-list is configured. Outside production it
@@ -59,6 +65,7 @@ func Load() (Config, error) {
 		PublicURL:      strings.TrimRight(os.Getenv("PUBLIC_URL"), "/"),
 		AllowedOrigins: list(env("ALLOWED_ORIGINS", "https://trainings.arc42.org")),
 		TestRecipients: list(os.Getenv("TEST_RECIPIENTS")),
+		SummaryNow:     os.Getenv("SUMMARY_NOW") == "1",
 	}
 
 	key, err := base64.StdEncoding.DecodeString(os.Getenv("TOKEN_KEY"))
@@ -100,6 +107,9 @@ func Load() (Config, error) {
 	}
 	if c.Environment == "PRODUCTION" && c.TursoURL == "" {
 		return Config{}, errors.New("refusing to start: production needs TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, or confirm links would work more than once")
+	}
+	if c.Environment == "PRODUCTION" && c.SummaryNow {
+		return Config{}, errors.New("refusing to start: SUMMARY_NOW is for test deployments; in production it would send a summary on every restart")
 	}
 	if c.Environment != "PRODUCTION" && c.Mailer != "log" && !c.TestMode() {
 		return Config{}, errors.New("refusing to start: outside ENVIRONMENT=PRODUCTION, TEST_RECIPIENTS must list who may receive mail")
