@@ -10,8 +10,9 @@ translation_url: /anmeldung-fail/
 ### unfortunately, that did NOT work!
 
 Something went wrong while sending your registration. Usually a required
-field is missing, or the e-mail address is not valid. Go "back" to the form,
-your entries are usually still there.
+field is missing, or the e-mail address is not valid. Links (http://,
+https://, www.) are not allowed in the comments, the billing address or the
+names. Go "back" to the form, your entries are usually still there.
 </div>
 
 We apologize for the inconvenience - please just send us your registration via email instead:

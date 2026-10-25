@@ -12,8 +12,9 @@ translation_url: /registration-fail/
 ### das hat leider NICHT funktioniert!
 
 Beim Absenden ist etwas schiefgegangen. Meist fehlt eine Pflichtangabe,
-oder die E-Mail-Adresse ist nicht gültig. Gehen Sie mit "Zurück" zum
-Formular, Ihre Eingaben sind in der Regel noch da.
+oder die E-Mail-Adresse ist nicht gültig. Links (http://, https://, www.)
+sind in den Bemerkungen, der Rechnungsadresse und den Namen nicht erlaubt.
+Gehen Sie mit "Zurück" zum Formular, Ihre Eingaben sind in der Regel noch da.
 </div>
 
 Wir bitten das zu entschuldigen - aber senden Sie uns Ihre Anmeldung doch einfach per Email:

@@ -60,8 +60,8 @@ Mail templates are in `internal/mail/templates/`; their expected output is in
 
 | Line | Meaning |
 |---|---|
-| `submit: dropped (reason)` | bot signal (origin, honeypot, rate limit, unknown code). No mail, the person saw the success page |
-| `submit: rejected (reason)` | a person's mistake (missing field, bad email). Fail page, no mail |
+| `submit: dropped (reason)` | bot signal (origin, honeypot, rate limit, unknown code, `score: <hints>` for two or more spam signals). No mail, the person saw the success page |
+| `submit: rejected (reason)` | a person's mistake (missing field, bad email, a link in comments, billing or a name). Fail page, no mail |
 | `submit R-…: accepted <code> (<lang>) hints=[…]` | both mails sent |
 | `submit R-…: back-office mail failed` | fail page shown; nothing reached anyone |
 | `submit R-…: registrant mail failed` | back office has it and follows up |
