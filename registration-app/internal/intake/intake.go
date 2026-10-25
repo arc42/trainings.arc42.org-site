@@ -94,6 +94,9 @@ var fieldNames = map[string][]string{
 	// notification, and the live forms still post there until go-live.
 	"heard":        {"Aufmerksam durch", "Heard via"},
 	"heard_detail": {"Aufmerksam durch (Details)", "Heard via (details)"},
+	// Hidden, filled by the page's script on load; empty from a bot that
+	// posts without running it. Same name in both forms. One spam point.
+	"js_ok": {"js_ok"},
 }
 
 var maxLen = map[string]int{
@@ -199,6 +202,24 @@ func (c *Checker) Check(ctx context.Context, in Input) Decision {
 			d.Hints = append(d.Hints, HintWaitlist)
 		}
 	}
+
+	// Rejected, not dropped: a person who pasted a link learns why on the
+	// fail page and sends again without it. A bot that learns to leave the
+	// link out still has to pass the score below.
+	if hasLink(r.Comments) || hasLink(r.Billing) {
+		return reject("link in comments or billing")
+	}
+	for _, n := range []string{r.LastName, r.FirstName, r.ParticipantLast, r.ParticipantFirst} {
+		if hasLink(n) {
+			return reject("link in a name field")
+		}
+	}
+
+	sig := signals(d.Reg, get(f, "js_ok") != "")
+	if len(sig) >= dropAt {
+		return drop("score: " + strings.Join(sig, ","))
+	}
+	d.Hints = append(d.Hints, sig...)
 	d.Hints = append(d.Hints, hintsFor(d.Reg)...)
 	d.Outcome = Accept
 	return d
