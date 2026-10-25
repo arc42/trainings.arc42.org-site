@@ -1,0 +1,12 @@
+[trainings.arc42.org] REGISTRATION R-7F3KQ 26-12 MSA (CONFIRMED)
+
+Registration R-7F3KQ (CONFIRMED)
+
+Course:                   26-12 MSA
+                          Mastering Software Architectures, December 1-4, 2026, München
+Last name:                Müller
+E-mail:                   anna@example.org
+Confirmed:                2026-10-26 14:03 (Berlin), by link
+
+The other details could not be read at confirmation (database unreachable).
+They follow in the weekly summary.

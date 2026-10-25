@@ -107,7 +107,6 @@ func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
 		s.sentPage(w, c, c.Email, true)
 		return
 	}
-	old := c.Email
 	c.Email, c.Corrections = newEmail, c.Corrections+1
 
 	// A dropped submission (no id) and a limited client get the same page and
@@ -152,9 +151,12 @@ func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.d.Log.Printf("correct %s: registrant mail failed: %v", c.ID, err)
 	}
-	if m, err := mail.Corrected(c, old); err == nil {
-		if err := s.send(r.Context(), send.Message{To: s.d.Cfg.BackofficeTo, ReplyTo: newEmail, Subject: m.Subject, Text: m.Text, CustomID: c.ID}); err != nil {
-			s.d.Log.Printf("correct %s: back-office notice failed: %v", c.ID, err)
+	// No mail to the back office any more: the BESTÄTIGT mail shows the
+	// address before the correction (spec 2026-10-25, 3.1). If this write
+	// fails, confirm still uses the token's address, which is the new one.
+	if s.d.Store != nil {
+		if err := s.d.Store.Corrected(r.Context(), c.ID, newEmail); err != nil {
+			s.d.Log.Printf("correct %s: store update failed: %v", c.ID, err)
 		}
 	}
 	s.d.Log.Printf("correct %s: address corrected (%d of %d)", c.ID, c.Corrections, maxCorrections)

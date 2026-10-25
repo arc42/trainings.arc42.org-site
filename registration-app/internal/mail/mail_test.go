@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"arc42-registration/internal/feed"
 	"arc42-registration/internal/intake"
@@ -60,27 +61,34 @@ func TestRegistrantMails(t *testing.T) {
 	}
 }
 
-func TestBackofficeMails(t *testing.T) {
+func TestConfirmedMails(t *testing.T) {
 	reg := intake.Registration{
 		ID: "R-7F3KQ", LastName: "Müller", FirstName: "Anna", Email: "anna@example.org",
-		Code: "26-12 MSA", Billing: "Firma X\nStraße 1\n12345 Ort", Comments: "",
+		Emails: []string{"anna@example.org"}, Code: "26-12 MSA", Billing: "Firma X\nStraße 1\n12345 Ort", Comments: "",
+		HeardVia: "Buch", HeardViaDetail: "arc42 by Example",
 		Via: "arc42.de", FormSource: "https://trainings.arc42.org/anmeldung/",
 	}
+	at := time.Date(2026, 10, 26, 13, 3, 0, 0, time.UTC)
 	for _, l := range []string{"de", "en"} {
 		reg.Lang = l
-		r, err := Backoffice(reg, FactsFor(dez, l), []string{intake.HintGmailDots, intake.HintClosed})
+		c := token.Claims{ID: "R-7F3KQ", Code: "26-12 MSA", Email: "anna@example.org", LastName: "Müller", Lang: l}
+		full, err := Confirmed(c, Confirmation{Reg: &reg, Facts: FactsFor(dez, l), Hints: []string{intake.HintGmailDots, intake.HintClosed},
+			CorrectedFrom: "anna@exmaple.org", At: at, Via: "code"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		golden(t, "backoffice_"+l+".txt", r.Subject+"\n\n"+r.Text)
-		c, err := Confirmed(token.Claims{ID: "R-7F3KQ", Code: "26-12 MSA", Email: "anna@example.org", LastName: "Müller", Lang: l})
-		if err != nil {
-			t.Fatal(err)
+		golden(t, "confirmed_"+l+".txt", full.Subject+"\n\n"+full.Text)
+		want := map[string]string{"de": "[trainings.arc42.org] ANMELDUNG R-7F3KQ 26-12 MSA (BESTÄTIGT)",
+			"en": "[trainings.arc42.org] REGISTRATION R-7F3KQ 26-12 MSA (CONFIRMED)"}[l]
+		if full.Subject != want {
+			t.Errorf("subject %q, want %q: filters match on it", full.Subject, want)
 		}
-		golden(t, "confirmed_"+l+".txt", c.Subject+"\n\n"+c.Text)
-		if strings.TrimSuffix(r.Subject, "(UNBESTÄTIGT)") != strings.TrimSuffix(c.Subject, "(BESTÄTIGT)") &&
-			strings.TrimSuffix(r.Subject, "(UNCONFIRMED)") != strings.TrimSuffix(c.Subject, "(CONFIRMED)") {
-			t.Errorf("subjects must differ only in the tag, so they thread:\n%s\n%s", r.Subject, c.Subject)
+		for _, missing := range []string{"down", "absent"} {
+			short, err := Confirmed(c, Confirmation{Missing: missing, Facts: FactsFor(dez, l), At: at, Via: "link"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			golden(t, "confirmed_"+missing+"_"+l+".txt", short.Subject+"\n\n"+short.Text)
 		}
 	}
 }
@@ -188,7 +196,7 @@ func TestRegistrantMailLeadsWithTheCode(t *testing.T) {
 // "How did you hear about this course?" reaches the back office as one line,
 // the choice with its details in brackets, and stays out of the way when the
 // registrant left both empty.
-func TestBackofficeMailSaysHowTheyHeard(t *testing.T) {
+func TestConfirmedMailSaysHowTheyHeard(t *testing.T) {
 	reg := intake.Registration{ID: "R-7F3KQ", LastName: "Müller", Email: "anna@example.org", Code: "26-12 MSA",
 		Billing: "X", HeardVia: "Buch", HeardViaDetail: "arc42 by Example"}
 	for l, want := range map[string]string{
@@ -196,13 +204,13 @@ func TestBackofficeMailSaysHowTheyHeard(t *testing.T) {
 		"en": "Heard via:                Buch (arc42 by Example)",
 	} {
 		reg.Lang = l
-		r, _ := Backoffice(reg, FactsFor(dez, l), nil)
+		r, _ := Confirmed(token.Claims{ID: reg.ID, Lang: l}, Confirmation{Reg: &reg, Facts: FactsFor(dez, l)})
 		if !strings.Contains(r.Text, want) {
 			t.Errorf("%s: missing %q in\n%s", l, want, r.Text)
 		}
 	}
 	reg.HeardVia, reg.HeardViaDetail, reg.Lang = "", "", "de"
-	if r, _ := Backoffice(reg, FactsFor(dez, "de"), nil); strings.Contains(r.Text, "Aufmerksam durch") {
+	if r, _ := Confirmed(token.Claims{ID: reg.ID}, Confirmation{Reg: &reg}); strings.Contains(r.Text, "Aufmerksam durch") {
 		t.Error("an empty answer still printed the line")
 	}
 }

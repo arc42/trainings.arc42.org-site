@@ -1,10 +1,13 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
+	"arc42-registration/internal/intake"
 	"arc42-registration/internal/mail"
 	"arc42-registration/internal/send"
 	"arc42-registration/internal/token"
@@ -78,7 +81,8 @@ func (s *Server) handleConfirm(w http.ResponseWriter, r *http.Request) {
 // click was one too many for the back office). If the mail fails, the
 // record is taken back so a retry goes through. If the store is down, the
 // link confirms anyway: a possible duplicate mail is better than a
-// registration that cannot be confirmed.
+// registration that cannot be confirmed. The mail is the back office's only
+// one for this registration (spec 2026-10-25), rendered from the stored row.
 func (s *Server) confirm(w http.ResponseWriter, r *http.Request, c token.Claims, via string) {
 	ctx := r.Context()
 	first := true
@@ -95,7 +99,7 @@ func (s *Server) confirm(w http.ResponseWriter, r *http.Request, c token.Claims,
 		s.redirect(w, r, "confirmed", c.Lang)
 		return
 	}
-	m, err := mail.Confirmed(c)
+	m, err := mail.Confirmed(c, s.confirmation(ctx, c, via))
 	if err == nil {
 		err = s.send(ctx, send.Message{To: s.d.Cfg.BackofficeTo, ReplyTo: c.Email, Subject: m.Subject, Text: m.Text, CustomID: c.ID})
 	}
@@ -111,6 +115,12 @@ func (s *Server) confirm(w http.ResponseWriter, r *http.Request, c token.Claims,
 	}
 	s.d.Log.Printf("confirm %s: confirmed %s (%s)", c.ID, c.Code, via)
 	if s.d.Store != nil {
+		// A failure here leaves the row pending although the back office has
+		// its mail; the summary run's reconciliation repairs it from the
+		// confirmed table (spec 4.3).
+		if err := s.d.Store.MarkConfirmed(ctx, c.ID, s.d.Now(), via); err != nil {
+			s.d.Log.Printf("confirm %s: could not mark the row confirmed: %v", c.ID, err)
+		}
 		// Housekeeping on the rare write path: nothing older than a link's
 		// lifetime (plus a day) is worth keeping.
 		if err := s.d.Store.Prune(ctx, s.d.Now().Add(-token.Valid-24*time.Hour)); err != nil {
@@ -118,6 +128,40 @@ func (s *Server) confirm(w http.ResponseWriter, r *http.Request, c token.Claims,
 		}
 	}
 	s.redirect(w, r, "confirmed", c.Lang)
+}
+
+// confirmation gathers what the BESTÄTIGT mail shows. The stored row is the
+// source; the token fills in when the store cannot supply it, and its address
+// wins either way, because that is the address that was just confirmed.
+func (s *Server) confirmation(ctx context.Context, c token.Claims, via string) mail.Confirmation {
+	k := mail.Confirmation{At: s.d.Now(), Via: via}
+	if c.Code != intake.Other {
+		if e, _ := s.d.Feed.Lookup(ctx, c.Code); e.Code != "" {
+			k.Facts = mail.FactsFor(e, c.Lang)
+		}
+	}
+	if s.d.Store == nil {
+		k.Missing = "down"
+		return k
+	}
+	rec, ok, err := s.d.Store.Registration(ctx, c.ID)
+	switch {
+	case err != nil:
+		s.d.Log.Printf("confirm %s: registration unreadable, short mail: %v", c.ID, err)
+		k.Missing = "down"
+	case !ok:
+		k.Missing = "absent"
+	default:
+		k.Reg, k.Hints, k.CorrectedFrom = &rec.Reg, rec.Hints, rec.CorrectedFrom
+		if len(rec.Reg.Emails) == 0 || !strings.EqualFold(rec.Reg.Emails[0], c.Email) {
+			// The correction reached the token but not the store.
+			if k.CorrectedFrom == "" {
+				k.CorrectedFrom = rec.Reg.Email
+			}
+			rec.Reg.Email = c.Email
+		}
+	}
+	return k
 }
 
 // errorPage is bilingual: an unreadable token carries no language.

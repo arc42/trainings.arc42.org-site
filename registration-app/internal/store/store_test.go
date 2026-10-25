@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"arc42-registration/internal/intake"
 )
 
 var t0 = time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)
@@ -59,6 +62,74 @@ func contract(t *testing.T, s Store, id string) {
 	}
 	if n, _ := s.Failures(ctx, id); n != 0 {
 		t.Errorf("failures survived Prune: %d", n)
+	}
+	registrations(t, s, id)
+}
+
+// registrations is the part of the contract added by the confirm-gated
+// redesign: what submit stores is what confirm reads back.
+func registrations(t *testing.T, s Store, id string) {
+	ctx := context.Background()
+	if _, ok, err := s.Registration(ctx, id); err != nil || ok {
+		t.Fatalf("fresh id: ok=%v err=%v", ok, err)
+	}
+	in := Record{
+		Reg: intake.Registration{ID: id, Lang: "de", LastName: "Müller", FirstName: "Anna",
+			Email: "Anna@Example.org, boss@example.org", Emails: []string{"anna@example.org", "boss@example.org"},
+			Code: "26-12 MSA", ParticipantLast: "Meier", Billing: "Firma X\nStraße 1", Comments: "PO 4711",
+			HeardVia: "Buch", Via: "arc42.de", FormSource: "https://trainings.arc42.org/anmeldung/"},
+		Hints: []string{"several-emails", "no-script"}, Status: StatusPending, CreatedAt: t0,
+	}
+	if err := s.Save(ctx, in); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Save(ctx, in); err == nil {
+		t.Error("a second Save of the same id succeeded")
+	}
+	got, ok, err := s.Registration(ctx, id)
+	if err != nil || !ok {
+		t.Fatalf("Registration: ok=%v err=%v", ok, err)
+	}
+	if !got.CreatedAt.Equal(t0) || !got.ConfirmedAt.IsZero() || got.MailFailed {
+		t.Errorf("times/flags = %v %v %v", got.CreatedAt, got.ConfirmedAt, got.MailFailed)
+	}
+	got.CreatedAt = in.CreatedAt // time.Time location differs between stores
+	if fmt.Sprint(got) != fmt.Sprint(in) {
+		t.Errorf("read back\n%+v\nwant\n%+v", got, in)
+	}
+
+	if err := s.MailFailed(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range []string{"anna@example.com", "anna@example.net"} {
+		if err := s.Corrected(ctx, id, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.MarkConfirmed(ctx, id, t0.Add(time.Hour), "code"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MarkConfirmed(ctx, id, t0.Add(2*time.Hour), "link"); err != nil {
+		t.Fatal(err)
+	}
+	got, _, _ = s.Registration(ctx, id)
+	if !got.MailFailed || got.Reg.Email != "anna@example.net" || len(got.Reg.Emails) != 1 ||
+		got.CorrectedFrom != "Anna@Example.org, boss@example.org" {
+		t.Errorf("after mail failure and two corrections: %+v", got)
+	}
+	if got.Status != StatusConfirmed || got.ConfirmedVia != "code" || !got.ConfirmedAt.Equal(t0.Add(time.Hour)) {
+		t.Errorf("confirmed twice: status %q via %q at %v; the first one counts", got.Status, got.ConfirmedVia, got.ConfirmedAt)
+	}
+	// Updates to an id that was never stored are no error: confirm calls
+	// them for registrations from before the redesign.
+	if err := s.MarkConfirmed(ctx, id+"-none", t0, "link"); err != nil {
+		t.Error(err)
+	}
+	if err := s.Prune(ctx, t0.Add(48*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok, _ := s.Registration(ctx, id); !ok {
+		t.Error("Prune deleted a registration; that is the summary run's job")
 	}
 }
 
@@ -136,5 +207,35 @@ func TestTursoSpeaksThePipelineProtocol(t *testing.T) {
 
 	if _, err := NewTurso("https://example.org", "", nil); err == nil {
 		t.Error("an empty token was accepted")
+	}
+}
+
+// A row comes back as typed values; NULL has no value at all.
+func TestTursoReadsARegistrationRow(t *testing.T) {
+	row := `[{"type":"text","value":"R-ABC12"},{"type":"integer","value":"1790000000"},{"type":"text","value":"confirmed"},` +
+		`{"type":"integer","value":"1790003600"},{"type":"text","value":"link"},{"type":"text","value":""},{"type":"integer","value":"0"},` +
+		`{"type":"text","value":"en"},{"type":"text","value":"26-12 MSA"},{"type":"text","value":"Smith"},{"type":"text","value":"Jo"},` +
+		`{"type":"text","value":"jo@example.org"},{"type":"text","value":"jo@example.org"},{"type":"null"},` +
+		`{"type":"text","value":""},{"type":"text","value":""},{"type":"text","value":""},{"type":"text","value":"ACME Ltd\nLondon"},` +
+		`{"type":"text","value":""},{"type":"null"},{"type":"null"},{"type":"text","value":"trainings.arc42.org"},` +
+		`{"type":"text","value":""},{"type":"text","value":"no-script"}]`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[` +
+			`{"type":"ok","response":{"type":"execute","result":{"rows":[],"affected_row_count":0}}},` +
+			`{"type":"ok","response":{"type":"execute","result":{"rows":[],"affected_row_count":0}}},` +
+			`{"type":"ok","response":{"type":"execute","result":{"rows":[],"affected_row_count":0}}},` +
+			`{"type":"ok","response":{"type":"execute","result":{"rows":[` + row + `],"affected_row_count":0}}},` +
+			`{"type":"ok","response":{"type":"close"}}]}`))
+	}))
+	defer srv.Close()
+	s, _ := NewTurso("libsql://x", "tok", srv.Client())
+	s.base = srv.URL
+	r, ok, err := s.Registration(context.Background(), "R-ABC12")
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	if r.Reg.LastName != "Smith" || r.Reg.Billing != "ACME Ltd\nLondon" || r.CorrectedFrom != "" || r.Reg.HeardVia != "" ||
+		r.ConfirmedAt.Unix() != 1790003600 || r.ConfirmedVia != "link" || len(r.Hints) != 1 || r.MailFailed {
+		t.Errorf("record = %+v", r)
 	}
 }

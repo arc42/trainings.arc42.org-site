@@ -1,7 +1,43 @@
-Registration {{.ID}} was confirmed by the registrant.
+Registration {{.ID}} (CONFIRMED)
 
-Course:     {{.Code}}
-Last name:  {{.LastName}}
-E-mail:     {{.Email}}
+Course:                   {{.Code}}
+{{- with .Facts}}
+                          {{.Title}}, {{.Dates}}, {{.Where}}{{end}}
+{{- with .Reg}}
+Last name:                {{.LastName}}
+First name:               {{.FirstName}}
+E-mail:                   {{.Email}}
+{{- with $.CorrectedFrom}}
+E-mail before:            {{.}} (corrected by the registrant){{end}}
+Participant last name:    {{.ParticipantLast}}
+Participant first name:   {{.ParticipantFirst}}
+Participant e-mail:       {{.ParticipantEmail}}
+Billing address:
+{{indent .Billing}}
+Comments:
+{{indent .Comments}}
+{{- if or .HeardVia .HeardViaDetail}}
+Heard via:                {{.HeardVia}}{{with .HeardViaDetail}} ({{.}}){{end}}{{end}}
 
-All details are in the mail "REGISTRATION {{.ID}} ... (UNCONFIRMED)".
+Language:                 {{.Lang}}
+via:                      {{.Via}}
+form_source:              {{.FormSource}}
+{{- else}}
+Last name:                {{.LastName}}
+E-mail:                   {{.Email}}
+{{- end}}
+Confirmed:                {{.At}}
+{{- if .Hints}}
+
+Notes:
+{{- range .Hints}}
+  - {{.}}{{end}}{{end}}
+{{- if eq .Missing "down"}}
+
+The other details could not be read at confirmation (database unreachable).
+They follow in the weekly summary.
+{{- else if eq .Missing "absent"}}
+
+The other details are in the mail "REGISTRATION {{.ID}} ... (UNCONFIRMED)":
+this registration was sent before the switch to one mail per registration.
+{{- end}}

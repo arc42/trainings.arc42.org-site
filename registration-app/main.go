@@ -34,7 +34,7 @@ func main() {
 	}
 	if cfg.TestMode() {
 		// The back office address is always allowed, so test mode still
-		// shows both back-office mails.
+		// shows the back-office mail.
 		sender = send.NewAllowList(sender, append(cfg.TestRecipients, cfg.BackofficeTo...), logger)
 		logger.Printf("test mode: mail only to %v and %v", cfg.TestRecipients, cfg.BackofficeTo)
 	}
@@ -44,8 +44,8 @@ func main() {
 		logger.Fatalf("token: %v", err)
 	}
 	courses := feed.New(cfg.FeedURL, nil, time.Now)
-	// The only state: confirmed registrations and wrong-code counts. Config
-	// has already refused production without Turso.
+	// The only state: registrations until reported, confirmations and
+	// wrong-code counts. Config has already refused production without Turso.
 	var st store.Store
 	if cfg.TursoURL != "" {
 		t, err := store.NewTurso(cfg.TursoURL, cfg.TursoToken, nil)

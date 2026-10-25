@@ -1,6 +1,7 @@
-// Package mail renders the three mails: the registrant's confirmation request
-// and the back office's UNBESTÄTIGT/BESTÄTIGT pair. Every mail is in the
-// language of the registration.
+// Package mail renders the two mails: the registrant's confirmation request
+// and the back office's one BESTÄTIGT mail, sent once the registrant
+// confirmed (spec 2026-10-25). Every mail is in the language of the
+// registration.
 //
 // The registrant mail never contains text the registrant typed: not the name,
 // not the comments, not the billing address. The address it goes to was typed
@@ -14,6 +15,7 @@ import (
 	htmltemplate "html/template"
 	"strings"
 	"text/template"
+	"time"
 
 	"arc42-registration/internal/feed"
 	"arc42-registration/internal/intake"
@@ -163,47 +165,63 @@ func Registrant(l string, facts *Facts, other bool, confirmURL, code string) (Re
 	return Rendered{Subject: subject, Text: t.String(), HTML: h.String()}, nil
 }
 
-// Backoffice renders the first mail, sent at once. facts may be nil.
-func Backoffice(reg intake.Registration, facts *Facts, hints []string) (Rendered, error) {
-	l := lang(reg.Lang)
-	status := map[string]string{"de": "UNBESTÄTIGT", "en": "UNCONFIRMED"}[l]
-	var worded []string
-	for _, h := range hints {
-		worded = append(worded, hintText[l][h])
-	}
-	data := map[string]any{"Reg": reg, "Facts": facts, "Hints": worded, "Status": status}
-	var t bytes.Buffer
-	if err := textT.ExecuteTemplate(&t, "backoffice_"+l+".txt", data); err != nil {
-		return Rendered{}, err
-	}
-	return Rendered{Subject: backofficeSubject(l, reg.ID, reg.Code, status), Text: t.String()}, nil
+// Confirmation is what the back office learns on confirmation. Reg is nil
+// when the store could not supply the registration; Missing says why.
+type Confirmation struct {
+	Reg           *intake.Registration
+	Missing       string // "down": store unreachable; "absent": stored before the redesign
+	Facts         *Facts
+	Hints         []string
+	CorrectedFrom string
+	At            time.Time
+	Via           string // "code" or "link"
 }
 
-// Confirmed renders the second back-office mail from the token alone.
-func Confirmed(c token.Claims) (Rendered, error) {
+// berlin is the back office's clock. The tz database is compiled in by
+// package feed (the image is FROM scratch).
+var berlin = func() *time.Location {
+	if loc, err := time.LoadLocation("Europe/Berlin"); err == nil {
+		return loc
+	}
+	return time.UTC
+}()
+
+// Confirmed renders the one back-office mail. Its body is the complete
+// registration, one "Label: value" line per field, so it can be copied into
+// the back-office spreadsheet; c (the confirm token) only fills in for a
+// registration the store could not supply.
+func Confirmed(c token.Claims, k Confirmation) (Rendered, error) {
 	l := lang(c.Lang)
 	status := map[string]string{"de": "BESTÄTIGT", "en": "CONFIRMED"}[l]
+	var worded []string
+	for _, h := range k.Hints {
+		if w := hintText[l][h]; w != "" {
+			worded = append(worded, w)
+		}
+	}
+	at := k.At.In(berlin)
+	how := map[string]map[string]string{
+		"de": {"code": "per Code", "link": "per Link"},
+		"en": {"code": "by code", "link": "by link"},
+	}[l][k.Via]
+	when := at.Format("02.01.2006, 15:04 Uhr") + ", " + how
+	if l == "en" {
+		when = at.Format("2006-01-02 15:04") + " (Berlin), " + how
+	}
+	data := map[string]any{
+		"ID": c.ID, "Code": c.Code, "LastName": c.LastName, "Email": c.Email,
+		"Reg": k.Reg, "Missing": k.Missing, "Facts": k.Facts, "Hints": worded,
+		"CorrectedFrom": k.CorrectedFrom, "At": when,
+	}
 	var t bytes.Buffer
-	if err := textT.ExecuteTemplate(&t, "confirmed_"+l+".txt", c); err != nil {
+	if err := textT.ExecuteTemplate(&t, "confirmed_"+l+".txt", data); err != nil {
 		return Rendered{}, err
 	}
 	return Rendered{Subject: backofficeSubject(l, c.ID, c.Code, status), Text: t.String()}, nil
 }
 
-// Corrected tells the back office that the registrant fixed their address on
-// the page after submitting. The confirmation went to the new address.
-func Corrected(c token.Claims, oldEmail string) (Rendered, error) {
-	l := lang(c.Lang)
-	status := map[string]string{"de": "E-MAIL KORRIGIERT", "en": "EMAIL CORRECTED"}[l]
-	var t bytes.Buffer
-	if err := textT.ExecuteTemplate(&t, "corrected_"+l+".txt", map[string]any{"C": c, "Old": oldEmail}); err != nil {
-		return Rendered{}, err
-	}
-	return Rendered{Subject: backofficeSubject(l, c.ID, c.Code, status), Text: t.String()}, nil
-}
-
-// Both back-office subjects differ only in the status tag, so mail clients
-// thread them and a filter can match the tag.
+// The subject is the one the BESTÄTIGT mail had in the two-mail flow, so
+// existing filters keep matching.
 func backofficeSubject(l, id, code, status string) string {
 	word := map[string]string{"de": "ANMELDUNG", "en": "REGISTRATION"}[l]
 	return "[trainings.arc42.org] " + word + " " + id + " " + code + " (" + status + ")"

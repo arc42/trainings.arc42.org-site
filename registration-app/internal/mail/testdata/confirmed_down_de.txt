@@ -1,0 +1,12 @@
+[trainings.arc42.org] ANMELDUNG R-7F3KQ 26-12 MSA (BESTÄTIGT)
+
+Anmeldung R-7F3KQ (BESTÄTIGT)
+
+Kurs:              26-12 MSA
+                   Mastering Software Architectures, 1.-4. Dezember 2026, München
+Nachname:          Müller
+E-Mail:            anna@example.org
+Bestätigt:         26.10.2026, 14:03 Uhr, per Link
+
+Die übrigen Angaben waren beim Bestätigen nicht lesbar (Datenbank nicht
+erreichbar). Sie folgen in der Wochenübersicht.

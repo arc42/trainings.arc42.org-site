@@ -1,7 +1,43 @@
-Anmeldung {{.ID}} wurde vom Anmeldenden bestätigt.
+Anmeldung {{.ID}} (BESTÄTIGT)
 
-Kurs:       {{.Code}}
-Nachname:   {{.LastName}}
-E-Mail:     {{.Email}}
+Kurs:              {{.Code}}
+{{- with .Facts}}
+                   {{.Title}}, {{.Dates}}, {{.Where}}{{end}}
+{{- with .Reg}}
+Nachname:          {{.LastName}}
+Vorname:           {{.FirstName}}
+E-Mail:            {{.Email}}
+{{- with $.CorrectedFrom}}
+E-Mail vorher:     {{.}} (vom Anmeldenden korrigiert){{end}}
+Nachname TN:       {{.ParticipantLast}}
+Vorname TN:        {{.ParticipantFirst}}
+E-Mail TN:         {{.ParticipantEmail}}
+Rechnungsadresse:
+{{indent .Billing}}
+Bemerkungen:
+{{indent .Comments}}
+{{- if or .HeardVia .HeardViaDetail}}
+Aufmerksam durch:  {{.HeardVia}}{{with .HeardViaDetail}} ({{.}}){{end}}{{end}}
 
-Alle Angaben stehen in der Mail "ANMELDUNG {{.ID}} ... (UNBESTÄTIGT)".
+Sprache:           {{.Lang}}
+via:               {{.Via}}
+form_source:       {{.FormSource}}
+{{- else}}
+Nachname:          {{.LastName}}
+E-Mail:            {{.Email}}
+{{- end}}
+Bestätigt:         {{.At}}
+{{- if .Hints}}
+
+Hinweise:
+{{- range .Hints}}
+  - {{.}}{{end}}{{end}}
+{{- if eq .Missing "down"}}
+
+Die übrigen Angaben waren beim Bestätigen nicht lesbar (Datenbank nicht
+erreichbar). Sie folgen in der Wochenübersicht.
+{{- else if eq .Missing "absent"}}
+
+Die übrigen Angaben stehen in der Mail "ANMELDUNG {{.ID}} ... (UNBESTÄTIGT)":
+die Anmeldung wurde vor der Umstellung auf eine Mail pro Anmeldung abgeschickt.
+{{- end}}
