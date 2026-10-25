@@ -109,8 +109,12 @@ var text = map[string]map[string]string{
 var hintText = map[string]map[string]string{
 	"de": {
 		intake.HintGmailDots:     "Gmail-Adresse mit vielen Punkten (Muster aus Spam-Tests)",
-		intake.HintURLInName:     "Link in einem Namensfeld",
 		intake.HintOddCase:       "Zufällig wirkende Groß-/Kleinschreibung in einem Namen",
+		intake.HintSameName:      "Vorname gleich Nachname",
+		intake.HintSameNames:     "Alle vier Namensfelder gleich",
+		intake.HintShortBilling:  "Rechnungsadresse sehr kurz oder nur ein Wort",
+		intake.HintDoubleTLD:     "E-Mail-Domain der Form x.com.de (Muster aus dem Spam)",
+		intake.HintNoScript:      "Formular ohne JavaScript abgeschickt",
 		intake.HintSeveralEmails: "Mehrere E-Mail-Adressen; die Bestätigung ging nur an die erste",
 		intake.HintClosed:        "Termin war beim Absenden nicht mehr offen (ausgebucht, abgesagt oder vorbei)",
 		intake.HintFeedDown:      "Kursliste nicht verfügbar, Buchungscode ungeprüft",
@@ -119,8 +123,12 @@ var hintText = map[string]map[string]string{
 	},
 	"en": {
 		intake.HintGmailDots:     "Gmail address with many dots (a spam-probing pattern)",
-		intake.HintURLInName:     "Link in a name field",
 		intake.HintOddCase:       "Random-looking upper/lower case in a name",
+		intake.HintSameName:      "First name equals last name",
+		intake.HintSameNames:     "All four name fields identical",
+		intake.HintShortBilling:  "Billing address very short or a single word",
+		intake.HintDoubleTLD:     "E-mail domain shaped like x.com.de (a spam pattern)",
+		intake.HintNoScript:      "Form sent without JavaScript",
 		intake.HintSeveralEmails: "Several e-mail addresses; only the first received the confirmation request",
 		intake.HintClosed:        "Date was no longer open when submitted (full, cancelled or past)",
 		intake.HintFeedDown:      "Course list unavailable, booking code not checked",
