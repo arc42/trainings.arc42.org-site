@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"arc42-registration/internal/intake"
 )
 
 // Turso keeps the state in a Turso (libSQL) database, spoken to over its
@@ -27,9 +29,24 @@ type Turso struct {
 	ready bool // tables exist; checked once per process
 }
 
+// schema is the only migration there is: run once per process in front of
+// the first pipeline. CREATE TABLE IF NOT EXISTS never adds a column to a
+// table that exists, so registrations carries the columns of the later steps
+// of spec 2026-10-25 (sheet_at for the sheet, reported_at for the summary)
+// from its first deploy on.
 var schema = []string{
 	"CREATE TABLE IF NOT EXISTS confirmed (id TEXT PRIMARY KEY, at INTEGER NOT NULL)",
 	"CREATE TABLE IF NOT EXISTS code_failures (id TEXT PRIMARY KEY, n INTEGER NOT NULL, at INTEGER NOT NULL)",
+	`CREATE TABLE IF NOT EXISTS registrations (
+		id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, status TEXT NOT NULL,
+		confirmed_at INTEGER, confirmed_via TEXT, drop_reason TEXT,
+		mail_failed INTEGER NOT NULL DEFAULT 0,
+		lang TEXT NOT NULL, code TEXT NOT NULL,
+		last_name TEXT, first_name TEXT, email TEXT, emails TEXT, corrected_from TEXT,
+		p_last TEXT, p_first TEXT, p_email TEXT,
+		billing TEXT, comments TEXT, heard TEXT, heard_detail TEXT,
+		via TEXT, form_source TEXT, hints TEXT,
+		sheet_at INTEGER, reported_at INTEGER)`,
 }
 
 // NewTurso takes the database URL as `turso db show --url` prints it
@@ -173,6 +190,88 @@ func (t *Turso) Prune(ctx context.Context, cutoff time.Time) error {
 	c := integer(cutoff.Unix())
 	_, err := t.run(ctx, stmt("DELETE FROM confirmed WHERE at < ?", c), stmt("DELETE FROM code_failures WHERE at < ?", c))
 	return err
+}
+
+// regColumns is the order Save writes and Registration reads.
+const regColumns = "id, created_at, status, confirmed_at, confirmed_via, drop_reason, mail_failed, " +
+	"lang, code, last_name, first_name, email, emails, corrected_from, " +
+	"p_last, p_first, p_email, billing, comments, heard, heard_detail, via, form_source, hints"
+
+func (t *Turso) Save(ctx context.Context, r Record) error {
+	g := r.Reg
+	_, err := t.run(ctx, stmt("INSERT INTO registrations ("+regColumns+") VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		text(g.ID), integer(r.CreatedAt.Unix()), text(r.Status), text(r.DropReason), flag(r.MailFailed),
+		text(g.Lang), text(g.Code), text(g.LastName), text(g.FirstName), text(g.Email), text(strings.Join(g.Emails, ",")),
+		text(g.ParticipantLast), text(g.ParticipantFirst), text(g.ParticipantEmail), text(g.Billing), text(g.Comments),
+		text(g.HeardVia), text(g.HeardViaDetail), text(g.Via), text(g.FormSource), text(strings.Join(r.Hints, ","))))
+	return err
+}
+
+func (t *Turso) Registration(ctx context.Context, id string) (Record, bool, error) {
+	res, err := t.run(ctx, stmt("SELECT "+regColumns+" FROM registrations WHERE id = ?", text(id)))
+	if err != nil || len(res.Rows) == 0 {
+		return Record{}, false, err
+	}
+	v := res.Rows[0]
+	if len(v) != strings.Count(regColumns, ",")+1 {
+		return Record{}, false, fmt.Errorf("turso: registrations row has %d columns", len(v))
+	}
+	r := Record{
+		Reg: intake.Registration{
+			ID: v[0].Value, Lang: v[7].Value, Code: v[8].Value,
+			LastName: v[9].Value, FirstName: v[10].Value, Email: v[11].Value, Emails: split(v[12].Value),
+			ParticipantLast: v[14].Value, ParticipantFirst: v[15].Value, ParticipantEmail: v[16].Value,
+			Billing: v[17].Value, Comments: v[18].Value, HeardVia: v[19].Value, HeardViaDetail: v[20].Value,
+			Via: v[21].Value, FormSource: v[22].Value,
+		},
+		Status: v[2].Value, ConfirmedVia: v[4].Value, DropReason: v[5].Value, MailFailed: v[6].Value == "1",
+		CorrectedFrom: v[13].Value, Hints: split(v[23].Value),
+		CreatedAt: unix(v[1]), ConfirmedAt: unix(v[3]),
+	}
+	return r, true, nil
+}
+
+func (t *Turso) MailFailed(ctx context.Context, id string) error {
+	_, err := t.run(ctx, stmt("UPDATE registrations SET mail_failed = 1 WHERE id = ?", text(id)))
+	return err
+}
+
+// Corrected keeps only the first address in corrected_from: that is the one
+// the back office might already know from somewhere, and a second correction
+// is rare enough not to need a history.
+func (t *Turso) Corrected(ctx context.Context, id, email string) error {
+	_, err := t.run(ctx, stmt("UPDATE registrations SET corrected_from = COALESCE(corrected_from, email), email = ?, emails = ? WHERE id = ?",
+		text(email), text(email), text(id)))
+	return err
+}
+
+func (t *Turso) MarkConfirmed(ctx context.Context, id string, at time.Time, via string) error {
+	_, err := t.run(ctx, stmt("UPDATE registrations SET status = ?, confirmed_at = ?, confirmed_via = ? WHERE id = ? AND status = ?",
+		text(StatusConfirmed), integer(at.Unix()), text(via), text(id), text(StatusPending)))
+	return err
+}
+
+func flag(b bool) arg {
+	if b {
+		return integer(1)
+	}
+	return integer(0)
+}
+
+// unix reads an INTEGER column holding unix seconds; NULL is the zero time.
+func unix(a arg) time.Time {
+	n, err := strconv.ParseInt(a.Value, 10, 64)
+	if a.Type != "integer" || err != nil {
+		return time.Time{}
+	}
+	return time.Unix(n, 0)
+}
+
+func split(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, ",")
 }
 
 func firstInt(r execResult) (int, error) {

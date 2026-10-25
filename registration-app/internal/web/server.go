@@ -60,9 +60,9 @@ type Deps struct {
 	// registration to maxCorrections. In memory: a restart forgets, and the
 	// correction window bounds what that can cost.
 	CorrectionLimiter *intake.Limiter
-	// Store remembers confirmed registrations and wrong codes (package
-	// store). nil behaves like a store that is down: links still confirm,
-	// codes are refused.
+	// Store keeps the registrations until they are reported, and which are
+	// confirmed, and wrong codes (package store). nil behaves like a store
+	// that is down: submits fail, links still confirm, codes are refused.
 	Store store.Store
 	Now   func() time.Time
 }

@@ -18,9 +18,9 @@ import (
 	"time"
 )
 
-// Claims is deliberately small: the full registration is already in the
-// back office's first mail. A short link survives mail clients that wrap
-// long URLs, and link scanners log URLs.
+// Claims is deliberately small: the full registration is in the store, read
+// by ID at confirmation. A short link survives mail clients that wrap long
+// URLs, and link scanners log URLs.
 type Claims struct {
 	ID       string `json:"i"` // registration id, e.g. R-7F3KQ
 	Code     string `json:"c"` // booking code, or "sonstige"
@@ -61,7 +61,7 @@ const Valid = 5 * 24 * time.Hour
 const maxLen = 2048
 
 // maxNameInToken is how much of the last name the token keeps. It only labels
-// the BESTÄTIGT mail, whose R-id points at the first mail with the full name;
+// the BESTÄTIGT mail when the store cannot supply the full registration;
 // keeping all 200 allowed characters made the longest links fail to open.
 const maxNameInToken = 60
 

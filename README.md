@@ -125,11 +125,12 @@ in [How a change reaches production](/admin-app/README.md#how-a-change-reaches-p
 ### The registration service
 
 A third program: it receives the registration form (instead of Formspark,
-since the go-live in Sep 2026), mails the back office and sends the registrant
+since the go-live in Sep 2026), stores it and sends the registrant
 a mail from `trainings@arc42.org` through Brevo, with a 6-digit
-code and a link to confirm their e-mail address, exactly once. Own fly app
-(`arc42-registration`); its only state, confirmed ids and wrong-code counts,
-is in Turso. [`registration-app/README.md`](/registration-app/README.md)
+code and a link to confirm their e-mail address, exactly once; the back office
+gets one mail, after the confirmation. Own fly app
+(`arc42-registration`); its state, the registrations until they are reported,
+confirmed ids and wrong-code counts, is in Turso (EU). [`registration-app/README.md`](/registration-app/README.md)
 explains it; the design is in
 [the spec](/docs/superpowers/specs/2026-09-25-registration-service-design.md),
 the flow in [`docs/registration-flow/`](/docs/registration-flow/).

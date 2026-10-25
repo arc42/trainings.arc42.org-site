@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"html"
 	"io"
 	"log"
@@ -56,6 +57,8 @@ type env struct {
 	now    *time.Time
 	logs   *bytes.Buffer
 	store  store.Store
+	ids    int
+	tweak  func(*Deps)
 }
 
 func newEnv(t *testing.T) *env {
@@ -69,7 +72,7 @@ func newEnv(t *testing.T) *env {
 func rebuild(e *env) *env {
 	sealer, _ := token.NewSealer([]byte("0123456789abcdef0123456789abcdef"), token.Valid, func() time.Time { return *e.now })
 	ff := fakeFeed{"26-12 MSA": feed.Bookable}
-	e.srv = New(Deps{
+	d := Deps{
 		Cfg: config.Config{BackofficeTo: []string{"office@example.org"}, ReplyTo: "info@arc42.de",
 			SiteURL: "https://trainings.arc42.org", PublicURL: "https://register.example"},
 		Checker: &intake.Checker{Feed: ff, Limiter: intake.NewLimiter(100, time.Hour, time.Now),
@@ -77,10 +80,21 @@ func rebuild(e *env) *env {
 		Feed: ff, Sealer: sealer, Sender: e.sender, Store: e.store,
 		RecipientLimiter:  intake.NewLimiter(3, 24*time.Hour, time.Now),
 		CorrectionLimiter: intake.NewLimiter(maxCorrections, correctionWindow, func() time.Time { return *e.now }),
-		NewID:             func() string { return "R-TEST1" },
+		NewID:             func() string { e.ids++; return fmt.Sprintf("R-TEST%d", e.ids) },
 		Log:               log.New(e.logs, "", 0),
-	}).Routes()
+		Now:               func() time.Time { return *e.now },
+	}
+	if e.tweak != nil {
+		e.tweak(&d)
+	}
+	e.srv = New(d).Routes()
 	return e
+}
+
+// rebuildWith recreates the server with f applied to its dependencies.
+func (e *env) rebuildWith(f func(*Deps)) {
+	e.tweak = f
+	rebuild(e)
 }
 
 func form(lang string) url.Values {
@@ -116,12 +130,14 @@ func TestTheWholeFlowInGerman(t *testing.T) {
 	e := newEnv(t)
 	rec := e.post("/submit", form("de"))
 	sentPage(t, rec, "anna@example.org", "Fast geschafft")
-	if len(e.sender.got) != 2 {
-		t.Fatalf("sent %d mails, want back office + registrant", len(e.sender.got))
+	// One mail only, to the registrant. The back office hears of the
+	// registration once it is confirmed (spec 2026-10-25).
+	if len(e.sender.got) != 1 {
+		t.Fatalf("sent %d mails, want the registrant's only", len(e.sender.got))
 	}
-	bo, reg := e.sender.got[0], e.sender.got[1]
-	if bo.To[0] != "office@example.org" || !strings.HasSuffix(bo.Subject, "(UNBESTÄTIGT)") || bo.ReplyTo != "anna@example.org" {
-		t.Errorf("back-office mail = %+v", bo)
+	reg := e.sender.got[0]
+	if r, ok, _ := e.store.Registration(context.Background(), "R-TEST1"); !ok || r.Status != store.StatusPending || r.Reg.Billing == "" {
+		t.Errorf("stored registration = %+v (found %v)", r, ok)
 	}
 	if reg.To[0] != "anna@example.org" || reg.ReplyTo != "info@arc42.de" || !strings.Contains(reg.Text, "26-12 MSA") {
 		t.Errorf("registrant mail = %+v", reg)
@@ -136,7 +152,7 @@ func TestTheWholeFlowInGerman(t *testing.T) {
 		page.Header().Get("Referrer-Policy") != "no-referrer" {
 		t.Fatalf("confirm page: %d %s", page.Code, page.Body.String())
 	}
-	if len(e.sender.got) != 2 {
+	if len(e.sender.got) != 1 {
 		t.Fatal("opening the link sent a mail: a link scanner would confirm fakes")
 	}
 
@@ -145,17 +161,27 @@ func TestTheWholeFlowInGerman(t *testing.T) {
 	if done.Code != http.StatusSeeOther || done.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
 		t.Fatalf("confirm: %d %q", done.Code, done.Header().Get("Location"))
 	}
-	conf := e.sender.got[2]
-	if !strings.HasSuffix(conf.Subject, "(BESTÄTIGT)") || !strings.Contains(conf.Subject, "R-TEST1") {
-		t.Errorf("confirmed mail subject = %q", conf.Subject)
+	conf := e.sender.got[1]
+	if !strings.HasSuffix(conf.Subject, "(BESTÄTIGT)") || !strings.Contains(conf.Subject, "R-TEST1") ||
+		conf.To[0] != "office@example.org" || conf.ReplyTo != "anna@example.org" {
+		t.Errorf("confirmed mail = %q to %v reply-to %q", conf.Subject, conf.To, conf.ReplyTo)
+	}
+	// The one back-office mail carries the whole registration.
+	for _, want := range []string{"Nachname:          Müller", "Rechnungsadresse:\n  Firma X", "Bestätigt:         30.09.2026, 12:00 Uhr, per Link", "Mastering Software Architectures"} {
+		if !strings.Contains(conf.Text, want) {
+			t.Errorf("confirmed mail lacks %q:\n%s", want, conf.Text)
+		}
+	}
+	if r, _, _ := e.store.Registration(context.Background(), "R-TEST1"); r.Status != store.StatusConfirmed || r.ConfirmedVia != "link" {
+		t.Errorf("stored after confirm: status %q via %q", r.Status, r.ConfirmedVia)
 	}
 
 	// Pressed twice: the link works once. The second press lands on the
 	// same confirmed page and sends nothing (changed 28 Sep 2026: the back
 	// office got one BESTÄTIGT mail per click).
 	again := e.post("/confirm", url.Values{"t": {tok}})
-	if len(e.sender.got) != 3 || again.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
-		t.Errorf("second confirm: %d mails in total (want 3), location %q", len(e.sender.got), again.Header().Get("Location"))
+	if len(e.sender.got) != 2 || again.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
+		t.Errorf("second confirm: %d mails in total (want 2), location %q", len(e.sender.got), again.Header().Get("Location"))
 	}
 	// Opening the link again goes straight to the confirmed page.
 	if page := e.get(link[1]); page.Code != http.StatusSeeOther || page.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
@@ -167,8 +193,16 @@ func TestEnglishRedirectsAndSubjects(t *testing.T) {
 	e := newEnv(t)
 	rec := e.post("/submit", form("en"))
 	sentPage(t, rec, "anna@example.org", "Almost done")
-	if !strings.HasSuffix(e.sender.got[0].Subject, "(UNCONFIRMED)") || !strings.Contains(e.sender.got[1].Text, "26-12 MSA") {
-		t.Errorf("mails = %+v", e.sender.got)
+	if len(e.sender.got) != 1 || !strings.Contains(e.sender.got[0].Text, "26-12 MSA") {
+		t.Fatalf("mails = %+v", e.sender.got)
+	}
+	link := linkRe.FindStringSubmatch(e.sender.got[0].Text)
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
+	if rec := e.post("/confirm", url.Values{"t": {tok}}); rec.Header().Get("Location") != "https://trainings.arc42.org/registration-confirmed/" {
+		t.Errorf("confirm: %q", rec.Header().Get("Location"))
+	}
+	if conf := e.sender.got[1]; !strings.HasSuffix(conf.Subject, "(CONFIRMED)") || !strings.Contains(conf.Text, "Billing address:") {
+		t.Errorf("confirmed mail: %q\n%s", conf.Subject, conf.Text)
 	}
 }
 
@@ -185,6 +219,25 @@ func TestDropsLookLikeSuccessAndSendNothing(t *testing.T) {
 	if !strings.Contains(e.logs.String(), "honeypot") {
 		t.Error("drop reason not logged")
 	}
+	// Kept for the weekly summary, with the reason.
+	if r, ok, _ := e.store.Registration(context.Background(), "R-TEST1"); !ok || r.Status != store.StatusDropped || r.DropReason != "honeypot" || r.Reg.LastName != "Müller" {
+		t.Errorf("stored drop = %+v (found %v)", r, ok)
+	}
+}
+
+// One script hammering from one address would fill the summary with copies;
+// rate-limit drops are logged, not kept.
+func TestRateLimitDropsAreNotStored(t *testing.T) {
+	e := newEnv(t)
+	e.rebuildWith(func(d *Deps) { d.Checker.Limiter = intake.NewLimiter(1, time.Hour, time.Now) })
+	e.post("/submit", form("de"))
+	e.post("/submit", form("de"))
+	if _, ok, _ := e.store.Registration(context.Background(), "R-TEST2"); ok {
+		t.Error("a rate-limit drop was stored")
+	}
+	if !strings.Contains(e.logs.String(), "dropped (rate limit)") {
+		t.Errorf("logs:\n%s", e.logs.String())
+	}
 }
 
 func TestRejectsGoToTheFailPage(t *testing.T) {
@@ -196,26 +249,30 @@ func TestRejectsGoToTheFailPage(t *testing.T) {
 	}
 }
 
-func TestBackOfficeFailureIsAFailure(t *testing.T) {
+// Until confirmation the store is the only place a registration exists. If
+// it cannot be written, the person has to know, and nothing is sent: a
+// confirmation for a registration nobody kept would confirm nothing.
+func TestStoreWriteFailureIsAFailure(t *testing.T) {
+	e := newEnv(t)
+	e.store = &brokenStore{Store: store.NewMemory(), save: errors.New("turso down")}
+	e = rebuild(e)
+	rec := e.post("/submit", form("de"))
+	if rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-fail/" || len(e.sender.got) != 0 {
+		t.Errorf("Location = %q, %d mails; want the fail page and none", rec.Header().Get("Location"), len(e.sender.got))
+	}
+}
+
+// Without the registrant mail nobody can confirm and the back office has no
+// mail: so the fail page now (until Oct 2026 this was a success, because the
+// back office already had the data), and the row is marked for the summary.
+func TestRegistrantMailFailureIsAFailure(t *testing.T) {
 	e := newEnv(t)
 	e.sender.fail = func(m send.Message) error { return errors.New("provider down") }
 	if rec := e.post("/submit", form("de")); rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-fail/" {
 		t.Errorf("Location = %q, want the fail page", rec.Header().Get("Location"))
 	}
-}
-
-func TestRegistrantFailureIsStillSuccess(t *testing.T) {
-	e := newEnv(t)
-	e.sender.fail = func(m send.Message) error {
-		if m.To[0] == "anna@example.org" {
-			return errors.New("bounced")
-		}
-		return nil
-	}
-	rec := e.post("/submit", form("de"))
-	sentPage(t, rec, "anna@example.org", "Fast geschafft")
-	if len(e.sender.got) != 1 {
-		t.Errorf("mails = %d", len(e.sender.got))
+	if r, ok, _ := e.store.Registration(context.Background(), "R-TEST1"); !ok || !r.MailFailed || r.Status != store.StatusPending {
+		t.Errorf("stored = %+v (found %v); want pending and marked mail_failed", r, ok)
 	}
 }
 
@@ -245,7 +302,7 @@ func TestOversizedBodyIsRefused(t *testing.T) {
 func TestBadTokens(t *testing.T) {
 	e := newEnv(t)
 	e.post("/submit", form("de"))
-	tok, _ := url.QueryUnescape(strings.TrimPrefix(linkRe.FindStringSubmatch(e.sender.got[1].Text)[1], "/confirm?t="))
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(linkRe.FindStringSubmatch(e.sender.got[0].Text)[1], "/confirm?t="))
 
 	if rec := e.get("/confirm?t=garbage"); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "info@arc42.de") {
 		t.Errorf("garbage: %d", rec.Code)
@@ -256,32 +313,25 @@ func TestBadTokens(t *testing.T) {
 	if rec.Code != http.StatusGone || !strings.Contains(string(body), "5") {
 		t.Errorf("expired: %d %s", rec.Code, body)
 	}
-	if len(e.sender.got) != 2 {
+	if len(e.sender.got) != 1 {
 		t.Error("an expired token sent a confirmation")
 	}
 }
 
 // The registrant mail goes to an address a stranger typed. However many IPs a
 // script uses, one address gets at most three confirmation requests a day;
-// the back office still sees every submission, marked.
+// every submission is stored, the withheld one marked for the summary.
 func TestConfirmationMailsPerAddressAreCapped(t *testing.T) {
 	e := newEnv(t)
 	for i := 0; i < 4; i++ {
 		e.post("/submit", form("de"))
 	}
-	var toOffice, toRegistrant []send.Message
-	for _, m := range e.sender.got {
-		if m.To[0] == "office@example.org" {
-			toOffice = append(toOffice, m)
-		} else {
-			toRegistrant = append(toRegistrant, m)
-		}
+	if n := len(mailsTo(e, "anna@example.org")); n != 3 || len(e.sender.got) != 3 {
+		t.Fatalf("registrant %d of %d mails; want 3 of 3", n, len(e.sender.got))
 	}
-	if len(toOffice) != 4 || len(toRegistrant) != 3 {
-		t.Fatalf("office %d, registrant %d; want 4 and 3", len(toOffice), len(toRegistrant))
-	}
-	if !strings.Contains(toOffice[3].Text, "nicht verschickt") {
-		t.Errorf("the fourth back-office mail does not say the confirmation was withheld:\n%s", toOffice[3].Text)
+	r, ok, _ := e.store.Registration(context.Background(), "R-TEST4")
+	if !ok || len(r.Hints) == 0 || r.Hints[len(r.Hints)-1] != intake.HintRecipientCap {
+		t.Errorf("the fourth is not stored with the cap hint: %+v (found %v)", r, ok)
 	}
 }
 
@@ -334,8 +384,9 @@ func mailsTo(e *env, addr string) []send.Message {
 }
 
 // Typo in the address: the person corrects it on the page, the confirmation
-// goes to the new address, the back office learns about it, and the
-// confirmed mail carries the corrected address.
+// goes to the new address, and the one confirmed mail carries the corrected
+// address and the one before it. (Until Oct 2026 the back office got an
+// E-MAIL KORRIGIERT mail of its own.)
 func TestCorrectingTheAddressResendsTheConfirmation(t *testing.T) {
 	e := newEnv(t)
 	body := sentPage(t, e.post("/submit", form("de")), "anna@example.org", "Fast geschafft")
@@ -346,19 +397,34 @@ func TestCorrectingTheAddressResendsTheConfirmation(t *testing.T) {
 	if len(toNew) != 1 || !strings.Contains(toNew[0].Text, "26-12 MSA") {
 		t.Fatalf("mails to the corrected address: %+v", toNew)
 	}
-	office := mailsTo(e, "office@example.org")
-	last := office[len(office)-1]
-	if !strings.Contains(last.Subject, "R-TEST1") || !strings.HasSuffix(last.Subject, "(E-MAIL KORRIGIERT)") ||
-		!strings.Contains(last.Text, "anna@example.org") || !strings.Contains(last.Text, "anna@example.com") {
-		t.Errorf("back-office correction notice: %q\n%s", last.Subject, last.Text)
+	if n := len(mailsTo(e, "office@example.org")); n != 0 {
+		t.Errorf("the correction mailed the back office %d times", n)
 	}
 
 	link := linkRe.FindStringSubmatch(toNew[0].Text)
 	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
 	e.post("/confirm", url.Values{"t": {tok}})
 	conf := e.sender.got[len(e.sender.got)-1]
-	if !strings.HasSuffix(conf.Subject, "(BESTÄTIGT)") || !strings.Contains(conf.Text, "anna@example.com") {
+	if !strings.HasSuffix(conf.Subject, "(BESTÄTIGT)") || !strings.Contains(conf.Text, "E-Mail:            anna@example.com") ||
+		!strings.Contains(conf.Text, "E-Mail vorher:     anna@example.org") || conf.ReplyTo != "anna@example.com" {
 		t.Errorf("confirmed mail does not carry the corrected address:\n%s", conf.Text)
+	}
+}
+
+// If the correction reached the token but not the store, the confirmed
+// address is still the one in the mail: the token's.
+func TestTheConfirmedAddressWinsOverAStaleRow(t *testing.T) {
+	e := newEnv(t)
+	e.store = &brokenStore{Store: store.NewMemory(), corrected: errors.New("turso down")}
+	e = rebuild(e)
+	body := sentPage(t, e.post("/submit", form("de")), "anna@example.org", "Fast geschafft")
+	e.post("/correct", url.Values{"t": {correctionToken(t, body)}, "email": {"anna@example.com"}})
+	link := linkRe.FindStringSubmatch(mailsTo(e, "anna@example.com")[0].Text)
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
+	e.post("/confirm", url.Values{"t": {tok}})
+	conf := e.sender.got[len(e.sender.got)-1]
+	if !strings.Contains(conf.Text, "E-Mail:            anna@example.com") || !strings.Contains(conf.Text, "E-Mail vorher:     anna@example.org") {
+		t.Errorf("confirmed mail:\n%s", conf.Text)
 	}
 }
 
@@ -430,7 +496,7 @@ func TestCorrectingADroppedSubmissionSendsNothing(t *testing.T) {
 func TestPagesCarryTheSiteFrameAndTheProgress(t *testing.T) {
 	e := newEnv(t)
 	sent := e.post("/submit", form("de")).Body.String()
-	reg := e.sender.got[1]
+	reg := e.sender.got[0]
 	link := linkRe.FindStringSubmatch(reg.Text)
 	confirm := e.get(link[1]).Body.String()
 	sentEN := e.post("/submit", form("en")).Body.String()
@@ -526,7 +592,7 @@ func TestAnInvalidCorrectionDoesNotExtendTheWindow(t *testing.T) {
 func TestAFailedConfirmationCanBeRetried(t *testing.T) {
 	e := newEnv(t)
 	e.post("/submit", form("de"))
-	link := linkRe.FindStringSubmatch(e.sender.got[1].Text)
+	link := linkRe.FindStringSubmatch(e.sender.got[0].Text)
 	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
 	e.sender.fail = func(m send.Message) error {
 		if strings.Contains(m.Subject, "BESTÄTIGT") {
@@ -539,7 +605,7 @@ func TestAFailedConfirmationCanBeRetried(t *testing.T) {
 	}
 	e.sender.fail = nil
 	e.post("/confirm", url.Values{"t": {tok}})
-	if n := len(e.sender.got); n != 3 || !strings.HasSuffix(e.sender.got[2].Subject, "(BESTÄTIGT)") {
+	if n := len(e.sender.got); n != 2 || !strings.HasSuffix(e.sender.got[1].Subject, "(BESTÄTIGT)") {
 		t.Errorf("retry after a failed mail: %d mails, last %q", n, e.sender.got[n-1].Subject)
 	}
 }
@@ -555,17 +621,17 @@ func TestTheCodeFromTheMailConfirms(t *testing.T) {
 	if !strings.Contains(page, `action="/code"`) || !strings.Contains(page, `autocomplete="one-time-code"`) {
 		t.Fatalf("the sent page has no code form:\n%s", page)
 	}
-	code := codeRe.FindStringSubmatch(e.sender.got[1].Text)[1]
+	code := codeRe.FindStringSubmatch(e.sender.got[0].Text)[1]
 	pageTok := correctionTokenRe.FindStringSubmatch(page)[1]
 	rec := e.post("/code", url.Values{"t": {pageTok}, "code": {code}})
 	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
 		t.Fatalf("code: %d %q\n%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
 	}
-	if n := len(e.sender.got); n != 3 || !strings.HasSuffix(e.sender.got[2].Subject, "(BESTÄTIGT)") {
+	if n := len(e.sender.got); n != 2 || !strings.HasSuffix(e.sender.got[1].Subject, "(BESTÄTIGT)") || !strings.Contains(e.sender.got[1].Text, "per Code") {
 		t.Fatalf("after the code: %d mails", n)
 	}
 	e.post("/code", url.Values{"t": {pageTok}, "code": {code}})
-	if len(e.sender.got) != 3 {
+	if len(e.sender.got) != 2 {
 		t.Error("the code confirmed twice")
 	}
 }
@@ -576,7 +642,7 @@ func TestTheCodeFromTheMailConfirms(t *testing.T) {
 func TestWrongCodesLockAfterFive(t *testing.T) {
 	e := newEnv(t)
 	page := e.post("/submit", form("de")).Body.String()
-	code := strings.ReplaceAll(codeRe.FindStringSubmatch(e.sender.got[1].Text)[1], " ", "")
+	code := strings.ReplaceAll(codeRe.FindStringSubmatch(e.sender.got[0].Text)[1], " ", "")
 	wrong := "000000"
 	if code == wrong {
 		wrong = "111111"
@@ -589,8 +655,72 @@ func TestWrongCodesLockAfterFive(t *testing.T) {
 		}
 	}
 	body := e.post("/code", url.Values{"t": {pageTok}, "code": {code}}).Body.String()
-	if !strings.Contains(body, "Zu viele falsche Versuche") || strings.Contains(body, `action="/code"`) || len(e.sender.got) != 2 {
+	if !strings.Contains(body, "Zu viele falsche Versuche") || strings.Contains(body, `action="/code"`) || len(e.sender.got) != 1 {
 		t.Errorf("after five wrong tries the right code still confirmed (%d mails) or the form is still there", len(e.sender.got))
+	}
+}
+
+// brokenStore fails the methods given an error, and is a working store
+// otherwise.
+type brokenStore struct {
+	store.Store
+	save, get, corrected error
+}
+
+func (b *brokenStore) Save(ctx context.Context, r store.Record) error {
+	if b.save != nil {
+		return b.save
+	}
+	return b.Store.Save(ctx, r)
+}
+
+func (b *brokenStore) Registration(ctx context.Context, id string) (store.Record, bool, error) {
+	if b.get != nil {
+		return store.Record{}, false, b.get
+	}
+	return b.Store.Registration(ctx, id)
+}
+
+func (b *brokenStore) Corrected(ctx context.Context, id, email string) error {
+	if b.corrected != nil {
+		return b.corrected
+	}
+	return b.Store.Corrected(ctx, id, email)
+}
+
+// Confirming must never fail because the store is down: the mail is then
+// rendered from the token, says where the rest will be, and goes out.
+func TestStoreDownAtConfirmStillConfirms(t *testing.T) {
+	e := newEnv(t)
+	b := &brokenStore{Store: store.NewMemory()}
+	e.store = b
+	e = rebuild(e)
+	e.post("/submit", form("de"))
+	b.get = errors.New("turso down")
+	link := linkRe.FindStringSubmatch(e.sender.got[0].Text)
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
+	rec := e.post("/confirm", url.Values{"t": {tok}})
+	if rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" || len(e.sender.got) != 2 {
+		t.Fatalf("confirm with the store down: %d %q, %d mails", rec.Code, rec.Header().Get("Location"), len(e.sender.got))
+	}
+	conf := e.sender.got[1]
+	if !strings.Contains(conf.Text, "Nachname:          Müller") || !strings.Contains(conf.Text, "Wochenübersicht") || strings.Contains(conf.Text, "Firma X") {
+		t.Errorf("short mail:\n%s", conf.Text)
+	}
+}
+
+// A link from before the deploy of the confirm-gated flow has no stored row:
+// it confirms, and the mail points to the UNBESTÄTIGT mail sent back then.
+func TestALinkFromBeforeTheRedesignStillConfirms(t *testing.T) {
+	e := newEnv(t)
+	e.post("/submit", form("de"))
+	link := linkRe.FindStringSubmatch(e.sender.got[0].Text)
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
+	e.store = store.NewMemory() // the row never existed
+	e = rebuild(e)
+	e.post("/confirm", url.Values{"t": {tok}})
+	if conf := e.sender.got[len(e.sender.got)-1]; !strings.HasSuffix(conf.Subject, "(BESTÄTIGT)") || !strings.Contains(conf.Text, "(UNBESTÄTIGT)") {
+		t.Errorf("confirmed mail without a row:\n%s", conf.Text)
 	}
 }
 
@@ -605,9 +735,9 @@ func TestCodeEntryNeedsTheStore(t *testing.T) {
 	e.store = downStore{store.NewMemory()}
 	e = rebuild(e)
 	page := e.post("/submit", form("de")).Body.String()
-	code := codeRe.FindStringSubmatch(e.sender.got[1].Text)[1]
+	code := codeRe.FindStringSubmatch(e.sender.got[0].Text)[1]
 	body := e.post("/code", url.Values{"t": {correctionTokenRe.FindStringSubmatch(page)[1]}, "code": {code}}).Body.String()
-	if !strings.Contains(body, "Link in der E-Mail") || len(e.sender.got) != 2 {
+	if !strings.Contains(body, "Link in der E-Mail") || len(e.sender.got) != 1 {
 		t.Errorf("code accepted without a store (%d mails):\n%s", len(e.sender.got), body)
 	}
 }
@@ -635,7 +765,7 @@ func TestADroppedSubmissionNeverConfirms(t *testing.T) {
 func TestPagesAskToConfirmTheAddress(t *testing.T) {
 	e := newEnv(t)
 	sent := e.post("/submit", form("de")).Body.String()
-	link := linkRe.FindStringSubmatch(e.sender.got[1].Text)
+	link := linkRe.FindStringSubmatch(e.sender.got[0].Text)
 	confirm := e.get(link[1]).Body.String()
 	sentEN := e.post("/submit", form("en")).Body.String()
 	for name, body := range map[string]string{"sent": sent, "confirm": confirm, "sent-en": sentEN} {
