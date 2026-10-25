@@ -284,6 +284,16 @@ In case you register more than one person, please state their names in the comme
 {%- endcomment -%}
 <input type="hidden" name="language" value="{% if include.lang == "de" %}de{% else %}en{% endif %}" />
 
+{%- comment -%}
+  js_ok: empty in the HTML, set to 1 by the script right below. Form bots post
+  without running the page's script and send it back empty. The registration
+  service counts that as one spam point (intake.signals); two points drop a
+  submission. One point alone never does, so a person with scripts off can
+  still register. Same name in both forms; read in intake.go's fieldNames.
+{%- endcomment -%}
+<input type="hidden" name="js_ok" id="registration-js-ok" value="" />
+<script type="text/javascript">document.getElementById("registration-js-ok").value = "1";</script>
+
 </form>
 
 <script type="text/javascript">

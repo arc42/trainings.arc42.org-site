@@ -98,13 +98,13 @@ func (e *env) rebuildWith(f func(*Deps)) {
 }
 
 func form(lang string) url.Values {
-	v := url.Values{"Email": {"anna@example.org"}, "Kurs": {"26-12 MSA"}, "language": {lang}}
+	v := url.Values{"Email": {"anna@example.org"}, "Kurs": {"26-12 MSA"}, "language": {lang}, "js_ok": {"1"}}
 	if lang == "de" {
 		v.Set("Nachname", "Müller")
-		v.Set("Rechnungsadresse", "Firma X")
+		v.Set("Rechnungsadresse", "Firma X, Straße 1, 12345 Ort")
 	} else {
 		v.Set("last name", "Smith")
-		v.Set("Billing address", "ACME")
+		v.Set("Billing address", "ACME Ltd, 1 Main Street, London")
 	}
 	return v
 }

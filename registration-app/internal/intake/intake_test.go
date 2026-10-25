@@ -40,7 +40,7 @@ func germanForm() url.Values {
 		"Kurs": {"26-12 MSA"}, "Rechnungsadresse": {"Firma X\nStraße 1\n12345 Ort"},
 		"Bemerkungen": {"PO 4711"}, "language": {"de"}, "via": {"arc42.de"},
 		"form_source": {"https://trainings.arc42.org/anmeldung/"},
-		"_gotcha":     {""}, "company_website": {""},
+		"_gotcha":     {""}, "company_website": {""}, "js_ok": {"1"},
 	}
 }
 
@@ -61,10 +61,11 @@ func TestAcceptsARealGermanRegistration(t *testing.T) {
 func TestReadsTheEnglishFieldNames(t *testing.T) {
 	f := url.Values{
 		"last name": {"Smith"}, "first name": {"Jo"}, "Email": {"jo@example.org"},
-		"Kurs": {"26-12 MSA"}, "Billing address": {"ACME"}, "Comments": {"hi"}, "language": {"en"},
+		"Kurs": {"26-12 MSA"}, "Billing address": {"ACME Ltd, London"}, "Comments": {"hi"}, "language": {"en"},
+		"js_ok": {"1"},
 	}
 	d := checker().Check(context.Background(), Input{Form: f, IP: "1.2.3.4"})
-	if d.Outcome != Accept || d.Reg.Lang != "en" || d.Reg.LastName != "Smith" || d.Reg.Billing != "ACME" || d.Reg.Comments != "hi" {
+	if d.Outcome != Accept || d.Reg.Lang != "en" || d.Reg.LastName != "Smith" || d.Reg.Billing != "ACME Ltd, London" || d.Reg.Comments != "hi" {
 		t.Fatalf("decision = %+v", d)
 	}
 }
@@ -90,6 +91,13 @@ func TestOutcomes(t *testing.T) {
 		{"display name in email", func(f url.Values, in *Input) { f.Set("Email", "Anna <anna@example.org>") }, Reject, "email"},
 		{"comments too long", func(f url.Values, in *Input) { f.Set("Bemerkungen", strings.Repeat("x", 4001)) }, Reject, "too long"},
 		{"4000 characters of umlauts are fine", func(f url.Values, in *Input) { f.Set("Bemerkungen", strings.Repeat("ü", 4000)) }, Accept, ""},
+		{"link in comments", func(f url.Values, in *Input) { f.Set("Bemerkungen", "see https://forum.example/t/1") }, Reject, "link"},
+		{"www in comments", func(f url.Values, in *Input) { f.Set("Bemerkungen", "www.forum.example") }, Reject, "link"},
+		{"link in billing", func(f url.Values, in *Input) { f.Set("Rechnungsadresse", "Firma X\nhttp://x.example") }, Reject, "link"},
+		{"link in a name", func(f url.Values, in *Input) { f.Set("VornameTN", "HTTPS://spam.example") }, Reject, "name"},
+		{"a bare domain is a company name", func(f url.Values, in *Input) { f.Set("Rechnungsadresse", "arc42.de GmbH\nStraße 1") }, Accept, ""},
+		{"one signal is a hint", func(f url.Values, in *Input) { f.Del("js_ok") }, Accept, ""},
+		{"two signals drop", func(f url.Values, in *Input) { f.Del("js_ok"); f.Set("Rechnungsadresse", "Cusco") }, Drop, "score"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -185,23 +193,86 @@ func TestLimiterWindowSlides(t *testing.T) {
 	}
 }
 
-func TestHints(t *testing.T) {
+// Each signal alone, against a registration that scores nothing.
+func TestSignals(t *testing.T) {
+	clean := Registration{LastName: "Müller", FirstName: "Anna", Emails: []string{"anna@example.org"}, Billing: "Firma X, Straße 1, 12345 Ort"}
 	cases := []struct {
-		name string
-		reg  Registration
-		want string
+		name   string
+		mutate func(r *Registration)
+		jsOK   bool
+		want   string
 	}{
-		{"dotted gmail", Registration{Emails: []string{"a.b.c.d.e1@gmail.com"}}, HintGmailDots},
-		{"one dot is normal", Registration{Emails: []string{"firstname.lastname@gmail.com"}}, ""},
-		{"url in name", Registration{LastName: "see https://spam.example", Emails: []string{"a@b.de"}}, HintURLInName},
-		{"random case", Registration{FirstName: "xKqTvBnM", Emails: []string{"a@b.de"}}, HintOddCase},
-		{"McDonald is a name", Registration{LastName: "McDonald", Emails: []string{"a@b.de"}}, ""},
+		{"clean", func(r *Registration) {}, true, ""},
+		{"dotted gmail", func(r *Registration) { r.Emails = []string{"a.b.c.d.e1@gmail.com"} }, true, HintGmailDots},
+		{"one dot is normal", func(r *Registration) { r.Emails = []string{"firstname.lastname@gmail.com"} }, true, ""},
+		{"random case", func(r *Registration) { r.FirstName = "xKqTvBnM" }, true, HintOddCase},
+		{"McDonald is a name", func(r *Registration) { r.LastName = "McDonald" }, true, ""},
+		{"first equals last", func(r *Registration) { r.FirstName = "müller" }, true, HintSameName},
+		{"no first name is not equal", func(r *Registration) { r.FirstName = "" }, true, ""},
+		{"short billing", func(r *Registration) { r.Billing = "Cusco, PE" }, true, HintShortBilling},
+		{"single-word billing", func(r *Registration) { r.Billing = "Musterfirmenstraße" }, true, HintShortBilling},
+		{"com.de", func(r *Registration) { r.Emails = []string{"x@mail.com.de"} }, true, HintDoubleTLD},
+		{"net.pl", func(r *Registration) { r.Emails = []string{"x@y.net.pl"} }, true, HintDoubleTLD},
+		{"co.uk is a registry", func(r *Registration) { r.Emails = []string{"x@firm.co.uk"} }, true, ""},
+		{"com.br is a registry", func(r *Registration) { r.Emails = []string{"x@firm.com.br"} }, true, ""},
+		{"subdomain is fine", func(r *Registration) { r.Emails = []string{"x@mail.firm.de"} }, true, ""},
+		{"no script", func(r *Registration) {}, false, HintNoScript},
 	}
 	for _, c := range cases {
-		got := hintsFor(c.reg)
-		if c.want == "" && len(got) != 0 || c.want != "" && !has(got, c.want) {
-			t.Errorf("%s: hints %v, want %q", c.name, got, c.want)
+		r := clean
+		c.mutate(&r)
+		got := signals(r, c.jsOK)
+		if c.want == "" && len(got) != 0 || c.want != "" && (len(got) != 1 || got[0] != c.want) {
+			t.Errorf("%s: signals %v, want %q", c.name, got, c.want)
 		}
+	}
+}
+
+// Generators fill every name field from one string: that is two signals.
+func TestFourIdenticalNamesScoreTwice(t *testing.T) {
+	r := Registration{LastName: "Bob", FirstName: "Bob", ParticipantLast: "Bob", ParticipantFirst: "bob",
+		Emails: []string{"bob@example.org"}, Billing: "Firma X, Straße 1, 12345 Ort"}
+	if got := signals(r, true); len(got) != 2 || !has(got, HintSameName) || !has(got, HintSameNames) {
+		t.Errorf("signals %v", got)
+	}
+}
+
+// The submission that started the redesign (spec 2026-10-25, section 1). With
+// its forum link it is rejected; a bot that learns to leave the link out is
+// still dropped by the score.
+func TestTheSpamSampleOf25October(t *testing.T) {
+	sample := func() url.Values {
+		return url.Values{
+			"Nachname": {"AllenHeavy"}, "Vorname": {"AllenHeavy"}, "Email": {"allen@mailbox.com.de"},
+			"Kurs": {"26-12 MSA"}, "Rechnungsadresse": {"Cusco"},
+			"Bemerkungen": {"Great forum https://forum.example/t/42 see https://forum.example/t/42"},
+			"language":    {"de"},
+		}
+	}
+	d := checker().Check(context.Background(), Input{Form: sample(), IP: "s1"})
+	if d.Outcome != Reject {
+		t.Errorf("with the link: outcome %v (%s), want Reject", d.Outcome, d.Reason)
+	}
+	f := sample()
+	f.Set("Bemerkungen", "Great forum")
+	d = checker().Check(context.Background(), Input{Form: f, IP: "s2"})
+	if d.Outcome != Drop || !strings.HasPrefix(d.Reason, "score") {
+		t.Errorf("without the link: outcome %v (%s), want Drop by score", d.Outcome, d.Reason)
+	}
+}
+
+// A real registration from someone with scripts off still goes through, and
+// the back office sees why it carries a hint.
+func TestAPlainRealRegistrationScoresZero(t *testing.T) {
+	d := checker().Check(context.Background(), Input{Form: germanForm(), IP: "p1"})
+	if d.Outcome != Accept || len(d.Hints) != 0 {
+		t.Errorf("outcome %v, hints %v", d.Outcome, d.Hints)
+	}
+	f := germanForm()
+	f.Del("js_ok")
+	d = checker().Check(context.Background(), Input{Form: f, IP: "p2"})
+	if d.Outcome != Accept || len(d.Hints) != 1 || d.Hints[0] != HintNoScript {
+		t.Errorf("without script: outcome %v, hints %v", d.Outcome, d.Hints)
 	}
 }
 
