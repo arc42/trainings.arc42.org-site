@@ -1,9 +1,13 @@
 // Command arc42-registration receives the trainings.arc42.org registration
-// form, mails the back office and the registrant, and confirms registrations
-// from a sealed link. See docs/superpowers/specs/2026-09-25-registration-service-design.md.
+// form, mails the registrant, confirms registrations from a sealed link or a
+// code, mails the back office once per confirmed registration, and sends the
+// back office a weekly summary of every attempt. See
+// docs/superpowers/specs/2026-09-25-registration-service-design.md and
+// 2026-10-25-confirm-gated-registration-design.md.
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +18,7 @@ import (
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/send"
 	"arc42-registration/internal/store"
+	"arc42-registration/internal/summary"
 	"arc42-registration/internal/token"
 	"arc42-registration/internal/web"
 )
@@ -59,6 +64,19 @@ func main() {
 		logger.Printf("store: in memory - forgets on restart, test deployments only")
 	}
 
+	// The weekly summary goes out from inside the first request after
+	// Monday 07:00 (package summary); cron-job.org makes sure there is one.
+	weekly := &summary.Runner{Store: st, Sender: sender, To: cfg.BackofficeTo, Log: logger, Now: time.Now}
+	if cfg.SummaryNow {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			if err := weekly.Force(ctx); err != nil {
+				logger.Printf("summary (SUMMARY_NOW): %v", err)
+			}
+		}()
+	}
+
 	srv := web.New(web.Deps{
 		Cfg: cfg,
 		Checker: &intake.Checker{
@@ -66,11 +84,12 @@ func main() {
 			Limiter:        intake.NewLimiter(5, time.Hour, time.Now),
 			AllowedOrigins: cfg.AllowedOrigins,
 		},
-		Feed:   courses,
-		Sealer: sealer,
-		Sender: sender,
-		Log:    logger,
-		Store:  st,
+		Feed:    courses,
+		Sealer:  sealer,
+		Sender:  sender,
+		Log:     logger,
+		Store:   st,
+		Summary: weekly,
 		// Three confirmation requests per address and day are plenty for a
 		// person who mistyped twice; more is someone using us as a mailer.
 		RecipientLimiter: intake.NewLimiter(3, 24*time.Hour, time.Now),

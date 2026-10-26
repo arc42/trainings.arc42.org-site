@@ -131,6 +131,94 @@ func registrations(t *testing.T, s Store, id string) {
 	if _, ok, _ := s.Registration(ctx, id); !ok {
 		t.Error("Prune deleted a registration; that is the summary run's job")
 	}
+	summaries(t, s, id)
+}
+
+// summaries is the part the weekly summary needs: listing, reconciling,
+// marking, deleting, and the week claim.
+func summaries(t *testing.T, s Store, id string) {
+	ctx := context.Background()
+	// A second registration, confirmed in the confirmed table only: the
+	// row update failed after the mail went out.
+	other := Record{Reg: intake.Registration{ID: id + "b", Lang: "en", Code: "26-12 MSA", Email: "jo@example.org"},
+		Status: StatusPending, CreatedAt: t0.Add(time.Minute)}
+	if err := s.Save(ctx, other); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Confirm(ctx, other.Reg.ID, t0.Add(3*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := s.Reconcile(ctx); err != nil || n != 1 {
+		t.Errorf("Reconcile = %d, %v; want the one pending row with a confirmation", n, err)
+	}
+	if n, _ := s.Reconcile(ctx); n != 0 {
+		t.Errorf("a second Reconcile marked %d", n)
+	}
+	all, err := s.All(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mine []Record
+	for _, r := range all {
+		if strings.HasPrefix(r.Reg.ID, id) {
+			mine = append(mine, r)
+		}
+	}
+	if len(mine) != 2 || mine[0].Reg.ID != id || mine[1].Reg.ID != other.Reg.ID {
+		t.Fatalf("All = %+v, want both, oldest first", mine)
+	}
+	if r := mine[1]; r.Status != StatusConfirmed || !r.ConfirmedAt.Equal(t0.Add(3*time.Hour)) || r.ConfirmedVia != "" {
+		t.Errorf("reconciled row = %q at %v via %q", r.Status, r.ConfirmedAt, r.ConfirmedVia)
+	}
+	at := t0.Add(7 * 24 * time.Hour)
+	if err := s.Reported(ctx, []string{id}, at); err != nil {
+		t.Fatal(err)
+	}
+	if r, _, _ := s.Registration(ctx, id); !r.ReportedAt.Equal(at) {
+		t.Errorf("ReportedAt = %v", r.ReportedAt)
+	}
+	if err := s.Delete(ctx, []string{id, other.Reg.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok, _ := s.Registration(ctx, id); ok {
+		t.Error("Delete left the row")
+	}
+	if err := s.Reported(ctx, nil, at); err != nil {
+		t.Error(err)
+	}
+
+	week := "test-" + id
+	if ok, err := s.Claim(ctx, week, at, at.Add(-15*time.Minute)); err != nil || !ok {
+		t.Fatalf("first claim: %v %v", ok, err)
+	}
+	if ok, _ := s.Claim(ctx, week, at.Add(time.Minute), at.Add(-14*time.Minute)); ok {
+		t.Error("a fresh claim was taken over")
+	}
+	if ok, _ := s.Claim(ctx, week, at.Add(20*time.Minute), at.Add(5*time.Minute)); !ok {
+		t.Error("a stale, unsent claim was not taken over")
+	}
+	if err := s.Release(ctx, week); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := s.Claim(ctx, week, at.Add(21*time.Minute), at.Add(6*time.Minute)); !ok {
+		t.Error("a released week could not be claimed again")
+	}
+	// to lies in the past: run against a real database, this row must
+	// never look like a newer summary than the real ones.
+	to := at
+	if err := s.SummarySent(ctx, week, at, t0, to, 2); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok, err := s.LastSummary(ctx); err != nil || !ok || got.Before(to) {
+		t.Errorf("LastSummary = %v %v %v, want %v or later", got, ok, err, to)
+	}
+	if ok, _ := s.Claim(ctx, week, to.Add(time.Hour), to); ok {
+		t.Error("a sent week was claimed again")
+	}
+	_ = s.Release(ctx, week) // no effect on a sent week
+	if ok, _ := s.Claim(ctx, week, to.Add(time.Hour), to); ok {
+		t.Error("Release removed a sent week")
+	}
 }
 
 func TestMemoryStore(t *testing.T) {
@@ -218,7 +306,7 @@ func TestTursoReadsARegistrationRow(t *testing.T) {
 		`{"type":"text","value":"jo@example.org"},{"type":"text","value":"jo@example.org"},{"type":"null"},` +
 		`{"type":"text","value":""},{"type":"text","value":""},{"type":"text","value":""},{"type":"text","value":"ACME Ltd\nLondon"},` +
 		`{"type":"text","value":""},{"type":"null"},{"type":"null"},{"type":"text","value":"trainings.arc42.org"},` +
-		`{"type":"text","value":""},{"type":"text","value":"no-script"}]`
+		`{"type":"text","value":""},{"type":"text","value":"no-script"},{"type":"null"}]`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"results":[` +
 			`{"type":"ok","response":{"type":"execute","result":{"rows":[],"affected_row_count":0}}},` +
@@ -235,7 +323,7 @@ func TestTursoReadsARegistrationRow(t *testing.T) {
 		t.Fatalf("ok=%v err=%v", ok, err)
 	}
 	if r.Reg.LastName != "Smith" || r.Reg.Billing != "ACME Ltd\nLondon" || r.CorrectedFrom != "" || r.Reg.HeardVia != "" ||
-		r.ConfirmedAt.Unix() != 1790003600 || r.ConfirmedVia != "link" || len(r.Hints) != 1 || r.MailFailed {
+		r.ConfirmedAt.Unix() != 1790003600 || r.ConfirmedVia != "link" || len(r.Hints) != 1 || r.MailFailed || !r.ReportedAt.IsZero() {
 		t.Errorf("record = %+v", r)
 	}
 }

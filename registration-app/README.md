@@ -6,7 +6,9 @@ registrant types the 6-digit code from their mail on the page that stayed
 open, or presses the button reached from the link in it. Only then does the
 back office get its one mail, BESTÄTIGT/CONFIRMED, with the complete
 registration. Turso also records which registrations are confirmed and how
-many wrong codes each got, so a registration confirms exactly once.
+many wrong codes each got, so a registration confirms exactly once. Every
+Monday the back office gets a summary of the week's attempts: confirmed,
+open and dropped; after it, what is final is deleted.
 
 Design: [spec](../docs/superpowers/specs/2026-09-25-registration-service-design.md),
 the confirm-gated flow since Oct 2026:
@@ -22,7 +24,7 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `POST /confirm` | sends the BESTÄTIGT / CONFIRMED mail, 303 to the confirmed page |
 | `POST /code` | the 6-digit code typed on the page that stayed open; same effect as `POST /confirm`, locked after 5 wrong codes |
 | `POST /correct` | corrects a mistyped address (at most 2 per registration, within 30 minutes) and sends the registrant mail, with a new code, to the corrected address |
-| `GET /healthz` | fly's health check |
+| `GET /healthz` | fly's health check, and the Monday ping that sends the weekly summary (below) |
 
 ## Configuration
 
@@ -40,10 +42,34 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `ENVIRONMENT` | no | `PRODUCTION` or anything else |
 | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | yes | the Turso database (EU, `aws-eu-west-1`) for registrations, confirmed ids and wrong-code counts (`turso db show --url`, `turso db tokens create`). Required in production; without them a test deployment keeps this in memory and forgets it on every restart |
 | `MAILER` | no | `brevo` (default) or `log`: print mails instead of sending |
+| `SUMMARY_NOW` | no | `1`: send a weekly summary at start, whatever the day, to see one on a test deployment. Refused in production |
 
 Outside `ENVIRONMENT=PRODUCTION` the service **refuses to start** unless
 `TEST_RECIPIENTS` is set (or `MAILER=log`), so a test deployment cannot mail
 anyone off the list.
+
+## The weekly summary
+
+There is no scheduler. Every request, `/healthz` included, asks whether the
+summary is due (`internal/summary`): it is, once the most recent Monday
+07:00 Berlin time lies after the last summary the store recorded. The run
+happens in the background, so the request is not slowed down. Its steps:
+claim the week in the `summaries` table (two machines during a deploy send
+one mail), mark registrations confirmed whose mail went out but whose row
+was not updated, send, then delete what is final: drops, confirmed ones,
+and open ones whose link has expired. An open registration whose link
+still works stays and is listed again next week with its final status.
+
+The machine sleeps when idle, so a **cron-job.org job** makes sure there is
+a request: `GET https://register.arc42.org/healthz`, every Monday at 07:00
+Europe/Berlin, with failure notification. It carries no secret and can only
+make the summary late: without it, the next submit or confirm sends the
+overdue summary, marked "Verspätet". The summary goes out even when the
+week was empty, so **a Monday without it means the service is not running**.
+
+The first request after the first deploy sends a summary at once; after
+that, Mondays. A test deployment with the in-memory store sends one per
+process start, since the store forgets the last one.
 
 ## Working on it
 
@@ -72,4 +98,8 @@ Mail templates are in `internal/mail/templates/`; their expected output is in
 | `confirm R-…: registration unreadable, short mail` | store down at confirm: the mail has id, code, name and address only |
 | `confirm R-…: could not mark the row confirmed` | the mail went out; the summary run repairs the row |
 | `correct R-…: store update failed` | the confirmed mail still shows the corrected address, from the token |
+| `summary <week>: sent, n rows reported, …` | the weekly summary went out; how many rows were kept for next week, deleted, and reconciled |
+| `summary <week>: claimed by another machine` | a second machine during a deploy; it sends nothing |
+| `summary: summary <week>: …` | the run failed before the mail was out; nothing changed, the next request a minute later tries again |
+| `summary <week>: sent, but not recorded` | the mail went out but the store did not take it; expect a second summary for the week after 15 minutes |
 | `test mode: not sending …` | a registrant address outside `TEST_RECIPIENTS`, as intended |

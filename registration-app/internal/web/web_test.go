@@ -779,3 +779,23 @@ func TestPagesAskToConfirmTheAddress(t *testing.T) {
 		}
 	}
 }
+
+type kicks struct{ n int }
+
+func (k *kicks) Kick() { k.n++ }
+
+// The Monday ping from cron-job.org is a plain GET /healthz, so every route
+// must ask whether the weekly summary is due, that one first of all.
+func TestEveryRequestAsksWhetherTheSummaryIsDue(t *testing.T) {
+	e := newEnv(t)
+	k := &kicks{}
+	e.rebuildWith(func(d *Deps) { d.Summary = k })
+	if rec := e.get("/healthz"); rec.Code != http.StatusOK || rec.Body.String() != "ok\n" {
+		t.Fatalf("healthz: %d %q", rec.Code, rec.Body)
+	}
+	e.post("/submit", form("de"))
+	e.get("/nowhere")
+	if k.n != 3 {
+		t.Errorf("Kick called %d times for 3 requests", k.n)
+	}
+}
