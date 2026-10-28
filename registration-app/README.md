@@ -78,7 +78,12 @@ make reg-check    # tests, vet, gofmt: what CI gates on
 make reg-run      # local on :8099, mails printed to the terminal, live course feed
 make reg-deploy   # fly deploy from the working tree (asks first)
 make reg-logs     # production logs
+make show-registrations  # what Turso holds now, read-only (needs `turso auth login`)
 ```
+
+`show-registrations` lists pending and confirmed registrations, newest
+first, times in UTC: the week since the last summary, plus the open ones
+that are kept. It is personal data; do not paste the output anywhere.
 
 Mail templates are in `internal/mail/templates/`; their expected output is in
 `internal/mail/testdata/`. After changing a template, run

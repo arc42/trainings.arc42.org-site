@@ -3,7 +3,8 @@
 .PHONY: help dev build stop site check-links check-consumers clean install update shell logs \
         app-test app-check app-build training-app-demo training-app-stop app-preview check-go \
         check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases \
-        reg-test reg-check reg-run reg-demo reg-deploy reg-status reg-logs
+        reg-test reg-check reg-run reg-demo reg-deploy reg-status reg-logs \
+        check-turso show-registrations
 
 # This site's fixed local dev port. Every arc42 site has its own so their dev
 # servers can run side by side; see raw/port-assignment.md in meta.arc42.org.
@@ -13,6 +14,7 @@ SITE_PORT   := 4260
 APP_DIR     := admin-app
 REG_DIR     := registration-app
 REG_APP     := arc42-registration
+REG_DB      := arc42-registration
 # Origins the demo service accepts: plain localhost plus the *.localhost
 # names that local proxies such as localdock put in front of the container.
 # An origin not listed here is dropped silently, which in a demo looks like
@@ -250,3 +252,25 @@ reg-status: check-flyctl ## Show the registration service's machines and health 
 
 reg-logs: check-flyctl ## Tail the registration service's logs (drops, rejects, sends)
 	cd $(REG_DIR) && flyctl logs -a $(REG_APP)
+
+# Read-only: one fixed SELECT, nothing from the command line reaches the SQL.
+# Access is whoever `turso auth login` signed in; the database lives in that
+# Turso account, not in fly. Times are UTC because SQLite on Turso has no
+# Berlin zone. Rows exist only until the weekly summary deletes them, so this
+# shows the week since last Monday plus registrations still pending.
+REG_SHOW_SQL := SELECT strftime('%d.%m. %H:%M', created_at, 'unixepoch') AS received_utc, \
+	status, code, first_name || ' ' || last_name AS name, email, \
+	CASE WHEN coalesce(p_email, '') <> '' THEN p_first || ' ' || p_last || ' <' || p_email || '>' ELSE '' END AS participant, \
+	substr(replace(replace(coalesce(comments, ''), char(13), ' '), char(10), ' '), 1, 60) AS comment \
+	FROM registrations WHERE status IN ('pending', 'confirmed') ORDER BY created_at DESC
+
+check-turso:
+	@command -v turso >/dev/null 2>&1 || { \
+		printf "\n  The Turso CLI is not installed.\n"; \
+		printf "  https://docs.turso.tech/cli/installation  — or: brew install tursodatabase/tap/turso\n\n"; exit 1; }
+	@turso auth whoami >/dev/null 2>&1 || { \
+		printf "\n  turso is installed but not signed in — run: turso auth login\n"; \
+		printf "  You also need access to the '$(REG_DB)' database.\n\n"; exit 1; }
+
+show-registrations: check-turso ## Registrations since the last weekly summary, read-only (personal data: do not paste the output anywhere)
+	@turso db shell $(REG_DB) "$(REG_SHOW_SQL)"
