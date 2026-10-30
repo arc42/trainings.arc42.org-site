@@ -19,7 +19,12 @@
 {{else if eq .CodeNote "locked"}}<p class="err">{{.T.CodeLocked}}</p>
 {{else}}<p class="err">{{.T.CodeUnavailable}}</p>{{end}}
 </div>
-<p class="muted">{{.T.NoMail}}</p>
+{{/* The way out when the mail never arrives: a provider can reject Brevo's
+     shared IP (SpamCop listing, 30 Oct 2026) after Brevo has accepted it, and
+     the service hears only the accept. The number finds the row in Turso; a dropped
+     submission shows one too, so the page still looks the same. Not muted:
+     this is the only help a person in that case gets. */}}
+<p>{{.T.NoMail}} <a href="mailto:info@arc42.de?subject={{.T.Subject}}%20{{.ID}}">info@arc42.de</a>{{.T.NoMailNum}} <strong>{{.ID}}</strong>{{.T.NoMailEnd}}</p>
 <div class="card">
 {{if .Exhausted}}
 <p>{{.T.Exhausted}} <a href="mailto:info@arc42.de">info@arc42.de</a></p>

@@ -27,7 +27,10 @@ var sentText = map[string]map[string]string{
 		"Title":     "Fast geschafft: bitte bestätigen Sie Ihre E-Mail-Adresse",
 		"Sent":      "Wir haben eine E-Mail an",
 		"SentTail":  " geschickt. Ihre Anmeldung ist vollständig, sobald Sie Ihre Adresse bestätigen: mit dem Code aus der E-Mail hier unten, oder mit dem Link darin. Beides gilt 5 Tage.",
-		"NoMail":    "Keine Mail da? Sehen Sie bitte auch im Spam-Ordner nach.",
+		"NoMail":    "Nach 15 Minuten noch keine E-Mail, auch nicht im Spam-Ordner? Dann hat Ihr Mailserver sie vermutlich abgelehnt. Schreiben Sie uns bitte an",
+		"NoMailNum": " und nennen Sie Ihre Anmeldenummer",
+		"NoMailEnd": ", dann schließen wir die Anmeldung von Hand ab.",
+		"Subject":   "Anmeldung",
 		"Wrong":     "Adresse falsch geschrieben? Tragen Sie die richtige ein, wir schicken die E-Mail dann dorthin:",
 		"Button":    "An diese Adresse schicken",
 		"Invalid":   "Das sieht nicht nach einer gültigen E-Mail-Adresse aus.",
@@ -42,7 +45,10 @@ var sentText = map[string]map[string]string{
 		"Title":     "Almost done: please confirm your e-mail address",
 		"Sent":      "We have sent an e-mail to",
 		"SentTail":  ". Your registration is complete once you confirm your address: with the code from the e-mail below, or with the link in it. Both are valid for 5 days.",
-		"NoMail":    "No mail? Please also check your spam folder.",
+		"NoMail":    "No e-mail after 15 minutes, and not in your spam folder either? Then your mail server has probably rejected it. Please write to us at",
+		"NoMailNum": " quoting your registration number",
+		"NoMailEnd": ", and we will complete the registration by hand.",
+		"Subject":   "Registration",
 		"Wrong":     "Address mistyped? Enter the correct one and we will send the e-mail there:",
 		"Button":    "Send to this address",
 		"Invalid":   "That does not look like a valid e-mail address.",
@@ -77,7 +83,7 @@ func (s *Server) sentPageNote(w http.ResponseWriter, c token.Claims, email strin
 	back := s.d.Cfg.SiteURL + map[string]string{"de": "/de/#training-dates", "en": "/#training-dates"}[l]
 	noStore(w)
 	_ = pages.ExecuteTemplate(w, "sent.html", s.frame(l, sentText[l]["Title"], map[string]any{
-		"T": sentText[l], "Email": email, "Token": tok, "Back": back,
+		"T": sentText[l], "Email": email, "Token": tok, "Back": back, "ID": c.ID,
 		"Invalid": invalid, "Exhausted": c.Corrections >= maxCorrections,
 		"CodeNote": codeNote, "CodeOpen": codeNote != "locked" && codeNote != "unavailable",
 	}))
