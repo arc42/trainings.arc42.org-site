@@ -1,0 +1,38 @@
+[trainings.arc42.org] ACHTUNG: Google Sheet nicht beschreibbar (Zugriff verweigert)
+
+Der Anmeldedienst konnte eine bestätigte Anmeldung nicht in das Google Sheet
+eintragen. Google hat die Anfrage abgelehnt. Ein neuer Versuch hilft erst,
+wenn jemand die Ursache behebt.
+
+Zeitpunkt:   03.11.2026, 10:15 Uhr
+Anmeldung:   R-7F3KQ
+Abgelehnt:   beim Schreiben ins Sheet
+Antwort:     403 {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+
+
+WAS DAS BEDEUTET
+
+Anmeldungen funktionieren weiter: Die Personen bestätigen wie gewohnt, und
+für jede Anmeldung kommt die BESTÄTIGT-Mail. Es fehlen nur die Zeilen im
+Sheet. Die Wochenübersicht listet jede fehlende Anmeldung. Der Dienst
+versucht es dort eine Woche lang erneut; was dann noch fehlt, bitte von Hand
+aus der BESTÄTIGT-Mail übertragen.
+
+
+WAHRSCHEINLICHE URSACHE UND ABHILFE
+
+Das Dienstkonto darf nicht (mehr) in das Sheet schreiben: Die Freigabe wurde
+entfernt, oder die Google-Sheets-API ist im Projekt abgeschaltet.
+
+1. Das Sheet öffnen (Link unten), "Teilen", registration-sheet@arc42-registration-write-sheet.iam.gserviceaccount.com
+   als "Bearbeiter" hinzufügen.
+2. Nennt die Antwort oben die API ("has not been used" oder "disabled"):
+   https://console.cloud.google.com/apis/library/sheets.googleapis.com?project=arc42-registration-write-sheet
+   und dort "Aktivieren".
+
+
+Sheet:          https://docs.google.com/spreadsheets/d/1JtivdvHqR-test/edit
+Dokumentation:  https://github.com/arc42/trainings.arc42.org-site/blob/main/registration-app/README.md#the-back-office-sheet
+
+Diese Mail kommt sofort beim ersten Fehler und danach höchstens einmal am
+Tag, solange das Problem besteht.

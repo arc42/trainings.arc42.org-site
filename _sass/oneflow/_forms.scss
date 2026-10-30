@@ -137,6 +137,53 @@
     border-width: 2px;
   }
 
+  /* ---- Participant blocks ---------------------------------------------- */
+  /* One per person, repeated by the "+ weitere Person" button. A hairline
+     box rather than the UA's grooved border, so two blocks read as two
+     people without a heavier rule than the section rules below. */
+  .participant-intro {
+    margin: 0 0 0.75em;
+    color: var(--ink-muted);
+    font-size: $type-size-6;
+  }
+
+  .participant {
+    margin: 0 0 1em;
+    padding: 0.5em 1em 0.25em;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+
+    legend {
+      padding: 0 0.35em;
+      color: var(--ink);
+      font-family: $sans-serif;
+      font-size: $type-size-6;
+      font-weight: 700;
+    }
+  }
+
+  /* A text button: removing a person is secondary to adding one. */
+  .participant__remove {
+    margin: 0 0 0.75em;
+    padding: 0;
+    color: var(--deep);
+    font: inherit;
+    font-size: $type-size-6;
+    text-decoration: underline;
+    background: none;
+    border: 0;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 3px solid var(--deep);
+      outline-offset: 2px;
+    }
+  }
+
+  #tn-add {
+    margin-top: 0;
+  }
+
   /* ---- Section rules ---------------------------------------------------- */
   /* Replaces three inline `color:CadetBlue; background-color:CadetBlue` rules
      in the include. CadetBlue #5f9ea0 is a teal, and teal is faq's reserved

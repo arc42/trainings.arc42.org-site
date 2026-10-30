@@ -45,6 +45,11 @@ type Record struct {
 	ConfirmedAt   time.Time
 	ConfirmedVia  string    // "code" or "link"; empty when reconciled (spec 4.3)
 	ReportedAt    time.Time // zero until a summary listed it
+	// Price is what the date cost on the day of the submit (feed.PriceOn),
+	// 0 when unknown ("Sonstige", feed down). Kept from the submit, so a
+	// sheet row retried a week later shows what the registrant saw.
+	Price   int
+	SheetAt time.Time // zero until its rows are in the back-office sheet
 }
 
 type Store interface {
@@ -74,6 +79,8 @@ type Store interface {
 	Corrected(ctx context.Context, id, email string) error
 	// MarkConfirmed moves a pending registration to confirmed.
 	MarkConfirmed(ctx context.Context, id string, at time.Time, via string) error
+	// SheetDone records that the registration's rows are in the sheet.
+	SheetDone(ctx context.Context, id string, at time.Time) error
 
 	// The weekly summary (package summary, spec 7).
 
@@ -190,6 +197,7 @@ func (m *Memory) Save(_ context.Context, r Record) error {
 		return errExists
 	}
 	r.Reg.Emails = append([]string(nil), r.Reg.Emails...)
+	r.Reg.Participants = append([]intake.Participant(nil), r.Reg.Participants...)
 	r.Hints = append([]string(nil), r.Hints...)
 	m.regs[r.Reg.ID] = r
 	return nil
@@ -221,6 +229,10 @@ func (m *Memory) MarkConfirmed(_ context.Context, id string, at time.Time, via s
 			r.Status, r.ConfirmedAt, r.ConfirmedVia = StatusConfirmed, at, via
 		}
 	})
+}
+
+func (m *Memory) SheetDone(_ context.Context, id string, at time.Time) error {
+	return m.change(id, func(r *Record) { r.SheetAt = at })
 }
 
 // change applies f to a stored registration. A missing id is no error, as

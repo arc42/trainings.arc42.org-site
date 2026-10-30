@@ -22,6 +22,13 @@ Die vollständigen Angaben stehen jeweils in der BESTÄTIGT-Mail.
 
 {{template "summaryRow" .}}
   Bestätigt:  {{.Confirmed}}{{if .Again}} (letzte Woche noch offen){{end}}
+{{- if eq .NoSheet "retry"}}
+  Sheet:      noch nicht eingetragen (Google nicht erreichbar);
+              nächste Woche ein neuer Versuch
+{{- else if eq .NoSheet "manual"}}
+  Sheet:      nicht eingetragen, kein weiterer Versuch. Bitte von Hand
+              aus der BESTÄTIGT-Mail übertragen.
+{{- end}}
 {{- end}}
 {{- end}}
 {{- with .Pending}}

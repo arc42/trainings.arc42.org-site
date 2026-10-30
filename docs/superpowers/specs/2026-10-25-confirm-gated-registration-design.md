@@ -211,11 +211,37 @@ row appended again.
   appends the row with a 5-second timeout. On failure it logs and leaves
   `sheet_at` NULL; the summary run retries. The confirmed page never waits
   for Google and never fails because of it.
-- Column order is a single Go slice, so the layout discussion later only
-  touches one list. Proposed start: id, confirmed at, course code, course
-  title, dates, last name, first name, e-mail, participant last, first,
-  e-mail, billing address (newlines joined with `; `), comments, heard via,
-  language, via.
+- Column order is a single Go slice (`columns` in `internal/sheet`).
+  **Decided 30 Oct 2026** (Gernot, from the sheet the back office set up):
+  one row **per participant**, columns A to L: Anrede, Name, Vorname,
+  Firma, Infos nach Einladung (empty), email Teilnehmer, email Sekretariat,
+  Datum der Anmeldung, Preis, in echtes Termin-Sheet übernommen von
+  (empty), Kurs (booking code), Anmeldung-ID. E and J are the back office's;
+  K and L sit outside the part that is copied into the date's sheet. The
+  registrant is the "Sekretariat" exactly when a participant is someone
+  else. Preis is the early-bird amount if the submit day is on or before
+  `early_bird.until`, else the list price, stored at submit; alumni and
+  special prices stay manual. The mapping rules are in
+  `registration-app/README.md`, "The back-office sheet".
+- For one row per participant the form collects participants as
+  structured blocks (Anrede, Nachname, Vorname, E-Mail), one shown, up to
+  10 added by "+ weitere Person"; every block posts the same four field
+  names, which intake pairs by position. Firma is one field per
+  registration. Anrede values are "Frau"/"Herr" in both languages. Stored
+  as JSON in a new `participants` column (plus `company`, `price`), added
+  to the live table by `ALTER TABLE` on the first request after deploy;
+  `p_last`, `p_first`, `p_email` keep the first participant so a revert
+  still reads it.
+- Retention (4.2) for a confirmed row whose sheet append failed: kept one
+  more week and retried; once reported as confirmed it is deleted, and the
+  summary tells the back office to type it in from the mail.
+- **A refusal is mailed at once** (Gernot, 30 Oct 2026: "if the key is no
+  longer valid, we need to be informed immediately"). Any 4xx from the
+  token endpoint or the Sheets API except 429, after one retry with a
+  fresh token on a 401, sends `ACHTUNG: Google Sheet nicht beschreibbar`
+  to `BACKOFFICE_TO`, with the remedy for that kind of refusal. At the
+  first refusal, then at most once a day (in memory). Transient failures
+  stay with the summary's retry.
 - Unset `SHEET_ID` disables the unit entirely (test deployments, local
   runs).
 
@@ -429,6 +455,6 @@ the `registrations` table can stay, unused.
 ## 12. Open points
 
 - Turso region check (section 9).
-- Column layout of the sheet (section 5), to be discussed with Peter.
+- ~~Column layout of the sheet (section 5)~~ decided 30 Oct 2026.
 - Whether the back office wants the weekly mail in German only or in both
   languages. Proposed: German.

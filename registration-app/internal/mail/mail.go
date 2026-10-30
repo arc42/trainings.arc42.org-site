@@ -26,7 +26,7 @@ import (
 //go:embed templates/*
 var files embed.FS
 
-var funcs = template.FuncMap{"indent": indent}
+var funcs = template.FuncMap{"indent": indent, "person": person, "inc": func(i int) int { return i + 1 }}
 
 var (
 	textT = template.Must(template.New("").Funcs(funcs).ParseFS(files, "templates/*.txt"))
@@ -233,6 +233,22 @@ func Confirmed(c token.Claims, k Confirmation) (Rendered, error) {
 func backofficeSubject(l, id, code, status string) string {
 	word := map[string]string{"de": "ANMELDUNG", "en": "REGISTRATION"}[l]
 	return "[trainings.arc42.org] " + word + " " + id + " " + code + " (" + status + ")"
+}
+
+// person is one participant on one line: "Frau Eva Meier <eva@example.org>".
+// The salutation is the stored value, German in both languages.
+func person(p intake.Participant) string {
+	var parts []string
+	for _, s := range []string{p.Salutation, p.First, p.Last} {
+		if s != "" {
+			parts = append(parts, s)
+		}
+	}
+	s := strings.Join(parts, " ")
+	if p.Email != "" {
+		s = strings.TrimSpace(s + " <" + p.Email + ">")
+	}
+	return s
 }
 
 func indent(s string) string {

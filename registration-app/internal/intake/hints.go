@@ -13,7 +13,7 @@ const (
 	HintGmailDots     = "gmail-dots"     // a.b.c.d@gmail.com, the probing pattern seen in the spam log
 	HintOddCase       = "odd-case"       // xKqTvBnM-style random strings
 	HintSameName      = "same-name"      // first name equals last name
-	HintSameNames     = "same-names"     // all four name fields identical
+	HintSameNames     = "same-names"     // the registrant's two names equal the first participant's two
 	HintShortBilling  = "short-billing"  // billing address too short or a single word to send an invoice to
 	HintDoubleTLD     = "double-tld"     // e-mail domain like x.com.de
 	HintNoScript      = "no-script"      // js_ok came back empty: the page's script did not run
@@ -39,8 +39,7 @@ func signals(r Registration, jsOK bool) []string {
 			break
 		}
 	}
-	names := []string{r.LastName, r.FirstName, r.ParticipantLast, r.ParticipantFirst}
-	for _, n := range names {
+	for _, n := range r.names() {
 		if oddCase(n) {
 			hs = append(hs, HintOddCase)
 			break
@@ -49,8 +48,7 @@ func signals(r Registration, jsOK bool) []string {
 	if r.FirstName != "" && strings.EqualFold(r.FirstName, r.LastName) {
 		hs = append(hs, HintSameName)
 	}
-	if r.ParticipantLast != "" && strings.EqualFold(r.LastName, r.FirstName) &&
-		strings.EqualFold(r.LastName, r.ParticipantLast) && strings.EqualFold(r.LastName, r.ParticipantFirst) {
+	if len(r.Participants) > 0 && sameNames(r.LastName, r.FirstName, r.Participants[0].Last, r.Participants[0].First) {
 		hs = append(hs, HintSameNames)
 	}
 	if len([]rune(r.Billing)) < 10 || len(strings.Fields(r.Billing)) < 2 {
@@ -66,6 +64,15 @@ func signals(r Registration, jsOK bool) []string {
 		hs = append(hs, HintNoScript)
 	}
 	return hs
+}
+
+func sameNames(first string, rest ...string) bool {
+	for _, n := range rest {
+		if !strings.EqualFold(first, n) {
+			return false
+		}
+	}
+	return first != ""
 }
 
 // hintsFor returns the hints that are information, not spam signals.

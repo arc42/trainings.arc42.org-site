@@ -9,9 +9,11 @@ First name:               {{.FirstName}}
 E-mail:                   {{.Email}}
 {{- with $.CorrectedFrom}}
 E-mail before:            {{.}} (corrected by the registrant){{end}}
-Participant last name:    {{.ParticipantLast}}
-Participant first name:   {{.ParticipantFirst}}
-Participant e-mail:       {{.ParticipantEmail}}
+Company:                  {{.Company}}
+Participants:
+{{- range $i, $p := .Participants}}
+  {{inc $i}}. {{person $p}}{{else}}
+  - (none given: the registrant attends){{end}}
 Billing address:
 {{indent .Billing}}
 Comments:

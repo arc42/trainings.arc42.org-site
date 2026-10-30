@@ -67,6 +67,8 @@ func TestConfirmedMails(t *testing.T) {
 	reg := intake.Registration{
 		ID: "R-7F3KQ", LastName: "Müller", FirstName: "Anna", Email: "anna@example.org",
 		Emails: []string{"anna@example.org"}, Code: "26-12 MSA", Billing: "Firma X\nStraße 1\n12345 Ort", Comments: "",
+		Company: "Firma X", Participants: []intake.Participant{
+			{Salutation: "Frau", Last: "Meier", First: "Eva", Email: "eva@example.org"}, {Last: "Lang", First: "Tim"}},
 		HeardVia: "Buch", HeardViaDetail: "arc42 by Example",
 		Via: "arc42.de", FormSource: "https://trainings.arc42.org/anmeldung/",
 	}
@@ -264,7 +266,8 @@ func TestSummaryMail(t *testing.T) {
 			Email: "ute@example.de"}, Status: store.StatusPending, MailFailed: true, CreatedAt: at(6 * 24 * time.Hour)},
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].CreatedAt.Before(rows[j].CreatedAt) })
-	r, err := Summary(Week{Number: 44, From: time.Date(2026, 10, 19, 5, 0, 30, 0, time.UTC), To: mon, Due: mon, Rows: rows})
+	r, err := Summary(Week{Number: 44, From: time.Date(2026, 10, 19, 5, 0, 30, 0, time.UTC), To: mon, Due: mon, Rows: rows,
+		NoSheet: map[string]string{"R-CONF1": "retry", "R-OLD01": "manual"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,4 +281,27 @@ func TestSummaryMail(t *testing.T) {
 		t.Fatal(err)
 	}
 	golden(t, "summary_empty_de.txt", empty.Subject+"\n\n"+empty.Text)
+}
+
+// Each kind of refusal gets its own remedy; the key's is the long one.
+func TestSheetAlertMails(t *testing.T) {
+	at := time.Date(2026, 11, 3, 9, 15, 0, 0, time.UTC)
+	for name, p := range map[string]SheetProblem{
+		"sheet_alert_token_de.txt": {Stage: "token", Status: 400, Detail: `{"error":"invalid_grant","error_description":"Invalid JWT Signature."}`},
+		"sheet_alert_key_de.txt":   {Stage: "key", Detail: "sheet: GOOGLE_SA_KEY is not JSON: invalid character 'x'"},
+		"sheet_alert_403_de.txt":   {Stage: "append", Status: 403, Detail: `{"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}`},
+	} {
+		p.At, p.ID, p.SheetID, p.Tab = at, "R-7F3KQ", "1JtivdvHqR-test", "Tabelle1"
+		if p.Stage != "key" { // unreadable key: no account known
+			p.Account = "registration-sheet@arc42-registration-write-sheet.iam.gserviceaccount.com"
+		}
+		r, err := SheetAlert(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(r.Text, "—") {
+			t.Errorf("%s: em-dash in a user-visible mail", name)
+		}
+		golden(t, name, r.Subject+"\n\n"+r.Text)
+	}
 }

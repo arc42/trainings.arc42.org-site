@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"arc42-registration/internal/config"
@@ -67,10 +68,23 @@ type Deps struct {
 	// Summary is asked on every request whether the weekly summary is due
 	// (package summary). nil: no summaries, as in most handler tests.
 	Summary interface{ Kick() }
-	Now     func() time.Time
+	// Sheet takes a confirmed registration's rows (package sheet). nil: no
+	// sheet, as in test deployments and most handler tests.
+	Sheet Sheet
+	Now   func() time.Time
 }
 
-type Server struct{ d Deps }
+type Sheet interface {
+	Append(ctx context.Context, rec store.Record) error
+}
+
+type Server struct {
+	d  Deps
+	bg sync.WaitGroup // sheet appends still running
+}
+
+// Wait blocks until background work has finished. For tests and shutdown.
+func (s *Server) Wait() { s.bg.Wait() }
 
 func New(d Deps) *Server {
 	if d.NewID == nil {

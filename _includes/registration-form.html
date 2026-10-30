@@ -166,26 +166,74 @@
 
 <hr class="form-rule">
 
-<strong>{% if include.lang == "de" %}Teilnehmende Person(en){% else %}Participants{% endif %}</strong>
-<br>
+{%- comment -%}
+  Participants: one block, and "+ weitere Person" adds more, up to 10
+  (registration-app/internal/intake, MaxParticipants). Every block carries
+  the same four field names; the browser posts them in order, empty ones
+  included, so the service pairs the n-th values into one person, and the
+  back-office sheet gets one row per person. Without JavaScript the one block
+  still works, as the form did before. Left empty, the registrant attends.
 
+  The Anrede option VALUE is "Frau"/"Herr" in both languages, like the
+  booking code it is what reaches the back office; the English form only
+  labels it. Firma is asked once per registration and goes into every row.
+{%- endcomment -%}
+{%- if include.lang == "de" -%}
+  {%- assign rf_p_head = "Teilnehmende Person(en)" -%}
+  {%- assign rf_p_intro = "Nehmen Sie selbst teil, können Sie diesen Teil leer lassen." -%}
+  {%- assign rf_p_person = "Person" -%}
+  {%- assign rf_p_sal = "Anrede (optional)" -%}
+  {%- assign rf_p_ms = "Frau" -%}
+  {%- assign rf_p_mr = "Herr" -%}
+  {%- assign rf_p_last = "Nachname teilnehmende Person" -%}
+  {%- assign rf_p_first = "Vorname teilnehmende Person" -%}
+  {%- assign rf_p_email = "E-Mail der teilnehmenden Person" -%}
+  {%- assign rf_p_add = "+ weitere Person" -%}
+  {%- assign rf_p_remove = "Person entfernen" -%}
+  {%- assign rf_company_label = "Firma (optional)" -%}
+{%- else -%}
+  {%- assign rf_p_head = "Participants" -%}
+  {%- assign rf_p_intro = "If you attend yourself, you can leave this part empty." -%}
+  {%- assign rf_p_person = "Person" -%}
+  {%- assign rf_p_sal = "Salutation (optional)" -%}
+  {%- assign rf_p_ms = "Ms" -%}
+  {%- assign rf_p_mr = "Mr" -%}
+  {%- assign rf_p_last = "Last name of participant" -%}
+  {%- assign rf_p_first = "First name of participant" -%}
+  {%- assign rf_p_email = "E-mail of participant" -%}
+  {%- assign rf_p_add = "+ another person" -%}
+  {%- assign rf_p_remove = "Remove person" -%}
+  {%- assign rf_company_label = "Company (optional)" -%}
+{%- endif -%}
+<strong>{{ rf_p_head }}</strong>
+<p class="participant-intro">{{ rf_p_intro }}</p>
+
+<div id="tn-list">
+<fieldset class="participant" data-tn>
+  <legend>{{ rf_p_person }} 1</legend>
+  <select id="anredeTN" name="AnredeTN" aria-label="{{ rf_p_sal }}">
+    <option value="">{{ rf_p_sal }}</option>
+    <option value="Frau">{{ rf_p_ms }}</option>
+    <option value="Herr">{{ rf_p_mr }}</option>
+  </select>
+  <input type="text" id="lastnameTN" name="NachnameTN" maxlength="200" aria-label="{{ rf_p_last }}" placeholder="{{ rf_p_last }}" />
+  <input type="text" id="firstnameTN" name="VornameTN" maxlength="200" aria-label="{{ rf_p_first }}" placeholder="{{ rf_p_first }}" />
+  <label for="emailTN">{{ rf_p_email }}</label>
+  <input type="email" id="emailTN" name="EmailTN" maxlength="320" placeholder="{{ rf_p_email }}" />
+</fieldset>
+</div>
+<button type="button" id="tn-add" class="btn btn--inverse" data-person="{{ rf_p_person }}" data-remove="{{ rf_p_remove }}" hidden>{{ rf_p_add }}</button>
+
+<hr class="form-rule">
+
+<label for="firma">{{ rf_company_label }}</label>
 {% if include.lang == "de" %}
-Falls Sie mehr als eine Person anmelden, schreiben Sie die weiteren Namen als Bemerkung.
-<input type="text" id="lastnameTN" name="NachnameTN" maxlength="200" aria-label="Nachname teilnehmende Person" placeholder="Nachname teilnehmende Person"   />
-<input type="text" id="firstnameTN" name="VornameTN" maxlength="200" aria-label="Vorname teilnehmende Person" placeholder="Vorname teilnehmende Person"  />
-
-<label for="emailTN">E-Mail (teilnehmende Person(en), falls abweichend zu obiger E-Mail)</label>
-<input type="email" id="emailTN" name="EmailTN" maxlength="320" placeholder="E-Mail TN" />
+<input type="text" id="firma" name="Firma" maxlength="200" placeholder="Firma" autocomplete="organization" />
 
 <label for="ra">Rechnungsadresse</label>
 <textarea id="ra" name="Rechnungsadresse" maxlength="1000" placeholder="* Diese Adresse benötigen wir zur Abrechnung" required ></textarea>
 {% else %}
-In case you register more than one person, please state their names in the comments.
-<input type="text" id="lastnameTN" name="NachnameTN" maxlength="200" aria-label="Last name of participant" placeholder="last name of participant"   />
-<input type="text" id="firstnameTN" name="VornameTN" maxlength="200" aria-label="First name of participant" placeholder="first name of participant"  />
-
-<label for="emailTN">E-Mail (participant)</label>
-<input type="email" id="emailTN" name="EmailTN" maxlength="320" placeholder="E-Mail participant" />
+<input type="text" id="firma" name="Company" maxlength="200" placeholder="Company" autocomplete="organization" />
 
 <label for="ra">Billing address</label>
 <textarea id="ra" name="Billing address" maxlength="1000" placeholder="* required to produce and send the invoice" required ></textarea>
@@ -194,10 +242,10 @@ In case you register more than one person, please state their names in the comme
 <hr class="form-rule">
 
 {% if include.lang == "de" %}
-<label for="comments">Bemerkungen (z.B. weitere TN, Bestell-/Auftragsnummer)</label>
+<label for="comments">Bemerkungen (z.B. Bestell-/Auftragsnummer)</label>
 <textarea id="comments" name="Bemerkungen" maxlength="4000" placeholder="Bemerkungen"></textarea>
 {% else %}
-<label for="comments">Comments (e.g. additional participants, order-numbers or similar)</label>
+<label for="comments">Comments (e.g. order numbers or similar)</label>
 <textarea id="comments" name="Comments" maxlength="4000" placeholder="Comments"></textarea>
 {% endif %}
 
@@ -295,6 +343,54 @@ In case you register more than one person, please state their names in the comme
 <script type="text/javascript">document.getElementById("registration-js-ok").value = "1";</script>
 
 </form>
+
+<script type="text/javascript">
+/* "+ weitere Person": clones the first participant block, empty, with ids
+   of its own so each label still points at its field. Hidden without
+   JavaScript, where the one block in the HTML is the whole form. At most
+   10 blocks (intake.MaxParticipants in the registration service, which
+   refuses more). */
+(function () {
+  var list = document.getElementById("tn-list");
+  var add = document.getElementById("tn-add");
+  if (!list || !add) return;
+  var MAX = 10;
+  var first = list.querySelector("[data-tn]");
+  var made = 1;
+  function renumber() {
+    var blocks = list.querySelectorAll("[data-tn]");
+    for (var i = 0; i < blocks.length; i++) {
+      blocks[i].querySelector("legend").textContent = add.getAttribute("data-person") + " " + (i + 1);
+    }
+    add.hidden = blocks.length >= MAX;
+  }
+  add.addEventListener("click", function () {
+    made++;
+    var block = first.cloneNode(true);
+    var fields = block.querySelectorAll("input, select");
+    for (var i = 0; i < fields.length; i++) {
+      fields[i].value = "";
+      if (fields[i].id) fields[i].id += "-" + made;
+    }
+    var label = block.querySelector("label");
+    if (label) label.htmlFor += "-" + made;
+    var remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "participant__remove";
+    remove.textContent = add.getAttribute("data-remove");
+    remove.addEventListener("click", function () {
+      list.removeChild(block);
+      renumber();
+      add.focus();
+    });
+    block.appendChild(remove);
+    list.appendChild(block);
+    renumber();
+    fields[0].focus();
+  });
+  renumber();
+})();
+</script>
 
 <script type="text/javascript">
 /* Busy button. Sending takes a few seconds (the registration service may be

@@ -1,0 +1,42 @@
+[trainings.arc42.org] ACHTUNG: Google Sheet nicht beschreibbar (Schlüssel ungültig)
+
+Der Anmeldedienst konnte eine bestätigte Anmeldung nicht in das Google Sheet
+eintragen. Google hat die Anfrage abgelehnt. Ein neuer Versuch hilft erst,
+wenn jemand die Ursache behebt.
+
+Zeitpunkt:   03.11.2026, 10:15 Uhr
+Anmeldung:   R-7F3KQ
+Abgelehnt:   beim Anmelden des Dienstkontos bei Google (Schlüssel)
+Antwort:     400 {"error":"invalid_grant","error_description":"Invalid JWT Signature."}
+
+
+WAS DAS BEDEUTET
+
+Anmeldungen funktionieren weiter: Die Personen bestätigen wie gewohnt, und
+für jede Anmeldung kommt die BESTÄTIGT-Mail. Es fehlen nur die Zeilen im
+Sheet. Die Wochenübersicht listet jede fehlende Anmeldung. Der Dienst
+versucht es dort eine Woche lang erneut; was dann noch fehlt, bitte von Hand
+aus der BESTÄTIGT-Mail übertragen.
+
+
+WAHRSCHEINLICHE URSACHE UND ABHILFE
+
+Der Schlüssel des Dienstkontos gilt nicht mehr: gelöscht, widerrufen,
+abgelaufen, oder das Dienstkonto wurde deaktiviert. So gibt es einen neuen:
+
+1. https://console.cloud.google.com/iam-admin/serviceaccounts?project=arc42-registration-write-sheet
+   Konto registration-sheet@arc42-registration-write-sheet.iam.gserviceaccount.com öffnen. Ist es deaktiviert, zuerst "Aktivieren".
+2. Reiter "Schlüssel": "Schlüssel hinzufügen", "Neuen Schlüssel erstellen",
+   Typ JSON. Die Datei wird heruntergeladen.
+3. Im Terminal, im Verzeichnis der Datei:
+     fly secrets set -a arc42-registration GOOGLE_SA_KEY="$(cat <datei>.json)"
+   fly startet den Dienst danach selbst neu. In seinem Log steht dann
+   "sheet: tab ... as registration-sheet@arc42-registration-write-sheet.iam.gserviceaccount.com".
+4. Die JSON-Datei löschen. Alte Schlüssel in der Konsole entfernen.
+
+
+Sheet:          https://docs.google.com/spreadsheets/d/1JtivdvHqR-test/edit
+Dokumentation:  https://github.com/arc42/trainings.arc42.org-site/blob/main/registration-app/README.md#the-back-office-sheet
+
+Diese Mail kommt sofort beim ersten Fehler und danach höchstens einmal am
+Tag, solange das Problem besteht.

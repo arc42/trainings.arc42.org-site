@@ -76,9 +76,10 @@ func registrations(t *testing.T, s Store, id string) {
 	in := Record{
 		Reg: intake.Registration{ID: id, Lang: "de", LastName: "Müller", FirstName: "Anna",
 			Email: "Anna@Example.org, boss@example.org", Emails: []string{"anna@example.org", "boss@example.org"},
-			Code: "26-12 MSA", ParticipantLast: "Meier", Billing: "Firma X\nStraße 1", Comments: "PO 4711",
+			Code: "26-12 MSA", Participants: []intake.Participant{{Salutation: "Frau", Last: "Meier", First: "Eva", Email: "eva@example.org"}, {Last: "Kurz"}},
+			Company: "Firma X", Billing: "Firma X\nStraße 1", Comments: "PO 4711",
 			HeardVia: "Buch", Via: "arc42.de", FormSource: "https://trainings.arc42.org/anmeldung/"},
-		Hints: []string{"several-emails", "no-script"}, Status: StatusPending, CreatedAt: t0,
+		Hints: []string{"several-emails", "no-script"}, Status: StatusPending, CreatedAt: t0, Price: 2690,
 	}
 	if err := s.Save(ctx, in); err != nil {
 		t.Fatal(err)
@@ -90,8 +91,8 @@ func registrations(t *testing.T, s Store, id string) {
 	if err != nil || !ok {
 		t.Fatalf("Registration: ok=%v err=%v", ok, err)
 	}
-	if !got.CreatedAt.Equal(t0) || !got.ConfirmedAt.IsZero() || got.MailFailed {
-		t.Errorf("times/flags = %v %v %v", got.CreatedAt, got.ConfirmedAt, got.MailFailed)
+	if !got.CreatedAt.Equal(t0) || !got.ConfirmedAt.IsZero() || got.MailFailed || !got.SheetAt.IsZero() {
+		t.Errorf("times/flags = %v %v %v %v", got.CreatedAt, got.ConfirmedAt, got.MailFailed, got.SheetAt)
 	}
 	got.CreatedAt = in.CreatedAt // time.Time location differs between stores
 	if fmt.Sprint(got) != fmt.Sprint(in) {
@@ -119,6 +120,12 @@ func registrations(t *testing.T, s Store, id string) {
 	}
 	if got.Status != StatusConfirmed || got.ConfirmedVia != "code" || !got.ConfirmedAt.Equal(t0.Add(time.Hour)) {
 		t.Errorf("confirmed twice: status %q via %q at %v; the first one counts", got.Status, got.ConfirmedVia, got.ConfirmedAt)
+	}
+	if err := s.SheetDone(ctx, id, t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if got, _, _ = s.Registration(ctx, id); !got.SheetAt.Equal(t0.Add(time.Hour)) {
+		t.Errorf("SheetAt = %v", got.SheetAt)
 	}
 	// Updates to an id that was never stored are no error: confirm calls
 	// them for registrations from before the redesign.
@@ -298,32 +305,114 @@ func TestTursoSpeaksThePipelineProtocol(t *testing.T) {
 	}
 }
 
-// A row comes back as typed values; NULL has no value at all.
+// fakeTurso answers the pipeline protocol: the column check with every
+// column there, a registrations SELECT with row, anything else with nothing.
+func fakeTurso(t *testing.T, row string) *Turso {
+	var cols []string
+	for _, c := range strings.Split(regColumns, ",") {
+		cols = append(cols, `[{"type":"text","value":"`+strings.TrimSpace(c)+`"}]`)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Requests []struct {
+				Type string
+				Stmt struct{ SQL string }
+			}
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		var results []string
+		for _, req := range body.Requests {
+			rows := ""
+			switch {
+			case req.Type != "execute":
+				results = append(results, `{"type":"ok","response":{"type":"close"}}`)
+				continue
+			case strings.Contains(req.Stmt.SQL, "pragma_table_info"):
+				rows = strings.Join(cols, ",")
+			case strings.HasPrefix(req.Stmt.SQL, "SELECT") && strings.Contains(req.Stmt.SQL, "FROM registrations"):
+				rows = row
+			}
+			results = append(results, `{"type":"ok","response":{"type":"execute","result":{"rows":[`+rows+`],"affected_row_count":0}}}`)
+		}
+		_, _ = w.Write([]byte(`{"results":[` + strings.Join(results, ",") + `]}`))
+	}))
+	t.Cleanup(srv.Close)
+	s, _ := NewTurso("libsql://x", "tok", srv.Client())
+	s.base = srv.URL
+	return s
+}
+
+// A row comes back as typed values; NULL has no value at all. This one was
+// stored before the participants, company and price columns existed: they
+// are NULL, and the one participant is in p_last, p_first, p_email.
 func TestTursoReadsARegistrationRow(t *testing.T) {
 	row := `[{"type":"text","value":"R-ABC12"},{"type":"integer","value":"1790000000"},{"type":"text","value":"confirmed"},` +
 		`{"type":"integer","value":"1790003600"},{"type":"text","value":"link"},{"type":"text","value":""},{"type":"integer","value":"0"},` +
 		`{"type":"text","value":"en"},{"type":"text","value":"26-12 MSA"},{"type":"text","value":"Smith"},{"type":"text","value":"Jo"},` +
 		`{"type":"text","value":"jo@example.org"},{"type":"text","value":"jo@example.org"},{"type":"null"},` +
-		`{"type":"text","value":""},{"type":"text","value":""},{"type":"text","value":""},{"type":"text","value":"ACME Ltd\nLondon"},` +
+		`{"type":"text","value":"Doe"},{"type":"text","value":"Ann"},{"type":"text","value":""},{"type":"text","value":"ACME Ltd\nLondon"},` +
 		`{"type":"text","value":""},{"type":"null"},{"type":"null"},{"type":"text","value":"trainings.arc42.org"},` +
-		`{"type":"text","value":""},{"type":"text","value":"no-script"},{"type":"null"}]`
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"results":[` +
-			`{"type":"ok","response":{"type":"execute","result":{"rows":[],"affected_row_count":0}}},` +
-			`{"type":"ok","response":{"type":"execute","result":{"rows":[],"affected_row_count":0}}},` +
-			`{"type":"ok","response":{"type":"execute","result":{"rows":[],"affected_row_count":0}}},` +
-			`{"type":"ok","response":{"type":"execute","result":{"rows":[` + row + `],"affected_row_count":0}}},` +
-			`{"type":"ok","response":{"type":"close"}}]}`))
-	}))
-	defer srv.Close()
-	s, _ := NewTurso("libsql://x", "tok", srv.Client())
-	s.base = srv.URL
-	r, ok, err := s.Registration(context.Background(), "R-ABC12")
+		`{"type":"text","value":""},{"type":"text","value":"no-script"},{"type":"null"},` +
+		`{"type":"null"},{"type":"null"},{"type":"null"},{"type":"null"}]`
+	r, ok, err := fakeTurso(t, row).Registration(context.Background(), "R-ABC12")
 	if err != nil || !ok {
 		t.Fatalf("ok=%v err=%v", ok, err)
 	}
 	if r.Reg.LastName != "Smith" || r.Reg.Billing != "ACME Ltd\nLondon" || r.CorrectedFrom != "" || r.Reg.HeardVia != "" ||
 		r.ConfirmedAt.Unix() != 1790003600 || r.ConfirmedVia != "link" || len(r.Hints) != 1 || r.MailFailed || !r.ReportedAt.IsZero() {
 		t.Errorf("record = %+v", r)
+	}
+	if fmt.Sprint(r.Reg.Participants) != fmt.Sprint([]intake.Participant{{Last: "Doe", First: "Ann"}}) ||
+		r.Reg.Company != "" || r.Price != 0 || !r.SheetAt.IsZero() {
+		t.Errorf("old row: participants %+v company %q price %d sheet %v", r.Reg.Participants, r.Reg.Company, r.Price, r.SheetAt)
+	}
+}
+
+// The live table predates participants, company and price. ensure adds
+// exactly the missing columns, once per process.
+func TestTursoAddsMissingColumns(t *testing.T) {
+	var alters []string
+	pipelines := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pipelines++
+		var body struct {
+			Requests []struct {
+				Type string
+				Stmt struct{ SQL string }
+			}
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		var results []string
+		for _, req := range body.Requests {
+			if req.Type != "execute" {
+				results = append(results, `{"type":"ok","response":{"type":"close"}}`)
+				continue
+			}
+			rows := ""
+			if strings.Contains(req.Stmt.SQL, "pragma_table_info") {
+				rows = `[{"type":"text","value":"id"}],[{"type":"text","value":"company"}]`
+			}
+			if strings.HasPrefix(req.Stmt.SQL, "ALTER") {
+				alters = append(alters, req.Stmt.SQL)
+			}
+			results = append(results, `{"type":"ok","response":{"type":"execute","result":{"rows":[`+rows+`],"affected_row_count":1}}}`)
+		}
+		_, _ = w.Write([]byte(`{"results":[` + strings.Join(results, ",") + `]}`))
+	}))
+	defer srv.Close()
+	s, _ := NewTurso("libsql://x", "tok", srv.Client())
+	s.base = srv.URL
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		if _, err := s.Confirm(ctx, "R-ABC12", t0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := []string{"ALTER TABLE registrations ADD COLUMN participants TEXT", "ALTER TABLE registrations ADD COLUMN price INTEGER"}
+	if fmt.Sprint(alters) != fmt.Sprint(want) {
+		t.Errorf("alters = %q, want %q", alters, want)
+	}
+	if pipelines != 4 { // schema+check, alters, confirm, confirm
+		t.Errorf("%d pipelines, want 4", pipelines)
 	}
 }

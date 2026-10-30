@@ -46,6 +46,11 @@ type Runner struct {
 	To     []string // BACKOFFICE_TO
 	Log    *log.Logger
 	Now    func() time.Time
+	// Sheet is the back-office sheet; the run appends what the confirm
+	// step could not. nil: no sheet, and confirmed rows go after one report.
+	Sheet interface {
+		Append(ctx context.Context, rec store.Record) error
+	}
 
 	mu      sync.Mutex
 	running bool
@@ -146,6 +151,8 @@ func (r *Runner) send(ctx context.Context, key string, w mail.Week) error {
 	if w.Rows, err = r.Store.All(ctx); err != nil {
 		return release(err)
 	}
+	synced := r.toSheet(ctx, key, w.Rows)
+	w.NoSheet = r.owed(w.Rows, w.To)
 	m, err := mail.Summary(w)
 	if err == nil {
 		err = r.Sender.Send(ctx, send.Message{To: r.To, Subject: m.Subject, Text: m.Text, CustomID: "summary-" + key})
@@ -159,7 +166,7 @@ func (r *Runner) send(ctx context.Context, key string, w mail.Week) error {
 	if err := r.Store.SummarySent(ctx, key, r.Now(), w.From, w.To, len(w.Rows)); err != nil {
 		r.Log.Printf("summary %s: sent, but not recorded: %v", key, err)
 	}
-	reported, gone := retain(w.Rows, w.To)
+	reported, gone := r.retain(w.Rows, w.To)
 	if err := r.Store.Reported(ctx, reported, w.To); err != nil {
 		r.Log.Printf("summary %s: marking reported: %v", key, err)
 	}
@@ -172,22 +179,97 @@ func (r *Runner) send(ctx context.Context, key string, w mail.Week) error {
 	if err := r.Store.Prune(ctx, w.To.Add(-token.Valid-24*time.Hour)); err != nil {
 		r.Log.Printf("summary %s: prune: %v", key, err)
 	}
-	r.Log.Printf("summary %s: sent, %d rows reported, %d kept, %d deleted, %d reconciled",
-		key, len(w.Rows), len(reported), len(gone), reconciled)
+	r.Log.Printf("summary %s: sent, %d rows reported, %d kept, %d deleted, %d reconciled, %d appended to the sheet",
+		key, len(w.Rows), len(reported), len(gone), reconciled, synced)
 	return nil
+}
+
+// sheetTimeout bounds one append; runTimeout bounds the whole run.
+const sheetTimeout = 10 * time.Second
+
+// toSheet appends the confirmed registrations whose rows are not in the
+// sheet yet: Google was down at confirm time, or the store was, and
+// reconciliation has just marked the row. It stops at the first failure,
+// since Google being down makes every further try another timeout; what is
+// left is retried next week. rows is updated in place.
+func (r *Runner) toSheet(ctx context.Context, key string, rows []store.Record) int {
+	if r.Sheet == nil {
+		return 0
+	}
+	n := 0
+	for i := range rows {
+		rec := &rows[i]
+		if rec.Status != store.StatusConfirmed || !rec.SheetAt.IsZero() {
+			continue
+		}
+		actx, cancel := context.WithTimeout(ctx, sheetTimeout)
+		err := r.appendContained(actx, *rec)
+		cancel()
+		if err != nil {
+			r.Log.Printf("summary %s: sheet append %s failed, stopping here: %v", key, rec.Reg.ID, err)
+			return n
+		}
+		n++
+		rec.SheetAt = r.Now()
+		if err := r.Store.SheetDone(ctx, rec.Reg.ID, rec.SheetAt); err != nil {
+			r.Log.Printf("summary %s: %s in the sheet, but not recorded: %v", key, rec.Reg.ID, err)
+		}
+	}
+	return n
+}
+
+// appendContained keeps a panic in the sheet from ending the run, and with
+// it the process: the summary mail matters more than the sheet.
+func (r *Runner) appendContained(ctx context.Context, rec store.Record) (err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("sheet panicked: %v", p)
+		}
+	}()
+	return r.Sheet.Append(ctx, rec)
+}
+
+// owed lists the confirmed registrations still missing from the sheet
+// after toSheet: "retry" for one kept for another week, "manual" for one
+// this run deletes, whose rows the back office must type in from its mail.
+func (r *Runner) owed(rows []store.Record, now time.Time) map[string]string {
+	if r.Sheet == nil {
+		return nil
+	}
+	out := map[string]string{}
+	for _, rec := range rows {
+		switch {
+		case rec.Status != store.StatusConfirmed || !rec.SheetAt.IsZero():
+		case r.keepForSheet(rec):
+			out[rec.Reg.ID] = "retry"
+		default:
+			out[rec.Reg.ID] = "manual"
+		}
+	}
+	return out
+}
+
+// keepForSheet: a confirmed registration missing from the sheet stays one
+// more week, so the next run retries it. Once it has been reported as
+// confirmed, it goes: the back office has the mail, and Turso keeps
+// personal data no longer than about two weeks (spec 4.2). A row reported
+// last week while still pending is reported as confirmed for the first
+// time now.
+func (r *Runner) keepForSheet(rec store.Record) bool {
+	return r.Sheet != nil && rec.Status == store.StatusConfirmed && rec.SheetAt.IsZero() &&
+		(rec.ReportedAt.IsZero() || rec.ConfirmedAt.After(rec.ReportedAt))
 }
 
 // retain applies the retention table of spec 4.2: what was reported and is
 // final is deleted; a pending registration whose link still works is kept
-// and reported again next week with its final status. Confirmed rows go at
-// once: the back office has the mail. (The sheet step, PR 4, keeps them
-// until their row is in the sheet.)
-func retain(rows []store.Record, now time.Time) (kept, gone []string) {
-	for _, r := range rows {
-		if r.Status == store.StatusPending && r.CreatedAt.Add(token.Valid).After(now) {
-			kept = append(kept, r.Reg.ID)
+// and reported again next week with its final status, and so is a
+// confirmed one whose rows are not in the sheet yet (keepForSheet).
+func (r *Runner) retain(rows []store.Record, now time.Time) (kept, gone []string) {
+	for _, rec := range rows {
+		if rec.Status == store.StatusPending && rec.CreatedAt.Add(token.Valid).After(now) || r.keepForSheet(rec) {
+			kept = append(kept, rec.Reg.ID)
 		} else {
-			gone = append(gone, r.Reg.ID)
+			gone = append(gone, rec.Reg.ID)
 		}
 	}
 	return kept, gone

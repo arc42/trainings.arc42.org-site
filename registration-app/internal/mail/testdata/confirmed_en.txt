@@ -8,9 +8,10 @@ Last name:                Müller
 First name:               Anna
 E-mail:                   anna@example.org
 E-mail before:            anna@exmaple.org (corrected by the registrant)
-Participant last name:    
-Participant first name:   
-Participant e-mail:       
+Company:                  Firma X
+Participants:
+  1. Frau Eva Meier <eva@example.org>
+  2. Tim Lang
 Billing address:
   Firma X
   Straße 1
