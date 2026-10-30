@@ -45,6 +45,11 @@ type Config struct {
 	SheetKey          []byte
 	SheetID, SheetTab string
 
+	// WebhookToken is the secret Brevo's delivery-event webhook carries in
+	// its URL (BREVO_WEBHOOK_TOKEN, spec 2026-10-30). Unset: the route does
+	// not exist.
+	WebhookToken string
+
 	// SummaryNow sends a weekly summary at start, whatever the week
 	// (SUMMARY_NOW=1), so a test deployment can show one without waiting
 	// for Monday. Refused in production, where it would send one on every
@@ -77,6 +82,7 @@ func Load() (Config, error) {
 		SheetKey:       []byte(os.Getenv("GOOGLE_SA_KEY")),
 		SheetID:        os.Getenv("SHEET_ID"),
 		SheetTab:       env("SHEET_TAB", "Tabelle1"),
+		WebhookToken:   os.Getenv("BREVO_WEBHOOK_TOKEN"),
 	}
 
 	key, err := base64.StdEncoding.DecodeString(os.Getenv("TOKEN_KEY"))
@@ -109,6 +115,11 @@ func Load() (Config, error) {
 		if strings.ContainsAny(a, "; ") || !strings.Contains(a, "@") {
 			return Config{}, fmt.Errorf("BACKOFFICE_TO: %q is not one address; separate several with commas", a)
 		}
+	}
+	// The token is all that keeps strangers from marking registrations as
+	// undeliverable and writing rows into the back office's sheet.
+	if c.WebhookToken != "" && len(c.WebhookToken) < 32 {
+		return Config{}, errors.New("BREVO_WEBHOOK_TOKEN is too short: use 32 random characters or more (openssl rand -hex 24)")
 	}
 	if c.PublicURL == "" {
 		return Config{}, errors.New("PUBLIC_URL is required: it is the base of every confirm link")

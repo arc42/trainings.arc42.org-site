@@ -1,0 +1,31 @@
+[trainings.arc42.org] ACHTUNG: Google Sheet nicht beschreibbar (Zugriff verweigert)
+
+Der Anmeldedienst konnte eine nicht zugestellte Mail nicht in das
+Tabellenblatt "Zustellung" eintragen. Google hat die Anfrage abgelehnt. Die
+Meldung steht nur im Log und in der Wochenübersicht.
+
+Zeitpunkt:   03.11.2026, 10:15 Uhr
+Anmeldung:   R-7F3KQ
+Abgelehnt:   beim Schreiben ins Sheet
+Antwort:     400 {"error":{"code":400,"message":"Unable to parse range: 'Zustellung'!A:I","status":"INVALID_ARGUMENT"}}
+
+
+WAS DAS BEDEUTET
+
+Anmeldungen und das Blatt mit den Anmeldungen sind nicht betroffen. Es fehlt
+nur die Zeile über die nicht zugestellte Mail. Die Wochenübersicht nennt nicht
+zugestellte Anmeldungen trotzdem; Mails an das Back-Office stehen nur im Log.
+
+
+WAHRSCHEINLICHE URSACHE UND ABHILFE
+
+Vermutlich gibt es das Tabellenblatt "Zustellung" nicht, oder es heißt anders.
+Ein Blatt mit genau diesem Namen anlegen, Kopfzeile A bis I:
+Zeit, Typ, Anmeldung-ID, Kurs, Name, Vorname, E-Mail, Ereignis, Grund.
+
+
+Sheet:          https://docs.google.com/spreadsheets/d/1JtivdvHqR-test/edit
+Dokumentation:  https://github.com/arc42/trainings.arc42.org-site/blob/main/registration-app/README.md#the-back-office-sheet
+
+Diese Mail kommt sofort beim ersten Fehler und danach höchstens einmal am
+Tag, solange das Problem besteht.

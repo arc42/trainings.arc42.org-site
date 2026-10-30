@@ -26,6 +26,7 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `POST /code` | the 6-digit code typed on the page that stayed open; same effect as `POST /confirm`, locked after 5 wrong codes |
 | `POST /correct` | corrects a mistyped address (at most 2 per registration, within 30 minutes) and sends the registrant mail, with a new code, to the corrected address |
 | `GET /healthz` | fly's health check, and the Monday ping that sends the weekly summary (below) |
+| `POST /brevo/events?t=…` | Brevo's delivery events: a mail that did not arrive (below). Exists only when `BREVO_WEBHOOK_TOKEN` is set |
 
 ## Configuration
 
@@ -47,6 +48,7 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `GOOGLE_SA_KEY` | yes | the JSON key of the Google service account that writes the sheet, as Google hands it out. Goes with `SHEET_ID`; one without the other, or a key that cannot be read, starts the service **without** the sheet and mails the back office (nothing about the sheet ever stops registrations) |
 | `SHEET_ID` | yes | the spreadsheet id from its URL (`/spreadsheets/d/<id>/edit`). Unset: no sheet, as in test deployments and `make reg-run` |
 | `SHEET_TAB` | no | the tab rows go to (default `Tabelle1`) |
+| `BREVO_WEBHOOK_TOKEN` | yes | the secret in the URL of Brevo's webhook, 32 characters or more (`openssl rand -hex 24`). Unset: no webhook route |
 
 Outside `ENVIRONMENT=PRODUCTION` the service **refuses to start** unless
 `TEST_RECIPIENTS` is set (or `MAILER=log`), so a test deployment cannot mail
@@ -135,6 +137,52 @@ key.json)" SHEET_ID=…`), and the spreadsheet shared with the account's
 address as **editor**. The service logs that address at start (`sheet: tab
 "Tabelle1" as …`).
 
+## Mails that did not arrive
+
+Brevo accepts a mail with 201 and only learns afterwards whether the
+receiving server took it. On 30 Oct 2026 mailbox.org refused a confirmation
+mail because Brevo's shared sending IP was on the SpamCop blocklist (`554
+5.7.1 … blocked by RBL`); the service had logged `accepted`. A Brevo
+webhook now reports such failures back (spec
+`docs/superpowers/specs/2026-10-30-bounce-webhook-design.md`):
+
+- **Registrant mail not delivered** (`hard_bounce`, `soft_bounce`,
+  `blocked`, `invalid_email`): the registration row is marked, a row goes to
+  the sheet's tab **Zustellung**, and the weekly summary shows the
+  registration as NICHT ZUGESTELLT. A later `delivered` for the same
+  address clears it; a corrected address makes it moot.
+- **Back-office mail not delivered** (BESTÄTIGT, the summary, the sheet
+  alert): a row in Zustellung, nothing else. The back office sits behind
+  the same kind of filter, so an alert mail through Brevo would be lost
+  the same way.
+
+Nobody is told by a mail through Brevo. The back office learns of a new
+Zustellung row from **Google's notification rule** on the spreadsheet,
+which Google sends from its own servers. The service sends nothing again
+automatically: Brevo picks the IP, and a resend may meet the same block.
+Write to the person from info@arc42.de, which mailbox.org sends itself.
+
+Setup, once:
+
+1. In the spreadsheet, a tab named exactly `Zustellung`, header row A to I:
+   `Zeit, Typ, Anmeldung-ID, Kurs, Name, Vorname, E-Mail, Ereignis, Grund`.
+   A missing tab is refused by Google and mailed as `ACHTUNG: Google Sheet
+   nicht beschreibbar`.
+2. Each person who wants to hear of it: Tools, Notification settings, Edit
+   notifications, "Any changes are made", "Email – right away". It covers
+   the whole file, so a confirmed registration on the main tab notifies too.
+3. `fly secrets set -a arc42-registration BREVO_WEBHOOK_TOKEN=$(openssl rand -hex 24)`,
+   and keep the value for the next step.
+4. Brevo, Transactional, Settings, Webhooks, add a webhook: URL
+   `https://register.arc42.org/brevo/events?t=<token>`, events delivered,
+   soft bounce, hard bounce, blocked, invalid email. Nothing else: opens and
+   clicks would only add personal data to the log.
+
+Answers: `401` wrong token; `400` unreadable body; `500` the store could
+not take it (Brevo may retry); `200` for everything else, ignored events
+included. The sheet row is appended after the answer; Google down costs a
+log line, and the summary still lists the registration.
+
 ## Working on it
 
 ```bash
@@ -174,6 +222,10 @@ Mail templates are in `internal/mail/templates/`; their expected output is in
 | `sheet: …; the alert mail failed too` | Brevo is down as well; the next refusal tries the mail again |
 | `summary <week>: sheet append R-… failed, stopping here` | the rest is retried next week; the summary lists what is missing |
 | `correct R-…: store update failed` | the confirmed mail still shows the corrected address, from the token |
+| `brevo events: registrant mail R-… not delivered: <event>: <answer>` | marked; a row went to Zustellung (or a `Zustellung row … failed` line follows) |
+| `brevo events: back-office mail … to … not delivered` | a back-office mail was refused; a row went to Zustellung |
+| `brevo events: … at a former address, ignored` / `… no longer holds, ignored` | a bounce for a corrected address, or for a row the summary has deleted |
+| `brevo events: wrong or missing token` | someone, or a Brevo webhook with an old token, called the route |
 | `summary <week>: sent, n rows reported, …` | the weekly summary went out; how many rows were kept for next week, deleted, reconciled, and appended to the sheet |
 | `summary <week>: claimed by another machine` | a second machine during a deploy; it sends nothing |
 | `summary: summary <week>: …` | the run failed before the mail was out; nothing changed, the next request a minute later tries again |

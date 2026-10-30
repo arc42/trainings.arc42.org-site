@@ -1,9 +1,9 @@
 # Registration service: learn when Brevo could not deliver a mail
 
 **Date:** 2026-10-30
-**Status:** proposed
+**Status:** implemented (30 Oct 2026), not yet deployed
 **Scope:** `registration-app/` (a new `POST /brevo/events` handler in `web`,
-two columns in `store`, a second tab in `sheet`, one section in the
+two columns in `store`, a second tab in `sheet`, one line per row in the
 summary), one webhook in the Brevo account, one notification rule on the
 back-office sheet, the registration service README.
 
@@ -61,20 +61,23 @@ is covered by the sheet; a missing summary looks like the heartbeat failing
 
 ## 3. What Brevo sends
 
-Brevo posts one JSON object per event. The fields this design reads
-(names as documented by Brevo; **to be checked against a real event before
-the parser is written**, section 9):
+Brevo posts one JSON object per event (an array only if "batched" is
+switched on, which it is not; the handler reads both). The fields this
+design reads, as documented at
+developers.brevo.com/docs/transactional-webhooks (read 30 Oct 2026; a real
+event is still to be seen, section 9):
 
 | Field | Use |
 |---|---|
 | `event` | which events count, below |
 | `email` | the recipient |
-| `tag` / `tags` | our `CustomID`: the registration id (`R-…`), `summary-<week>` or `sheet-alert` |
+| `tags` (array), in some events `tag` (a string, once holding a JSON array) | our `CustomID`: the registration id (`R-…`), `summary-<week>` or `sheet-alert`. Both read leniently |
 | `ts_event` | when it happened, unix seconds |
 | `reason` | the remote server's answer, for the sheet |
 | `message-id` | for looking it up in Brevo |
 
-Subscribed events, nothing else:
+Events (subscribed in Brevo as `delivered`, `softBounce`, `hardBounce`,
+`blocked`, `invalid`; the payload names differ):
 
 | Event | Meaning | Effect |
 |---|---|---|
@@ -82,7 +85,7 @@ Subscribed events, nothing else:
 | `soft_bounce` | refusal Brevo files as temporary; the RBL case above was one | failed |
 | `blocked` | Brevo did not send: the address is on its blocklist | failed |
 | `invalid_email` | address syntactically unusable at Brevo | failed |
-| `error` | Brevo-side failure | failed |
+| `error` | Brevo-side failure; **not offered** for transactional webhooks, handled in case it comes | failed |
 | `delivered` | the remote server accepted it | clears a failure recorded **earlier** for the same recipient and id |
 
 `deferred` is not subscribed: Brevo is still retrying, and a later
@@ -98,11 +101,14 @@ sheet row that turns out to be a false alarm.
 
 `POST /brevo/events`:
 
-1. **Authentication.** Brevo's webhook form offers HTTP basic auth (or a
-   bearer token; whichever it offers, section 9). The password is the fly
-   secret `BREVO_WEBHOOK_TOKEN`, compared in constant time. Wrong or
-   missing: `401`, nothing logged beyond one line. Unset secret: the route
-   answers `404`, so a deployment without the webhook has no open endpoint.
+1. **Authentication.** A token in the URL, `?t=<token>`: Brevo's docs
+   mention neither basic auth nor a bearer token for the receiving end
+   (the create-webhook API has an undocumented `auth` object and custom
+   headers), and a URL works in the UI and the API alike. The token is the
+   fly secret `BREVO_WEBHOOK_TOKEN`, at least 32 characters, compared in
+   constant time. Wrong or missing: `401`, one log line. Unset secret: the
+   route does not exist, so a deployment without the webhook has no open
+   endpoint.
 2. **Body** at most 64 KB, one event or an array of events (Brevo has sent
    both shapes over time; accept both, cheaply).
 3. Per event:
@@ -145,19 +151,21 @@ A second tab in the same spreadsheet, created by hand once, name fixed in
 code (`Zustellung`), same service account, same append code. One row per
 failure event:
 
-| A | B | C | D | E | F | G | H |
-|---|---|---|---|---|---|---|---|
-| Zeit | Typ (Anmeldung / Back-Office) | Anmeldung-ID | Kurs | Name, Vorname | E-Mail | Ereignis | Grund |
+| A | B | C | D | E | F | G | H | I |
+|---|---|---|---|---|---|---|---|---|
+| Zeit | Typ (Anmeldung / Back-Office) | Anmeldung-ID | Kurs | Name | Vorname | E-Mail | Ereignis | Grund |
 
-Back-office rows leave C to E empty when the tag is not a registration id.
+Name and Vorname are two columns, as on the main tab (Gernot, 30 Oct 2026).
+Back-office rows leave C to F empty when the tag is not a registration id.
 
 No rows on `delivered`: the tab is a list of things to act on, and a row
 that only says "never mind" is noise. A false alarm is resolved by the back
 office finding the person registered.
 
 A missing tab makes Google answer `400`, which the existing Sheet alert
-(spec 2026-10-25, 5) mails as "Google Sheet nicht beschreibbar". That alert
-goes through Brevo; it is the setup mistake it catches, not the outage.
+(spec 2026-10-25, 5) mails as "Google Sheet nicht beschreibbar", in a
+variant that names the Zustellung tab and its header row. That alert goes
+through Brevo; it is the setup mistake it catches, not the outage.
 
 **Notification rule** (by hand, once, by each back-office person who wants
 it; it needs edit access): Google Sheets, Tools → Notification settings →
@@ -176,20 +184,25 @@ section needs another channel before the webhook goes live.
 
 ## 7. Weekly summary
 
-A section "Nicht zugestellt" above the per-status tables, one line per row
-with `bounced_at` set: id, course, name, address, reason (first 100
-characters). Empty when there are none, and then left out. The subject's
-counts gain ", 1 nicht zugestellt" only when there is one.
+A bounced registration stays in its status table and gets one more line,
+`Zustellung: NICHT ZUGESTELLT, <reason, first 100 characters>`, with the
+advice to write from info@arc42.de, the way a failed submit mail is shown
+today. Below the counts, a line "Nicht zugestellt: n" when n > 0, and the
+subject's counts gain ", n nicht zugestellt". (Built this way rather than
+as a separate section: the row already carries everything the back office
+needs, and it is where they look for the person.) The reason is defused
+like a comment: SpamCop's answer quotes a URL.
 
 ## 8. Configuration
 
 | Env | Secret | Meaning |
 |---|---|---|
-| `BREVO_WEBHOOK_TOKEN` | yes | basic-auth password Brevo sends; unset disables the route |
+| `BREVO_WEBHOOK_TOKEN` | yes | the token in the webhook URL, 32 characters or more; unset disables the route |
 
 In Brevo, by hand, documented in the README: Transactional → Settings →
-Webhooks → new webhook, URL `https://register.arc42.org/brevo/events`,
-the events of section 3, authentication with the token. Test deployments
+Webhooks → new webhook, URL
+`https://register.arc42.org/brevo/events?t=<token>`, the events of
+section 3. Test deployments
 leave the token unset.
 
 What this adds to the failure surface: one route and one setting in Brevo.
@@ -201,11 +214,11 @@ none, webhooks are included in every Brevo plan.
 
 One PR. `make reg-check` gates it.
 
-- **Before writing the parser**: point the webhook at a request inspector
-  once (or read Brevo's "test webhook" output) and save one real
-  `soft_bounce` and one `delivered` body as `testdata`. The tag field's
-  name and shape (`tag` string or `tags` array) and the auth option are
-  taken from that, not from memory.
+- The parser follows Brevo's documented examples and reads the tag
+  leniently (`tags` array, `tag` string, `tag` string holding an array).
+  **After deploy**, the first real event is checked in the log against
+  that: if a bounce of a known registration logs "without a registration
+  id", the tag arrives in a shape the parser does not know.
 - Handler tests with those bodies: failure marks the row and appends;
   `delivered` after a failure clears it, before does not; a bounce for a
   corrected address is ignored; a back-office recipient appends without a
@@ -231,7 +244,7 @@ can stay, unused.
 
 ## 11. Open points
 
-- Brevo's payload shape and auth option, from a real event (section 9).
+- Brevo's payload shape, from the first real event (section 9).
 - Whether Google's notification rule fires for changes by the service
   account (section 6).
 - ~~Notification on every change or a daily digest~~ decided 30 Oct 2026:

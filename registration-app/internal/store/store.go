@@ -50,6 +50,11 @@ type Record struct {
 	// sheet row retried a week later shows what the registrant saw.
 	Price   int
 	SheetAt time.Time // zero until its rows are in the back-office sheet
+	// BouncedAt is when Brevo last reported that the registrant mail could
+	// not be delivered (spec 2026-10-30); zero when none is known. A later
+	// delivery or a correction of the address clears it.
+	BouncedAt    time.Time
+	BounceReason string // the event and the remote server's answer
 }
 
 type Store interface {
@@ -81,6 +86,11 @@ type Store interface {
 	MarkConfirmed(ctx context.Context, id string, at time.Time, via string) error
 	// SheetDone records that the registration's rows are in the sheet.
 	SheetDone(ctx context.Context, id string, at time.Time) error
+	// Bounced records that the registrant mail could not be delivered.
+	Bounced(ctx context.Context, id string, at time.Time, reason string) error
+	// Delivered clears a bounce recorded at or before at: Brevo's events
+	// can arrive out of order, and only a later delivery settles one.
+	Delivered(ctx context.Context, id string, at time.Time) error
 
 	// The weekly summary (package summary, spec 7).
 
@@ -220,6 +230,7 @@ func (m *Memory) Corrected(_ context.Context, id, email string) error {
 			r.CorrectedFrom = r.Reg.Email
 		}
 		r.Reg.Email, r.Reg.Emails = email, []string{email}
+		r.BouncedAt, r.BounceReason = time.Time{}, ""
 	})
 }
 
@@ -233,6 +244,18 @@ func (m *Memory) MarkConfirmed(_ context.Context, id string, at time.Time, via s
 
 func (m *Memory) SheetDone(_ context.Context, id string, at time.Time) error {
 	return m.change(id, func(r *Record) { r.SheetAt = at })
+}
+
+func (m *Memory) Bounced(_ context.Context, id string, at time.Time, reason string) error {
+	return m.change(id, func(r *Record) { r.BouncedAt, r.BounceReason = at, reason })
+}
+
+func (m *Memory) Delivered(_ context.Context, id string, at time.Time) error {
+	return m.change(id, func(r *Record) {
+		if !r.BouncedAt.IsZero() && !r.BouncedAt.After(at) {
+			r.BouncedAt, r.BounceReason = time.Time{}, ""
+		}
+	})
 }
 
 // change applies f to a stored registration. A missing id is no error, as

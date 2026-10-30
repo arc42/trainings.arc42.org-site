@@ -46,7 +46,8 @@ var schema = []string{
 		billing TEXT, comments TEXT, heard TEXT, heard_detail TEXT,
 		via TEXT, form_source TEXT, hints TEXT,
 		sheet_at INTEGER, reported_at INTEGER,
-		participants TEXT, company TEXT, price INTEGER)`,
+		participants TEXT, company TEXT, price INTEGER,
+		bounced_at INTEGER, bounce_reason TEXT)`,
 	// One row per summary week. The primary key is the claim that keeps two
 	// machines from both sending; sent_at NULL means claimed, not yet sent.
 	`CREATE TABLE IF NOT EXISTS summaries (
@@ -64,6 +65,9 @@ var addedColumns = []struct{ name, def string }{
 	{"participants", "participants TEXT"},
 	{"company", "company TEXT"},
 	{"price", "price INTEGER"},
+	// Brevo's delivery events (spec 2026-10-30).
+	{"bounced_at", "bounced_at INTEGER"},
+	{"bounce_reason", "bounce_reason TEXT"},
 }
 
 // NewTurso takes the database URL as `turso db show --url` prints it
@@ -250,7 +254,7 @@ func (t *Turso) Prune(ctx context.Context, cutoff time.Time) error {
 const regColumns = "id, created_at, status, confirmed_at, confirmed_via, drop_reason, mail_failed, " +
 	"lang, code, last_name, first_name, email, emails, corrected_from, " +
 	"p_last, p_first, p_email, billing, comments, heard, heard_detail, via, form_source, hints, reported_at, " +
-	"participants, company, price, sheet_at"
+	"participants, company, price, sheet_at, bounced_at, bounce_reason"
 
 func (t *Turso) Save(ctx context.Context, r Record) error {
 	g := r.Reg
@@ -262,7 +266,7 @@ func (t *Turso) Save(ctx context.Context, r Record) error {
 	if err != nil {
 		return err
 	}
-	_, err = t.run(ctx, stmt("INSERT INTO registrations ("+regColumns+") VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)",
+	_, err = t.run(ctx, stmt("INSERT INTO registrations ("+regColumns+") VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, NULL)",
 		text(g.ID), integer(r.CreatedAt.Unix()), text(r.Status), text(r.DropReason), flag(r.MailFailed),
 		text(g.Lang), text(g.Code), text(g.LastName), text(g.FirstName), text(g.Email), text(strings.Join(g.Emails, ",")),
 		text(first.Last), text(first.First), text(first.Email), text(g.Billing), text(g.Comments),
@@ -361,6 +365,7 @@ func scan(v []arg) (Record, error) {
 		CorrectedFrom: v[13].Value, Hints: split(v[23].Value),
 		CreatedAt: unix(v[1]), ConfirmedAt: unix(v[3]), ReportedAt: unix(v[24]),
 		Price: price, SheetAt: unix(v[28]),
+		BouncedAt: unix(v[29]), BounceReason: v[30].Value,
 	}, nil
 }
 
@@ -373,7 +378,7 @@ func (t *Turso) MailFailed(ctx context.Context, id string) error {
 // the back office might already know from somewhere, and a second correction
 // is rare enough not to need a history.
 func (t *Turso) Corrected(ctx context.Context, id, email string) error {
-	_, err := t.run(ctx, stmt("UPDATE registrations SET corrected_from = COALESCE(corrected_from, email), email = ?, emails = ? WHERE id = ?",
+	_, err := t.run(ctx, stmt("UPDATE registrations SET corrected_from = COALESCE(corrected_from, email), email = ?, emails = ?, bounced_at = NULL, bounce_reason = NULL WHERE id = ?",
 		text(email), text(email), text(id)))
 	return err
 }
@@ -386,6 +391,18 @@ func (t *Turso) MarkConfirmed(ctx context.Context, id string, at time.Time, via 
 
 func (t *Turso) SheetDone(ctx context.Context, id string, at time.Time) error {
 	_, err := t.run(ctx, stmt("UPDATE registrations SET sheet_at = ? WHERE id = ?", integer(at.Unix()), text(id)))
+	return err
+}
+
+func (t *Turso) Bounced(ctx context.Context, id string, at time.Time, reason string) error {
+	_, err := t.run(ctx, stmt("UPDATE registrations SET bounced_at = ?, bounce_reason = ? WHERE id = ?",
+		integer(at.Unix()), text(reason), text(id)))
+	return err
+}
+
+func (t *Turso) Delivered(ctx context.Context, id string, at time.Time) error {
+	_, err := t.run(ctx, stmt("UPDATE registrations SET bounced_at = NULL, bounce_reason = NULL WHERE id = ? AND bounced_at <= ?",
+		text(id), integer(at.Unix())))
 	return err
 }
 

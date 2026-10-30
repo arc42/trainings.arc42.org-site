@@ -99,6 +99,32 @@ func registrations(t *testing.T, s Store, id string) {
 		t.Errorf("read back\n%+v\nwant\n%+v", got, in)
 	}
 
+	// Brevo's delivery events: a delivery clears only a bounce from before
+	// it, and a correction clears any.
+	bounce := func(at time.Time, reason string) {
+		t.Helper()
+		if err := s.Bounced(ctx, id, at, reason); err != nil {
+			t.Fatal(err)
+		}
+	}
+	bounce(t0.Add(time.Minute), "soft_bounce: 554 5.7.1 blocked by RBL")
+	if got, _, _ := s.Registration(ctx, id); !got.BouncedAt.Equal(t0.Add(time.Minute)) || got.BounceReason != "soft_bounce: 554 5.7.1 blocked by RBL" {
+		t.Errorf("after Bounced: %v %q", got.BouncedAt, got.BounceReason)
+	}
+	if err := s.Delivered(ctx, id, t0); err != nil {
+		t.Fatal(err)
+	}
+	if got, _, _ := s.Registration(ctx, id); got.BouncedAt.IsZero() {
+		t.Error("a delivery from before the bounce cleared it")
+	}
+	if err := s.Delivered(ctx, id, t0.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if got, _, _ := s.Registration(ctx, id); !got.BouncedAt.IsZero() || got.BounceReason != "" {
+		t.Errorf("a later delivery left %v %q", got.BouncedAt, got.BounceReason)
+	}
+	bounce(t0.Add(3*time.Minute), "hard_bounce: user unknown")
+
 	if err := s.MailFailed(ctx, id); err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +143,9 @@ func registrations(t *testing.T, s Store, id string) {
 	if !got.MailFailed || got.Reg.Email != "anna@example.net" || len(got.Reg.Emails) != 1 ||
 		got.CorrectedFrom != "Anna@Example.org, boss@example.org" {
 		t.Errorf("after mail failure and two corrections: %+v", got)
+	}
+	if !got.BouncedAt.IsZero() || got.BounceReason != "" {
+		t.Errorf("a correction left the bounce of the old address: %v %q", got.BouncedAt, got.BounceReason)
 	}
 	if got.Status != StatusConfirmed || got.ConfirmedVia != "code" || !got.ConfirmedAt.Equal(t0.Add(time.Hour)) {
 		t.Errorf("confirmed twice: status %q via %q at %v; the first one counts", got.Status, got.ConfirmedVia, got.ConfirmedAt)
@@ -353,7 +382,7 @@ func TestTursoReadsARegistrationRow(t *testing.T) {
 		`{"type":"text","value":"Doe"},{"type":"text","value":"Ann"},{"type":"text","value":""},{"type":"text","value":"ACME Ltd\nLondon"},` +
 		`{"type":"text","value":""},{"type":"null"},{"type":"null"},{"type":"text","value":"trainings.arc42.org"},` +
 		`{"type":"text","value":""},{"type":"text","value":"no-script"},{"type":"null"},` +
-		`{"type":"null"},{"type":"null"},{"type":"null"},{"type":"null"}]`
+		`{"type":"null"},{"type":"null"},{"type":"null"},{"type":"null"},{"type":"null"},{"type":"null"}]`
 	r, ok, err := fakeTurso(t, row).Registration(context.Background(), "R-ABC12")
 	if err != nil || !ok {
 		t.Fatalf("ok=%v err=%v", ok, err)
@@ -363,12 +392,13 @@ func TestTursoReadsARegistrationRow(t *testing.T) {
 		t.Errorf("record = %+v", r)
 	}
 	if fmt.Sprint(r.Reg.Participants) != fmt.Sprint([]intake.Participant{{Last: "Doe", First: "Ann"}}) ||
-		r.Reg.Company != "" || r.Price != 0 || !r.SheetAt.IsZero() {
+		r.Reg.Company != "" || r.Price != 0 || !r.SheetAt.IsZero() || !r.BouncedAt.IsZero() {
 		t.Errorf("old row: participants %+v company %q price %d sheet %v", r.Reg.Participants, r.Reg.Company, r.Price, r.SheetAt)
 	}
 }
 
-// The live table predates participants, company and price. ensure adds
+// The live table predates participants, company, price and the bounce
+// columns. ensure adds
 // exactly the missing columns, once per process.
 func TestTursoAddsMissingColumns(t *testing.T) {
 	var alters []string
@@ -408,7 +438,8 @@ func TestTursoAddsMissingColumns(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	want := []string{"ALTER TABLE registrations ADD COLUMN participants TEXT", "ALTER TABLE registrations ADD COLUMN price INTEGER"}
+	want := []string{"ALTER TABLE registrations ADD COLUMN participants TEXT", "ALTER TABLE registrations ADD COLUMN price INTEGER",
+		"ALTER TABLE registrations ADD COLUMN bounced_at INTEGER", "ALTER TABLE registrations ADD COLUMN bounce_reason TEXT"}
 	if fmt.Sprint(alters) != fmt.Sprint(want) {
 		t.Errorf("alters = %q, want %q", alters, want)
 	}

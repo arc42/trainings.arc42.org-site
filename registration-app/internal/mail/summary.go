@@ -29,6 +29,7 @@ type Week struct {
 type summaryRow struct {
 	ID, When, Code, Name, Email, Billing, Comments string
 	Hints, Reason, Confirmed, Link, NoSheet        string
+	Bounce                                         string // why Brevo could not deliver the registrant mail
 	MailFailed, Again                              bool
 }
 
@@ -37,7 +38,7 @@ type summaryRow struct {
 // Monday without it is the alarm (spec 7.4).
 func Summary(w Week) (Rendered, error) {
 	groups := map[string][]summaryRow{}
-	failed := 0
+	failed, bounced := 0, 0
 	for _, r := range w.Rows {
 		row := summaryRow{
 			ID: r.Reg.ID, When: short(r.CreatedAt), Code: orDash(r.Reg.Code),
@@ -45,6 +46,12 @@ func Summary(w Week) (Rendered, error) {
 			Email: orDash(r.Reg.Email), Billing: firstLine(r.Reg.Billing), Comments: excerpt(r.Reg.Comments, 80),
 			Hints: strings.Join(r.Hints, ", "), Reason: r.DropReason,
 			MailFailed: r.MailFailed, Again: !r.ReportedAt.IsZero(), NoSheet: w.NoSheet[r.Reg.ID],
+		}
+		// The remote answer can quote a URL (SpamCop's does): excerpt
+		// defuses it like a comment.
+		if !r.BouncedAt.IsZero() {
+			row.Bounce = excerpt(r.BounceReason, 100)
+			bounced++
 		}
 		switch r.Status {
 		case store.StatusConfirmed:
@@ -68,7 +75,7 @@ func Summary(w Week) (Rendered, error) {
 	data := map[string]any{
 		"Number": w.Number, "To": long(w.To), "Late": w.Late, "Due": long(w.Due),
 		"Confirmed": groups[store.StatusConfirmed], "Pending": groups[store.StatusPending], "Dropped": groups[store.StatusDropped],
-		"C": c, "P": p, "D": d, "Failed": failed, "Empty": len(w.Rows) == 0,
+		"C": c, "P": p, "D": d, "Failed": failed, "Bounced": bounced, "Empty": len(w.Rows) == 0,
 	}
 	if !w.From.IsZero() {
 		data["From"] = long(w.From)
@@ -77,7 +84,11 @@ func Summary(w Week) (Rendered, error) {
 	if err := textT.ExecuteTemplate(&t, "summary_de.txt", data); err != nil {
 		return Rendered{}, err
 	}
-	subject := fmt.Sprintf("[trainings.arc42.org] Wochenübersicht Anmeldungen KW %d (%d bestätigt, %d offen, %d verworfen)", w.Number, c, p, d)
+	counts := fmt.Sprintf("%d bestätigt, %d offen, %d verworfen", c, p, d)
+	if bounced > 0 {
+		counts += fmt.Sprintf(", %d nicht zugestellt", bounced)
+	}
+	subject := fmt.Sprintf("[trainings.arc42.org] Wochenübersicht Anmeldungen KW %d (%s)", w.Number, counts)
 	return Rendered{Subject: subject, Text: t.String()}, nil
 }
 

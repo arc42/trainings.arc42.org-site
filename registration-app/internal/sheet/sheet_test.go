@@ -201,6 +201,32 @@ func TestAppend(t *testing.T) {
 	}
 }
 
+// The delivery tab's header row (spec 2026-10-30), as the back office
+// creates it.
+func TestDeliveryLayout(t *testing.T) {
+	want := "Zeit|Typ|Anmeldung-ID|Kurs|Name|Vorname|E-Mail|Ereignis|Grund"
+	if got := strings.Join(DeliveryHeaders(), "|"); got != want {
+		t.Errorf("headers\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestAppendDelivery(t *testing.T) {
+	s, f := setup(t)
+	d := Delivery{At: t0, Kind: KindRegistrant, ID: "R-7F3KQ", Code: intake.Other, Last: "Huber", First: "Sabine",
+		Email: "hr@example.org", Event: "soft_bounce", Reason: "554 5.7.1 blocked by RBL"}
+	if err := s.AppendDelivery(context.Background(), d); err != nil {
+		t.Fatal(err)
+	}
+	want := "/v4/spreadsheets/1Jtiv-test/values/%27Zustellung%27%21A:I:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"
+	if len(f.appends) != 1 || f.appends[0] != want {
+		t.Errorf("append %v\nwant %s", f.appends, want)
+	}
+	got := fmt.Sprint(f.bodies[0])
+	if wantRow := "[[31.10.2026 00:30 Anmeldung R-7F3KQ Sonstige Huber Sabine hr@example.org soft_bounce 554 5.7.1 blocked by RBL]]"; got != wantRow {
+		t.Errorf("row %s\nwant %s", got, wantRow)
+	}
+}
+
 // A 4xx from the Sheets API needs a person; a 5xx or 429 is weather.
 func TestRefusalsAreToldApartFromWeather(t *testing.T) {
 	s, f := setup(t)

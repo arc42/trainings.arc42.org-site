@@ -71,7 +71,10 @@ type Deps struct {
 	// Sheet takes a confirmed registration's rows (package sheet). nil: no
 	// sheet, as in test deployments and most handler tests.
 	Sheet Sheet
-	Now   func() time.Time
+	// Deliveries takes Brevo's delivery failures as rows of the sheet's
+	// Zustellung tab (events.go). nil: no sheet.
+	Deliveries Deliveries
+	Now        func() time.Time
 }
 
 type Sheet interface {
@@ -107,6 +110,11 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /confirm", s.handleConfirm)
 	mux.HandleFunc("POST /correct", s.handleCorrect)
 	mux.HandleFunc("POST /code", s.handleCode)
+	// Only with a token: a deployment without the webhook has no open
+	// endpoint that writes to the store (spec 2026-10-30).
+	if s.d.Cfg.WebhookToken != "" {
+		mux.HandleFunc("POST /brevo/events", s.handleBrevoEvents)
+	}
 	if s.d.Summary == nil {
 		return mux
 	}

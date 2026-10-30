@@ -40,12 +40,26 @@ func (a *Alerting) Append(ctx context.Context, rec store.Record) (err error) {
 	err = a.Sheet.Append(ctx, rec)
 	var r *Refused
 	if errors.As(err, &r) {
-		a.alert(ctx, rec.Reg.ID, r)
+		a.alert(ctx, mail.SheetProblem{ID: rec.Reg.ID, Tab: a.Tab}, r)
 	}
 	return err
 }
 
-func (a *Alerting) alert(ctx context.Context, id string, r *Refused) {
+// AppendDelivery is Append for DeliveryTab. A refusal there is most likely
+// the tab missing or renamed, and the alert names that tab.
+func (a *Alerting) AppendDelivery(ctx context.Context, d Delivery) (err error) {
+	defer Contain(&err)
+	err = a.Sheet.AppendDelivery(ctx, d)
+	var r *Refused
+	if errors.As(err, &r) {
+		a.alert(ctx, mail.SheetProblem{ID: d.ID, Tab: DeliveryTab, Delivery: true}, r)
+	}
+	return err
+}
+
+// alert mails p, completed with the refusal and the account, unless one
+// went out within Every.
+func (a *Alerting) alert(ctx context.Context, p mail.SheetProblem, r *Refused) {
 	now := a.Now()
 	a.mu.Lock()
 	if !a.last.IsZero() && now.Sub(a.last) < a.Every {
@@ -56,8 +70,8 @@ func (a *Alerting) alert(ctx context.Context, id string, r *Refused) {
 	a.last = now // taken before sending, so two failing appends send one mail
 	a.mu.Unlock()
 
-	m, err := mail.SheetAlert(mail.SheetProblem{At: now, ID: id, Stage: r.Stage, Status: r.Status, Detail: r.Detail,
-		Account: a.Email(), SheetID: a.ID, Tab: a.Tab})
+	p.At, p.Stage, p.Status, p.Detail, p.Account, p.SheetID = now, r.Stage, r.Status, r.Detail, a.Email(), a.ID
+	m, err := mail.SheetAlert(p)
 	if err == nil {
 		sctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), alertTimeout)
 		err = a.Sender.Send(sctx, send.Message{To: a.To, Subject: m.Subject, Text: m.Text, CustomID: "sheet-alert"})

@@ -4,6 +4,16 @@ GOOGLE_SA_KEY ist kein lesbarer Schlüssel eines Dienstkontos.
 
 Zeitpunkt:   {{.At}}
 Fehler:      {{.Detail}}
+{{- else if .Delivery -}}
+Der Anmeldedienst konnte eine nicht zugestellte Mail nicht in das
+Tabellenblatt "{{.Tab}}" eintragen. Google hat die Anfrage abgelehnt. Die
+Meldung steht nur im Log und in der Wochenübersicht.
+
+Zeitpunkt:   {{.At}}
+{{- with .ID}}
+Anmeldung:   {{.}}{{end}}
+Abgelehnt:   beim Schreiben ins Sheet
+Antwort:     {{.Status}} {{.Detail}}
 {{- else -}}
 Der Anmeldedienst konnte eine bestätigte Anmeldung nicht in das Google Sheet
 eintragen. Google hat die Anfrage abgelehnt. Ein neuer Versuch hilft erst,
@@ -17,7 +27,11 @@ Antwort:     {{.Status}} {{.Detail}}
 
 
 WAS DAS BEDEUTET
-
+{{if .Delivery}}
+Anmeldungen und das Blatt mit den Anmeldungen sind nicht betroffen. Es fehlt
+nur die Zeile über die nicht zugestellte Mail. Die Wochenübersicht nennt nicht
+zugestellte Anmeldungen trotzdem; Mails an das Back-Office stehen nur im Log.
+{{- else}}
 Anmeldungen funktionieren weiter: Die Personen bestätigen wie gewohnt, und
 für jede Anmeldung kommt die BESTÄTIGT-Mail. Es fehlen nur die Zeilen im
 Sheet.
@@ -29,6 +43,7 @@ der BESTÄTIGT-Mail übertragen.
 {{- else}} Die Wochenübersicht listet jede fehlende Anmeldung. Der Dienst
 versucht es dort eine Woche lang erneut; was dann noch fehlt, bitte von Hand
 aus der BESTÄTIGT-Mail übertragen.
+{{- end}}
 {{- end}}
 
 
@@ -70,6 +85,10 @@ Unter dieser ID gibt es kein Sheet mehr: gelöscht oder im Papierkorb.
    als "Bearbeiter" teilen und seine ID (aus der URL, zwischen /d/ und
    /edit) setzen:
      fly secrets set -a arc42-registration SHEET_ID=<id>
+{{- else if and (eq .Status 400) .Delivery}}
+Vermutlich gibt es das Tabellenblatt "{{.Tab}}" nicht, oder es heißt anders.
+Ein Blatt mit genau diesem Namen anlegen, Kopfzeile A bis I:
+Zeit, Typ, Anmeldung-ID, Kurs, Name, Vorname, E-Mail, Ereignis, Grund.
 {{- else if eq .Status 400}}
 Vermutlich gibt es das Tabellenblatt "{{.Tab}}" nicht mehr, etwa weil es
 umbenannt wurde. Das Blatt zurück in "{{.Tab}}" umbenennen, oder den neuen

@@ -18,6 +18,9 @@ type SheetProblem struct {
 	Account string // the service account's address
 	SheetID string
 	Tab     string
+	// Delivery: the refused row was a delivery failure for the
+	// "Zustellung" tab (spec 2026-10-30), not a confirmed registration.
+	Delivery bool
 }
 
 // SheetAlert renders the mail that goes to the back office at once when the
@@ -30,7 +33,7 @@ func SheetAlert(p SheetProblem) (Rendered, error) {
 	project, _, _ := strings.Cut(domain, ".")
 	data := map[string]any{
 		"At": long(p.At), "ID": p.ID, "Stage": p.Stage, "Status": p.Status, "Detail": p.Detail,
-		"Account": p.Account, "Project": project, "SheetID": p.SheetID, "Tab": p.Tab,
+		"Account": p.Account, "Project": project, "SheetID": p.SheetID, "Tab": p.Tab, "Delivery": p.Delivery,
 	}
 	var t bytes.Buffer
 	if err := textT.ExecuteTemplate(&t, "sheet_alert_de.txt", data); err != nil {

@@ -70,6 +70,7 @@ func main() {
 	// registration. Interface-typed on purpose: a nil *sheet.Sheet inside
 	// the interface would count as a sheet.
 	var rows web.Sheet
+	var deliveries web.Deliveries
 	if cfg.SheetID != "" || len(cfg.SheetKey) > 0 {
 		sh, err := sheet.New(cfg.SheetKey, cfg.SheetID, cfg.SheetTab)
 		if err != nil {
@@ -81,7 +82,8 @@ func main() {
 		} else {
 			// A refusal (dead key, sheet unshared) is mailed at once, not
 			// left to Monday's summary.
-			rows = &sheet.Alerting{Sheet: sh, Sender: sender, To: cfg.BackofficeTo, Log: logger, Every: 24 * time.Hour}
+			alerting := &sheet.Alerting{Sheet: sh, Sender: sender, To: cfg.BackofficeTo, Log: logger, Every: 24 * time.Hour}
+			rows, deliveries = alerting, alerting
 			// The address the spreadsheet must be shared with, as editor.
 			logger.Printf("sheet: tab %q as %s", cfg.SheetTab, sh.Email())
 		}
@@ -116,6 +118,9 @@ func main() {
 		Store:   st,
 		Summary: weekly,
 		Sheet:   rows,
+		// Brevo's delivery failures (spec 2026-10-30), when the webhook
+		// token is set; the tab is the sheet's second.
+		Deliveries: deliveries,
 		// Three confirmation requests per address and day are plenty for a
 		// person who mistyped twice; more is someone using us as a mailer.
 		RecipientLimiter: intake.NewLimiter(3, 24*time.Hour, time.Now),
