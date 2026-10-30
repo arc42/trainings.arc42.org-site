@@ -63,6 +63,19 @@ func TestARefusalIsMailedAtOnceAndThenDaily(t *testing.T) {
 	}
 }
 
+// A refusal on the delivery tab names that tab: the likely cause is that
+// nobody has created it yet.
+func TestADeliveryRefusalNamesItsTab(t *testing.T) {
+	a, f, snd, _ := alerting(t)
+	f.status = http.StatusBadRequest
+	if err := a.AppendDelivery(context.Background(), Delivery{At: t0, Kind: KindBackoffice, Email: "office@example.org", Event: "blocked"}); err == nil {
+		t.Fatal("a refusal was swallowed")
+	}
+	if len(snd.got) != 1 || !strings.Contains(snd.got[0].Text, `"Zustellung"`) || strings.Contains(snd.got[0].Text, "SHEET_TAB") {
+		t.Errorf("alert: %+v", snd.got)
+	}
+}
+
 func TestWeatherIsNotMailed(t *testing.T) {
 	a, f, snd, _ := alerting(t)
 	f.status = http.StatusServiceUnavailable

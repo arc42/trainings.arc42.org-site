@@ -1,4 +1,4 @@
-[trainings.arc42.org] Wochenübersicht Anmeldungen KW 44 (2 bestätigt, 2 offen, 1 verworfen)
+[trainings.arc42.org] Wochenübersicht Anmeldungen KW 44 (2 bestätigt, 2 offen, 1 verworfen, 1 nicht zugestellt)
 
 Wochenübersicht der Anmeldungen, KW 44
 
@@ -7,6 +7,10 @@ Zeitraum: 19.10.2026, 07:00 Uhr bis 26.10.2026, 07:00 Uhr
 Bestätigt: 2
 Offen:     2 (davon 1 ohne Bestätigungsmail)
 Verworfen: 1
+
+Nicht zugestellt: 1. Bestätigungsmail vom Mailserver des Empfängers
+abgelehnt, ohne Mail keine Bestätigung. Einzelheiten bei der jeweiligen
+Anmeldung unten und im Sheet, Blatt "Zustellung".
 
 
 BESTÄTIGT (2)
@@ -50,6 +54,8 @@ R-PEND1  So 25.10. 02:00  sonstige
   E-Mail:     jo@example.com
   Rechnung:   ACME Ltd, 1 Main Street, London
   Bemerkung:  -
+  Zustellung: NICHT ZUGESTELLT, soft_bounce: 554 5.7.1 Service unavailable; Client host [77.32.148.25] blocked by RBL; Blocked - see ...
+              Bitte von info@arc42.de aus selbst anschreiben.
   Link:       gültig bis Fr 30.10. 01:00
 
 

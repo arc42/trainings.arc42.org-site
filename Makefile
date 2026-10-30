@@ -261,7 +261,8 @@ reg-logs: check-flyctl ## Tail the registration service's logs (drops, rejects, 
 REG_SHOW_SQL := SELECT strftime('%d.%m. %H:%M', created_at, 'unixepoch') AS received_utc, \
 	status, code, first_name || ' ' || last_name AS name, email, \
 	CASE WHEN coalesce(p_email, '') <> '' THEN p_first || ' ' || p_last || ' <' || p_email || '>' ELSE '' END AS participant, \
-	substr(replace(replace(coalesce(comments, ''), char(13), ' '), char(10), ' '), 1, 60) AS comment \
+	substr(replace(replace(coalesce(comments, ''), char(13), ' '), char(10), ' '), 1, 60) AS comment, \
+	CASE WHEN bounced_at IS NOT NULL THEN 'NICHT ZUGESTELLT' ELSE '' END AS delivery \
 	FROM registrations WHERE status IN ('pending', 'confirmed') ORDER BY created_at DESC
 
 check-turso:

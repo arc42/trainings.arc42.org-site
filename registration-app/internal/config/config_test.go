@@ -19,6 +19,7 @@ func base(t *testing.T) {
 	t.Setenv("GOOGLE_SA_KEY", "")
 	t.Setenv("SHEET_ID", "")
 	t.Setenv("SHEET_TAB", "")
+	t.Setenv("BREVO_WEBHOOK_TOKEN", "")
 }
 
 func TestLoadAcceptsATestSetup(t *testing.T) {
@@ -112,6 +113,7 @@ func TestLoadRejectsBadSettings(t *testing.T) {
 		"unknown mailer":    {"MAILER", "smtp"},
 		"no back office":    {"BACKOFFICE_TO", ""},
 		"no public url":     {"PUBLIC_URL", ""},
+		"guessable webhook": {"BREVO_WEBHOOK_TOKEN", "secret"},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {

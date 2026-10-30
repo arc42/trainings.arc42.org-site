@@ -218,27 +218,93 @@ func (s *Sheet) Email() string { return s.email }
 // *Refused; everything else (network, timeout, 5xx, 429) is transient and
 // left to the summary run's retry.
 func (s *Sheet) Append(ctx context.Context, rec store.Record) error {
-	err := s.append(ctx, rec)
+	return s.retried(ctx, s.Tab, len(columns), Rows(rec))
+}
+
+// DeliveryTab is the tab Brevo's delivery failures go to (spec 2026-10-30),
+// a second tab of the same spreadsheet. Its name is fixed: the back office
+// creates it once, and a missing tab is a 400, mailed like any refusal.
+const DeliveryTab = "Zustellung"
+
+// Delivery is one mail Brevo could not deliver, as a row of DeliveryTab.
+type Delivery struct {
+	At   time.Time
+	Kind string // KindRegistrant or KindBackoffice
+	// The registration the mail belonged to; empty for a back-office mail
+	// that belongs to none (the summary, the sheet alert).
+	ID, Code, Last, First string
+	Email                 string // the recipient
+	Event, Reason         string // Brevo's event name and the remote answer
+}
+
+const (
+	KindRegistrant = "Anmeldung"
+	KindBackoffice = "Back-Office"
+)
+
+// deliveryColumns is the layout of DeliveryTab, A to I.
+var deliveryColumns = []struct {
+	header string
+	value  func(Delivery) any
+}{
+	{"Zeit", func(d Delivery) any { return d.At.In(berlin).Format("02.01.2006 15:04") }},
+	{"Typ", func(d Delivery) any { return d.Kind }},
+	{"Anmeldung-ID", func(d Delivery) any { return d.ID }},
+	{"Kurs", func(d Delivery) any {
+		if d.Code == intake.Other {
+			return "Sonstige"
+		}
+		return d.Code
+	}},
+	{"Name", func(d Delivery) any { return d.Last }},
+	{"Vorname", func(d Delivery) any { return d.First }},
+	{"E-Mail", func(d Delivery) any { return d.Email }},
+	{"Ereignis", func(d Delivery) any { return d.Event }},
+	{"Grund", func(d Delivery) any { return d.Reason }},
+}
+
+// DeliveryHeaders is the header row DeliveryTab expects, for the README
+// and tests.
+func DeliveryHeaders() []string {
+	h := make([]string, len(deliveryColumns))
+	for i, c := range deliveryColumns {
+		h[i] = c.header
+	}
+	return h
+}
+
+// AppendDelivery adds one row to DeliveryTab, with Append's rules.
+func (s *Sheet) AppendDelivery(ctx context.Context, d Delivery) error {
+	row := make([]any, len(deliveryColumns))
+	for i, c := range deliveryColumns {
+		row[i] = c.value(d)
+	}
+	return s.retried(ctx, DeliveryTab, len(deliveryColumns), [][]any{row})
+}
+
+// retried is append with one more try on a 401 (see Append).
+func (s *Sheet) retried(ctx context.Context, tab string, width int, values [][]any) error {
+	err := s.append(ctx, tab, width, values)
 	var r *Refused
 	if errors.As(err, &r) && r.Stage == StageAppend && r.Status == http.StatusUnauthorized {
 		s.mu.Lock()
 		s.token = ""
 		s.mu.Unlock()
-		err = s.append(ctx, rec)
+		err = s.append(ctx, tab, width, values)
 	}
 	return err
 }
 
-func (s *Sheet) append(ctx context.Context, rec store.Record) error {
+func (s *Sheet) append(ctx context.Context, tab string, width int, values [][]any) error {
 	tok, err := s.accessToken(ctx)
 	if err != nil {
 		return err
 	}
 	// The tab name quoted, as A1 notation wants for names with spaces.
-	rng := "'" + strings.ReplaceAll(s.Tab, "'", "''") + "'!A:" + string(rune('A'+len(columns)-1))
+	rng := "'" + strings.ReplaceAll(tab, "'", "''") + "'!A:" + string(rune('A'+width-1))
 	u := s.API + "/v4/spreadsheets/" + url.PathEscape(s.ID) + "/values/" + url.PathEscape(rng) +
 		":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"
-	body, err := json.Marshal(map[string]any{"values": Rows(rec)})
+	body, err := json.Marshal(map[string]any{"values": values})
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,12 @@ Verspätet: fällig war {{.Due}}.
 Bestätigt: {{.C}}
 Offen:     {{.P}}{{if .Failed}} (davon {{.Failed}} ohne Bestätigungsmail){{end}}
 Verworfen: {{.D}}
+{{- if .Bounced}}
+
+Nicht zugestellt: {{.Bounced}}. Bestätigungsmail vom Mailserver des Empfängers
+abgelehnt, ohne Mail keine Bestätigung. Einzelheiten bei der jeweiligen
+Anmeldung unten und im Sheet, Blatt "Zustellung".
+{{- end}}
 {{- if .Empty}}
 
 Keine Anmeldeversuche in diesem Zeitraum. Diese Mail kommt trotzdem: bleibt
@@ -65,4 +71,7 @@ Anmeldung, bitte die Person anschreiben.
   Rechnung:   {{.Billing}}
   Bemerkung:  {{.Comments}}
 {{- with .Hints}}
-  Hinweise:   {{.}}{{end}}{{end}}
+  Hinweise:   {{.}}{{end}}
+{{- with .Bounce}}
+  Zustellung: NICHT ZUGESTELLT, {{.}}
+              Bitte von info@arc42.de aus selbst anschreiben.{{end}}{{end}}

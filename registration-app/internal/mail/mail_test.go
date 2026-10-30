@@ -261,7 +261,10 @@ func TestSummaryMail(t *testing.T) {
 			Hints: []string{"several-emails"}, Status: store.StatusConfirmed, CreatedAt: at(100 * time.Hour),
 			ConfirmedAt: at(99 * time.Hour), ConfirmedVia: "code"},
 		{Reg: intake.Registration{ID: "R-PEND1", Code: "sonstige", LastName: "Smith", Email: "jo@example.com",
-			Billing: "ACME Ltd, 1 Main Street, London"}, Status: store.StatusPending, CreatedAt: at(30 * time.Hour)},
+			Billing: "ACME Ltd, 1 Main Street, London"}, Status: store.StatusPending, CreatedAt: at(30 * time.Hour),
+			// Brevo's webhook (spec 2026-10-30); the answer quotes a URL.
+			BouncedAt:    at(30*time.Hour - time.Minute),
+			BounceReason: "soft_bounce: 554 5.7.1 Service unavailable; Client host [77.32.148.25] blocked by RBL; Blocked - see https://www.spamcop.net/bl.shtml?77.32.148.25"},
 		{Reg: intake.Registration{ID: "R-PEND2", Code: "26-12 MSA", LastName: "Klein", FirstName: "Ute",
 			Email: "ute@example.de"}, Status: store.StatusPending, MailFailed: true, CreatedAt: at(6 * 24 * time.Hour)},
 	}
@@ -290,8 +293,14 @@ func TestSheetAlertMails(t *testing.T) {
 		"sheet_alert_token_de.txt": {Stage: "token", Status: 400, Detail: `{"error":"invalid_grant","error_description":"Invalid JWT Signature."}`},
 		"sheet_alert_key_de.txt":   {Stage: "key", Detail: "sheet: GOOGLE_SA_KEY is not JSON: invalid character 'x'"},
 		"sheet_alert_403_de.txt":   {Stage: "append", Status: 403, Detail: `{"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}`},
+		// The delivery tab (spec 2026-10-30) not created yet.
+		"sheet_alert_delivery_de.txt": {Stage: "append", Status: 400, Tab: "Zustellung", Delivery: true,
+			Detail: `{"error":{"code":400,"message":"Unable to parse range: 'Zustellung'!A:I","status":"INVALID_ARGUMENT"}}`},
 	} {
-		p.At, p.ID, p.SheetID, p.Tab = at, "R-7F3KQ", "1JtivdvHqR-test", "Tabelle1"
+		p.At, p.ID, p.SheetID = at, "R-7F3KQ", "1JtivdvHqR-test"
+		if p.Tab == "" {
+			p.Tab = "Tabelle1"
+		}
 		if p.Stage != "key" { // unreadable key: no account known
 			p.Account = "registration-sheet@arc42-registration-write-sheet.iam.gserviceaccount.com"
 		}
