@@ -37,6 +37,14 @@ type Config struct {
 	AllowedOrigins []string
 	TestRecipients []string // non-empty means test mode
 
+	// The back-office sheet (package sheet). SheetKey is the service
+	// account's JSON key. Neither set: the sheet is off, as in test
+	// deployments and local runs. Only one set is NOT refused here: nothing
+	// about the sheet may keep registrations from running, so main starts
+	// without it and mails the back office (sheet.MailUnreadableKey).
+	SheetKey          []byte
+	SheetID, SheetTab string
+
 	// SummaryNow sends a weekly summary at start, whatever the week
 	// (SUMMARY_NOW=1), so a test deployment can show one without waiting
 	// for Monday. Refused in production, where it would send one on every
@@ -66,6 +74,9 @@ func Load() (Config, error) {
 		AllowedOrigins: list(env("ALLOWED_ORIGINS", "https://trainings.arc42.org")),
 		TestRecipients: list(os.Getenv("TEST_RECIPIENTS")),
 		SummaryNow:     os.Getenv("SUMMARY_NOW") == "1",
+		SheetKey:       []byte(os.Getenv("GOOGLE_SA_KEY")),
+		SheetID:        os.Getenv("SHEET_ID"),
+		SheetTab:       env("SHEET_TAB", "Tabelle1"),
 	}
 
 	key, err := base64.StdEncoding.DecodeString(os.Getenv("TOKEN_KEY"))

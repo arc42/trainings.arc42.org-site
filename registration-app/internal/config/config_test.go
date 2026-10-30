@@ -16,6 +16,9 @@ func base(t *testing.T) {
 	t.Setenv("PUBLIC_URL", "https://arc42-registration.fly.dev/")
 	t.Setenv("ENVIRONMENT", "")
 	t.Setenv("TEST_RECIPIENTS", "Me@Example.org, you@example.org")
+	t.Setenv("GOOGLE_SA_KEY", "")
+	t.Setenv("SHEET_ID", "")
+	t.Setenv("SHEET_TAB", "")
 }
 
 func TestLoadAcceptsATestSetup(t *testing.T) {
@@ -169,5 +172,24 @@ func TestSummaryNowIsForTestDeploymentsOnly(t *testing.T) {
 	t.Setenv("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.test")
 	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "SUMMARY_NOW") {
 		t.Errorf("production with SUMMARY_NOW: %v", err)
+	}
+}
+
+// The sheet is off without its settings. Half a setup is accepted: the
+// service must run without the sheet rather than not at all (main mails
+// the back office about it).
+func TestSheetSettingsNeverStopTheService(t *testing.T) {
+	base(t)
+	if c, err := Load(); err != nil || c.SheetID != "" || c.SheetTab != "Tabelle1" {
+		t.Fatalf("no sheet: %+v %v", c, err)
+	}
+	t.Setenv("SHEET_ID", "1Jtiv")
+	if _, err := Load(); err != nil {
+		t.Errorf("SHEET_ID alone stopped the service: %v", err)
+	}
+	t.Setenv("SHEET_ID", "")
+	t.Setenv("GOOGLE_SA_KEY", `{"type":"service_account"}`)
+	if _, err := Load(); err != nil {
+		t.Errorf("GOOGLE_SA_KEY alone stopped the service: %v", err)
 	}
 }

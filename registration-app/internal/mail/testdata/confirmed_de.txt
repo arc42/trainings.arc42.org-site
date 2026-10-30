@@ -8,9 +8,10 @@ Nachname:          Müller
 Vorname:           Anna
 E-Mail:            anna@example.org
 E-Mail vorher:     anna@exmaple.org (vom Anmeldenden korrigiert)
-Nachname TN:       
-Vorname TN:        
-E-Mail TN:         
+Firma:             Firma X
+Teilnehmende:
+  1. Frau Eva Meier <eva@example.org>
+  2. Tim Lang
 Rechnungsadresse:
   Firma X
   Straße 1

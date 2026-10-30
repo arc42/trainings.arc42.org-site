@@ -5,10 +5,12 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/mail"
 	"arc42-registration/internal/send"
+	"arc42-registration/internal/store"
 	"arc42-registration/internal/token"
 )
 
@@ -98,7 +100,8 @@ func (s *Server) confirm(w http.ResponseWriter, r *http.Request, c token.Claims,
 		s.redirect(w, r, "confirmed", c.Lang)
 		return
 	}
-	m, err := mail.Confirmed(c, s.confirmation(ctx, c, via))
+	k, rec := s.confirmation(ctx, c, via)
+	m, err := mail.Confirmed(c, k)
 	if err == nil {
 		err = s.send(ctx, send.Message{To: s.d.Cfg.BackofficeTo, ReplyTo: c.Email, Subject: m.Subject, Text: m.Text, CustomID: c.ID})
 	}
@@ -121,13 +124,51 @@ func (s *Server) confirm(w http.ResponseWriter, r *http.Request, c token.Claims,
 			s.d.Log.Printf("confirm %s: could not mark the row confirmed: %v", c.ID, err)
 		}
 	}
+	if s.d.Sheet != nil && rec != nil {
+		s.toSheet(ctx, *rec)
+	}
 	s.redirect(w, r, "confirmed", c.Lang)
+}
+
+// sheetTimeout bounds one append including the token request.
+const sheetTimeout = 10 * time.Second
+
+// toSheet appends the registration's rows in the background: the confirmed
+// page never waits for Google and never fails because of it (spec
+// 2026-10-25, section 5). A failure leaves sheet_at empty, and the weekly
+// summary run tries again; so does a registration the store could not
+// supply at confirm time, once reconciliation has marked it.
+func (s *Server) toSheet(ctx context.Context, rec store.Record) {
+	ctx = context.WithoutCancel(ctx) // the request is answered long before
+	s.bg.Add(1)
+	go func() {
+		defer s.bg.Done()
+		// Whatever the sheet does, the process lives: a panic here would
+		// take every registration down with it.
+		defer func() {
+			if p := recover(); p != nil {
+				s.d.Log.Printf("confirm %s: sheet panicked, contained, the summary run retries: %v", rec.Reg.ID, p)
+			}
+		}()
+		actx, cancel := context.WithTimeout(ctx, sheetTimeout)
+		defer cancel()
+		if err := s.d.Sheet.Append(actx, rec); err != nil {
+			s.d.Log.Printf("confirm %s: sheet append failed, the summary run retries: %v", rec.Reg.ID, err)
+			return
+		}
+		if err := s.d.Store.SheetDone(ctx, rec.Reg.ID, s.d.Now()); err != nil {
+			s.d.Log.Printf("confirm %s: in the sheet, but not recorded (expect a duplicate row next week): %v", rec.Reg.ID, err)
+			return
+		}
+		s.d.Log.Printf("confirm %s: %d row(s) in the sheet", rec.Reg.ID, max(1, len(rec.Reg.Participants)))
+	}()
 }
 
 // confirmation gathers what the BESTÄTIGT mail shows. The stored row is the
 // source; the token fills in when the store cannot supply it, and its address
-// wins either way, because that is the address that was just confirmed.
-func (s *Server) confirmation(ctx context.Context, c token.Claims, via string) mail.Confirmation {
+// wins either way, because that is the address that was just confirmed. The
+// row comes back too, for the sheet; nil when the store could not supply it.
+func (s *Server) confirmation(ctx context.Context, c token.Claims, via string) (mail.Confirmation, *store.Record) {
 	k := mail.Confirmation{At: s.d.Now(), Via: via}
 	if c.Code != intake.Other {
 		if e, _ := s.d.Feed.Lookup(ctx, c.Code); e.Code != "" {
@@ -136,15 +177,17 @@ func (s *Server) confirmation(ctx context.Context, c token.Claims, via string) m
 	}
 	if s.d.Store == nil {
 		k.Missing = "down"
-		return k
+		return k, nil
 	}
 	rec, ok, err := s.d.Store.Registration(ctx, c.ID)
 	switch {
 	case err != nil:
 		s.d.Log.Printf("confirm %s: registration unreadable, short mail: %v", c.ID, err)
 		k.Missing = "down"
+		return k, nil
 	case !ok:
 		k.Missing = "absent"
+		return k, nil
 	default:
 		k.Reg, k.Hints, k.CorrectedFrom = &rec.Reg, rec.Hints, rec.CorrectedFrom
 		if len(rec.Reg.Emails) == 0 || !strings.EqualFold(rec.Reg.Emails[0], c.Email) {
@@ -152,10 +195,10 @@ func (s *Server) confirmation(ctx context.Context, c token.Claims, via string) m
 			if k.CorrectedFrom == "" {
 				k.CorrectedFrom = rec.Reg.Email
 			}
-			rec.Reg.Email = c.Email
+			rec.Reg.Email, rec.Reg.Emails = c.Email, []string{c.Email}
 		}
 	}
-	return k
+	return k, &rec
 }
 
 // errorPage is bilingual: an unreadable token carries no language.

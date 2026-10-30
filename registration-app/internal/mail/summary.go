@@ -19,13 +19,16 @@ type Week struct {
 	Due  time.Time
 	Late bool
 	Rows []store.Record // every stored registration, oldest first
+	// NoSheet: confirmed registrations whose rows are not in the sheet,
+	// "retry" (kept, tried again next week) or "manual" (deleted now).
+	NoSheet map[string]string
 }
 
 // summaryRow is one registration as the summary shows it: one line of
 // facts, then short indented lines, never the whole registration.
 type summaryRow struct {
 	ID, When, Code, Name, Email, Billing, Comments string
-	Hints, Reason, Confirmed, Link                 string
+	Hints, Reason, Confirmed, Link, NoSheet        string
 	MailFailed, Again                              bool
 }
 
@@ -41,11 +44,14 @@ func Summary(w Week) (Rendered, error) {
 			Name:  orDash(strings.Trim(r.Reg.LastName+", "+r.Reg.FirstName, ", ")),
 			Email: orDash(r.Reg.Email), Billing: firstLine(r.Reg.Billing), Comments: excerpt(r.Reg.Comments, 80),
 			Hints: strings.Join(r.Hints, ", "), Reason: r.DropReason,
-			MailFailed: r.MailFailed, Again: !r.ReportedAt.IsZero(),
+			MailFailed: r.MailFailed, Again: !r.ReportedAt.IsZero(), NoSheet: w.NoSheet[r.Reg.ID],
 		}
 		switch r.Status {
 		case store.StatusConfirmed:
 			row.Confirmed = short(r.ConfirmedAt) + map[string]string{"code": ", per Code", "link": ", per Link"}[r.ConfirmedVia]
+			// Listed last week while still open. A row confirmed before
+			// that was kept for the sheet; its Sheet line says so.
+			row.Again = row.Again && r.ConfirmedAt.After(r.ReportedAt)
 		case store.StatusPending:
 			if until := r.CreatedAt.Add(token.Valid); until.After(w.To) {
 				row.Link = "gültig bis " + short(until)

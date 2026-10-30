@@ -262,3 +262,103 @@ func (c *countingStore) LastSummary(ctx context.Context) (time.Time, bool, error
 	}
 	return c.Store.LastSummary(ctx)
 }
+
+type fakeSheet struct {
+	got  []string
+	fail error
+}
+
+func (f *fakeSheet) Append(_ context.Context, rec store.Record) error {
+	if f.fail != nil {
+		return f.fail
+	}
+	f.got = append(f.got, rec.Reg.ID)
+	return nil
+}
+
+// A confirmed registration missing from the sheet (Google down at confirm
+// time, or the store down and the row only reconciled now) is appended by
+// the run. If that fails too, it stays one more week; after that the back
+// office is told to type it in, and it goes like every other row.
+func TestTheRunCatchesUpOnTheSheet(t *testing.T) {
+	mon := berlinAt(2026, 10, 26, 7, 0)
+	g := newRig(mon)
+	ctx := context.Background()
+	sh := &fakeSheet{}
+	g.save(t, "R-DONE1", store.StatusPending, mon.Add(-100*time.Hour))
+	_ = g.st.MarkConfirmed(ctx, "R-DONE1", mon.Add(-99*time.Hour), "code")
+	_ = g.st.SheetDone(ctx, "R-DONE1", mon.Add(-99*time.Hour))
+	g.save(t, "R-OWED1", store.StatusPending, mon.Add(-90*time.Hour))
+	_ = g.st.MarkConfirmed(ctx, "R-OWED1", mon.Add(-89*time.Hour), "link")
+	g.save(t, "R-RECO1", store.StatusPending, mon.Add(-80*time.Hour))
+	_, _ = g.st.Confirm(ctx, "R-RECO1", mon.Add(-79*time.Hour)) // the row update failed
+	r := g.runner()
+	r.Sheet = sh
+	g.run(t, r)
+	if strings.Join(sh.got, ",") != "R-OWED1,R-RECO1" {
+		t.Errorf("appended %v, want the two owed ones", sh.got)
+	}
+	if all, _ := g.st.All(ctx); len(all) != 0 {
+		t.Errorf("kept %+v; everything is in the sheet now", all)
+	}
+	if !strings.Contains(g.logs.String(), "2 appended to the sheet") {
+		t.Errorf("log: %s", g.logs)
+	}
+}
+
+func TestASheetThatStaysDownIsHandedToTheBackOffice(t *testing.T) {
+	mon := berlinAt(2026, 10, 26, 7, 0)
+	g := newRig(mon)
+	ctx := context.Background()
+	sh := &fakeSheet{fail: errors.New("503")}
+	g.save(t, "R-OWED1", store.StatusPending, mon.Add(-90*time.Hour))
+	_ = g.st.MarkConfirmed(ctx, "R-OWED1", mon.Add(-89*time.Hour), "link")
+	r := g.runner()
+	r.Sheet = sh
+	g.run(t, r)
+	if all, _ := g.st.All(ctx); len(all) != 1 {
+		t.Fatalf("kept %d rows, want the owed one", len(all))
+	}
+	if text := g.sender.got[0].Text; !strings.Contains(text, "nächste Woche ein neuer Versuch") {
+		t.Errorf("first summary:\n%s", text)
+	}
+
+	g.now = mon.Add(7 * 24 * time.Hour)
+	r = g.runner()
+	r.Sheet = sh
+	g.run(t, r)
+	text := g.sender.got[1].Text
+	if !strings.Contains(text, "Bitte von Hand") || strings.Contains(text, "letzte Woche noch offen") {
+		t.Errorf("second summary:\n%s", text)
+	}
+	if all, _ := g.st.All(ctx); len(all) != 0 {
+		t.Errorf("kept %+v after two weeks", all)
+	}
+}
+
+// Without a sheet, confirmed rows go after their first report, as before.
+func TestNoSheetNoWaiting(t *testing.T) {
+	mon := berlinAt(2026, 10, 26, 7, 0)
+	g := newRig(mon)
+	g.save(t, "R-CONF1", store.StatusConfirmed, mon.Add(-90*time.Hour))
+	g.run(t, g.runner())
+	if all, _ := g.st.All(context.Background()); len(all) != 0 || strings.Contains(g.sender.got[0].Text, "Sheet:") {
+		t.Errorf("kept %+v; mail:\n%s", all, g.sender.got[0].Text)
+	}
+}
+
+type panickySheet struct{}
+
+func (panickySheet) Append(context.Context, store.Record) error { panic("boom") }
+
+func TestAPanickingSheetDoesNotStopTheSummary(t *testing.T) {
+	mon := berlinAt(2026, 10, 26, 7, 0)
+	g := newRig(mon)
+	g.save(t, "R-OWED1", store.StatusConfirmed, mon.Add(-90*time.Hour))
+	r := g.runner()
+	r.Sheet = panickySheet{}
+	g.run(t, r)
+	if len(g.sender.got) != 1 || !strings.Contains(g.sender.got[0].Text, "nächste Woche ein neuer Versuch") {
+		t.Errorf("summary: %+v", g.sender.got)
+	}
+}

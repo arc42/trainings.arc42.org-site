@@ -5,7 +5,8 @@ mails the registrant through Brevo, and confirms a registration when the
 registrant types the 6-digit code from their mail on the page that stayed
 open, or presses the button reached from the link in it. Only then does the
 back office get its one mail, BESTÄTIGT/CONFIRMED, with the complete
-registration. Turso also records which registrations are confirmed and how
+registration, and its rows in the back-office Google Sheet, one per
+participant (below). Turso also records which registrations are confirmed and how
 many wrong codes each got, so a registration confirms exactly once. Every
 Monday the back office gets a summary of the week's attempts: confirmed,
 open and dropped; after it, what is final is deleted.
@@ -43,6 +44,9 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | yes | the Turso database (EU, `aws-eu-west-1`) for registrations, confirmed ids and wrong-code counts (`turso db show --url`, `turso db tokens create`). Required in production; without them a test deployment keeps this in memory and forgets it on every restart |
 | `MAILER` | no | `brevo` (default) or `log`: print mails instead of sending |
 | `SUMMARY_NOW` | no | `1`: send a weekly summary at start, whatever the day, to see one on a test deployment. Refused in production |
+| `GOOGLE_SA_KEY` | yes | the JSON key of the Google service account that writes the sheet, as Google hands it out. Goes with `SHEET_ID`; one without the other, or a key that cannot be read, starts the service **without** the sheet and mails the back office (nothing about the sheet ever stops registrations) |
+| `SHEET_ID` | yes | the spreadsheet id from its URL (`/spreadsheets/d/<id>/edit`). Unset: no sheet, as in test deployments and `make reg-run` |
+| `SHEET_TAB` | no | the tab rows go to (default `Tabelle1`) |
 
 Outside `ENVIRONMENT=PRODUCTION` the service **refuses to start** unless
 `TEST_RECIPIENTS` is set (or `MAILER=log`), so a test deployment cannot mail
@@ -70,6 +74,66 @@ week was empty, so **a Monday without it means the service is not running**.
 The first request after the first deploy sends a summary at once; after
 that, Mondays. A test deployment with the in-memory store sends one per
 process start, since the store forgets the last one.
+
+## The back-office sheet
+
+Every confirmed registration is appended to the Google Sheet
+"arc42-neue-Anmeldungen" (`internal/sheet`), **one row per participant**; the
+back office copies each new row into the sheet of its course date. Columns,
+as agreed on 30 Oct 2026 (the list is `columns` in `internal/sheet/sheet.go`,
+the one place to change when the sheet changes):
+
+| | Column | Filled with |
+|---|---|---|
+| A | Anrede | the participant's (Frau, Herr or empty) |
+| B, C | Name, Vorname | the participant's; the registrant's when no participant was entered |
+| D | Firma | the one Firma field of the registration, in every row |
+| E | Infos nach Einladung | empty: the back office's |
+| F | email Teilnehmer | the participant's; the registrant's when they attend |
+| G | email Sekretariat | the registrant's, when they registered someone else; else empty |
+| H | Datum der Anmeldung | the submit day, `DD.MM.YYYY`, Berlin |
+| I | Preis | a number: the early-bird price if submitted by its last day, else the list price; empty for "Sonstige". Alumni and special prices are the back office's |
+| J | in echtes Termin-Sheet übernommen von | empty: the back office's |
+| K | Kurs | the booking code |
+| L | Anmeldung-ID | `R-…`, the id in the BESTÄTIGT mail's subject |
+
+The append runs in the background after the BESTÄTIGT mail; the page never
+waits for Google. If it fails (or the store was down at confirm time), the
+weekly summary run appends it, and the summary says so; after a second
+failed week the summary asks the back office to type the rows in from the
+mail, and the registration is deleted as usual. A row can end up in the
+sheet twice (Google took it, the service did not hear back); the id in L
+shows it.
+
+**When Google refuses, the back office hears at once.** A refusal no retry
+will fix (the key deleted, revoked or disabled; the sheet no longer shared
+with the service account, deleted, or its tab renamed: any 4xx except 429,
+after one retry with a fresh token on a 401) sends the mail `ACHTUNG:
+Google Sheet nicht beschreibbar` to `BACKOFFICE_TO`, with Google's answer
+and the steps that fix that kind of refusal, a new key among them
+(`internal/mail/templates/sheet_alert_de.txt`). Immediately at the first
+refusal, then at most once a day while it lasts; the pause is kept in
+memory, so a restart may send one more. Network errors, timeouts and 5xx
+send nothing: the summary run retries them, and lists what is missing.
+
+**Nothing about the sheet stops the service.** A missing or unreadable key
+starts it without the sheet, with the same ACHTUNG mail; every refusal is
+an ordinary error; and a panic anywhere in the sheet code is contained
+(`sheet.Contain`, and a `recover` in the confirm hook and the summary run),
+because a panic in a goroutine would end the whole process.
+
+Testing against the real Google (opt-in, skipped by `make reg-check`):
+`SHEET_LIVE=1 go test ./internal/sheet -run Live -v` checks that a forged
+key is refused as a dead key is (no secret needed); with `GOOGLE_SA_KEY`
+and `SHEET_ID` set as well it appends one test registration (two rows, R-TEST1,
+marked TEST) to the real sheet and checks the refusals for a missing tab and
+a missing spreadsheet. Delete the test rows afterwards.
+
+Setup: a Google Cloud project with the Sheets API enabled, a service account
+without roles, a JSON key for it (`fly secrets set GOOGLE_SA_KEY="$(cat
+key.json)" SHEET_ID=…`), and the spreadsheet shared with the account's
+address as **editor**. The service logs that address at start (`sheet: tab
+"Tabelle1" as …`).
 
 ## Working on it
 
@@ -102,8 +166,15 @@ Mail templates are in `internal/mail/templates/`; their expected output is in
 | `confirm R-…: confirmed <code>` | BESTÄTIGT/CONFIRMED sent, the one back-office mail |
 | `confirm R-…: registration unreadable, short mail` | store down at confirm: the mail has id, code, name and address only |
 | `confirm R-…: could not mark the row confirmed` | the mail went out; the summary run repairs the row |
+| `confirm R-…: n row(s) in the sheet` | appended to the back-office sheet |
+| `confirm R-…: sheet append failed, the summary run retries` | Google unreachable or refusing (403: the sheet is not shared with the service account) |
+| `confirm R-…: in the sheet, but not recorded` | the next summary run appends it again: expect a duplicate row |
+| `sheet: sheet: token refused: 400 …; alert mailed to the back office` | Google refused the key (or `append refused: 403/404/400`: the sheet); the ACHTUNG mail went out |
+| `sheet: … (alert already mailed at …)` | the same refusal again within a day; no second mail |
+| `sheet: …; the alert mail failed too` | Brevo is down as well; the next refusal tries the mail again |
+| `summary <week>: sheet append R-… failed, stopping here` | the rest is retried next week; the summary lists what is missing |
 | `correct R-…: store update failed` | the confirmed mail still shows the corrected address, from the token |
-| `summary <week>: sent, n rows reported, …` | the weekly summary went out; how many rows were kept for next week, deleted, and reconciled |
+| `summary <week>: sent, n rows reported, …` | the weekly summary went out; how many rows were kept for next week, deleted, reconciled, and appended to the sheet |
 | `summary <week>: claimed by another machine` | a second machine during a deploy; it sends nothing |
 | `summary: summary <week>: …` | the run failed before the mail was out; nothing changed, the next request a minute later tries again |
 | `summary <week>: sent, but not recorded` | the mail went out but the store did not take it; expect a second summary for the week after 15 minutes |

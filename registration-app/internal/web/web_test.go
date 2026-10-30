@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -53,6 +54,7 @@ func (f *fakeSender) Send(_ context.Context, m send.Message) error {
 
 type env struct {
 	srv    http.Handler
+	server *Server
 	sender *fakeSender
 	now    *time.Time
 	logs   *bytes.Buffer
@@ -87,7 +89,8 @@ func rebuild(e *env) *env {
 	if e.tweak != nil {
 		e.tweak(&d)
 	}
-	e.srv = New(d).Routes()
+	e.server = New(d)
+	e.srv = e.server.Routes()
 	return e
 }
 
@@ -797,5 +800,116 @@ func TestEveryRequestAsksWhetherTheSummaryIsDue(t *testing.T) {
 	e.get("/nowhere")
 	if k.n != 3 {
 		t.Errorf("Kick called %d times for 3 requests", k.n)
+	}
+}
+
+type fakeSheet struct {
+	mu  sync.Mutex
+	got []store.Record
+	err error
+}
+
+func (f *fakeSheet) Append(_ context.Context, rec store.Record) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return f.err
+	}
+	f.got = append(f.got, rec)
+	return nil
+}
+
+func (e *env) confirmFirst(t *testing.T) *httptest.ResponseRecorder {
+	t.Helper()
+	link := linkRe.FindStringSubmatch(e.sender.got[0].Text)
+	tok, _ := url.QueryUnescape(strings.TrimPrefix(link[1], "/confirm?t="))
+	rec := e.post("/confirm", url.Values{"t": {tok}})
+	e.server.Wait()
+	return rec
+}
+
+// The rows go to the sheet after the mail, with everything the form had,
+// and the store records that they are there.
+func TestConfirmAppendsToTheSheet(t *testing.T) {
+	e := newEnv(t)
+	sh := &fakeSheet{}
+	e.rebuildWith(func(d *Deps) { d.Sheet = sh })
+	f := form("de")
+	f["AnredeTN"], f["NachnameTN"], f["VornameTN"], f["EmailTN"] = []string{"Frau", "Herr"}, []string{"Meier", "Lang"}, []string{"Eva", "Tim"}, []string{"eva@example.org", ""}
+	f.Set("Firma", "Firma X")
+	e.post("/submit", f)
+	if len(sh.got) != 0 {
+		t.Fatal("appended before the confirmation")
+	}
+	if rec := e.confirmFirst(t); rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" {
+		t.Fatalf("confirm: %q", rec.Header().Get("Location"))
+	}
+	if len(sh.got) != 1 {
+		t.Fatalf("%d appends, want 1", len(sh.got))
+	}
+	g := sh.got[0]
+	if len(g.Reg.Participants) != 2 || g.Reg.Participants[1].Salutation != "Herr" || g.Reg.Company != "Firma X" || g.Price != 2890 {
+		t.Errorf("appended %+v", g)
+	}
+	if r, _, _ := e.store.Registration(context.Background(), "R-TEST1"); !r.SheetAt.Equal(*e.now) || r.Price != 2890 {
+		t.Errorf("stored: sheet_at %v price %d", r.SheetAt, r.Price)
+	}
+	conf := e.sender.got[1].Text
+	if !strings.Contains(conf, "  1. Frau Eva Meier <eva@example.org>\n  2. Herr Tim Lang") || !strings.Contains(conf, "Firma:             Firma X") {
+		t.Errorf("confirmed mail lacks the participants:\n%s", conf)
+	}
+}
+
+// Google down: the person is confirmed as always, the back office has its
+// mail, and the row stays owed for the summary run.
+func TestASheetFailureChangesNothingForThePerson(t *testing.T) {
+	e := newEnv(t)
+	sh := &fakeSheet{err: errors.New("503 from Google")}
+	e.rebuildWith(func(d *Deps) { d.Sheet = sh })
+	e.post("/submit", form("de"))
+	rec := e.confirmFirst(t)
+	if rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" || len(e.sender.got) != 2 {
+		t.Fatalf("confirm: %q, %d mails", rec.Header().Get("Location"), len(e.sender.got))
+	}
+	if r, _, _ := e.store.Registration(context.Background(), "R-TEST1"); r.Status != store.StatusConfirmed || !r.SheetAt.IsZero() {
+		t.Errorf("stored: status %q sheet_at %v", r.Status, r.SheetAt)
+	}
+	if !strings.Contains(e.logs.String(), "sheet append failed") {
+		t.Errorf("log:\n%s", e.logs)
+	}
+}
+
+// Without the stored row there is nothing to put in the sheet yet; the
+// summary run appends it once reconciliation has marked the row.
+func TestStoreDownAtConfirmLeavesTheSheetToTheSummary(t *testing.T) {
+	e := newEnv(t)
+	b := &brokenStore{Store: store.NewMemory()}
+	sh := &fakeSheet{}
+	e.store = b
+	e.rebuildWith(func(d *Deps) { d.Sheet = sh })
+	e.post("/submit", form("de"))
+	b.get = errors.New("turso down")
+	e.confirmFirst(t)
+	if len(sh.got) != 0 {
+		t.Errorf("appended %+v without the row", sh.got)
+	}
+}
+
+type panickySheet struct{}
+
+func (panickySheet) Append(context.Context, store.Record) error { panic("boom") }
+
+// The sheet must never take the service down: a panic in the background
+// append is contained, the person is confirmed, the row stays owed.
+func TestAPanickingSheetIsContained(t *testing.T) {
+	e := newEnv(t)
+	e.rebuildWith(func(d *Deps) { d.Sheet = panickySheet{} })
+	e.post("/submit", form("de"))
+	rec := e.confirmFirst(t)
+	if rec.Header().Get("Location") != "https://trainings.arc42.org/anmeldung-bestaetigt/" || len(e.sender.got) != 2 {
+		t.Fatalf("confirm: %q, %d mails", rec.Header().Get("Location"), len(e.sender.got))
+	}
+	if !strings.Contains(e.logs.String(), "sheet panicked, contained") {
+		t.Errorf("log:\n%s", e.logs)
 	}
 }

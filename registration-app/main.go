@@ -1,7 +1,8 @@
 // Command arc42-registration receives the trainings.arc42.org registration
 // form, mails the registrant, confirms registrations from a sealed link or a
-// code, mails the back office once per confirmed registration, and sends the
-// back office a weekly summary of every attempt. See
+// code, mails the back office once per confirmed registration, appends it to
+// the back office's Google Sheet, and sends the back office a weekly summary
+// of every attempt. See
 // docs/superpowers/specs/2026-09-25-registration-service-design.md and
 // 2026-10-25-confirm-gated-registration-design.md.
 package main
@@ -17,6 +18,7 @@ import (
 	"arc42-registration/internal/feed"
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/send"
+	"arc42-registration/internal/sheet"
 	"arc42-registration/internal/store"
 	"arc42-registration/internal/summary"
 	"arc42-registration/internal/token"
@@ -64,9 +66,32 @@ func main() {
 		logger.Printf("store: in memory - forgets on restart, test deployments only")
 	}
 
+	// The back-office sheet: one row per participant of every confirmed
+	// registration. Interface-typed on purpose: a nil *sheet.Sheet inside
+	// the interface would count as a sheet.
+	var rows web.Sheet
+	if cfg.SheetID != "" || len(cfg.SheetKey) > 0 {
+		sh, err := sheet.New(cfg.SheetKey, cfg.SheetID, cfg.SheetTab)
+		if err != nil {
+			// Not fatal: deploy is merge, and a key pasted wrong must not
+			// take registrations down with it. The service runs without
+			// the sheet and says so at once.
+			logger.Printf("%v; running without the sheet", err)
+			go sheet.MailUnreadableKey(context.Background(), sender, cfg.BackofficeTo, cfg.SheetKey, cfg.SheetID, err, logger)
+		} else {
+			// A refusal (dead key, sheet unshared) is mailed at once, not
+			// left to Monday's summary.
+			rows = &sheet.Alerting{Sheet: sh, Sender: sender, To: cfg.BackofficeTo, Log: logger, Every: 24 * time.Hour}
+			// The address the spreadsheet must be shared with, as editor.
+			logger.Printf("sheet: tab %q as %s", cfg.SheetTab, sh.Email())
+		}
+	} else {
+		logger.Printf("sheet: off (GOOGLE_SA_KEY and SHEET_ID not set)")
+	}
+
 	// The weekly summary goes out from inside the first request after
 	// Monday 07:00 (package summary); cron-job.org makes sure there is one.
-	weekly := &summary.Runner{Store: st, Sender: sender, To: cfg.BackofficeTo, Log: logger, Now: time.Now}
+	weekly := &summary.Runner{Store: st, Sender: sender, To: cfg.BackofficeTo, Log: logger, Now: time.Now, Sheet: rows}
 	if cfg.SummaryNow {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -90,6 +115,7 @@ func main() {
 		Log:     logger,
 		Store:   st,
 		Summary: weekly,
+		Sheet:   rows,
 		// Three confirmation requests per address and day are plenty for a
 		// person who mistyped twice; more is someone using us as a mailer.
 		RecipientLimiter: intake.NewLimiter(3, 24*time.Hour, time.Now),

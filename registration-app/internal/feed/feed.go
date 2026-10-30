@@ -15,9 +15,34 @@ import (
 )
 
 type Price struct {
-	Amount   int    `json:"amount"`
-	Currency string `json:"currency"`
+	Amount    int        `json:"amount"`
+	Currency  string     `json:"currency"`
+	EarlyBird *EarlyBird `json:"early_bird"`
 }
+
+type EarlyBird struct {
+	Amount int    `json:"amount"`
+	Until  string `json:"until"` // YYYY-MM-DD, the last day it applies
+}
+
+// PriceOn is the price a registration made on day (YYYY-MM-DD, Berlin) pays
+// before any alumni or special agreement, which the back office applies by
+// hand: the early-bird amount up to and including its last day, else the
+// list price. 0 when the date has no price. The feed already omits an
+// expired early bird, but only from its last build, up to a week ago, so the
+// date is compared here again.
+func (d Date) PriceOn(day string) int {
+	if d.Price == nil {
+		return 0
+	}
+	if eb := d.Price.EarlyBird; eb != nil && eb.Amount > 0 && day <= eb.Until {
+		return eb.Amount
+	}
+	return d.Price.Amount
+}
+
+// Day is t's calendar day in Berlin, in the form PriceOn compares.
+func Day(t time.Time) string { return t.In(berlin).Format("2006-01-02") }
 
 type Date struct {
 	ID       string   `json:"id"`

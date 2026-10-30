@@ -95,6 +95,14 @@ func TestOutcomes(t *testing.T) {
 		{"www in comments", func(f url.Values, in *Input) { f.Set("Bemerkungen", "www.forum.example") }, Reject, "link"},
 		{"link in billing", func(f url.Values, in *Input) { f.Set("Rechnungsadresse", "Firma X\nhttp://x.example") }, Reject, "link"},
 		{"link in a name", func(f url.Values, in *Input) { f.Set("VornameTN", "HTTPS://spam.example") }, Reject, "name"},
+		{"link in a later participant", func(f url.Values, in *Input) {
+			f["NachnameTN"] = []string{"Meier", "www.spam.example"}
+			f["VornameTN"] = []string{"Eva", "Tom"}
+		}, Reject, "name"},
+		{"link in the company", func(f url.Values, in *Input) { f.Set("Firma", "http://spam.example") }, Reject, "company"},
+		{"ten participants are fine", func(f url.Values, in *Input) { f["NachnameTN"] = strings.Split(strings.Repeat("Meier,", 10)[:59], ",") }, Accept, ""},
+		{"eleven participants come from a script", func(f url.Values, in *Input) { f["NachnameTN"] = strings.Split(strings.Repeat("Meier,", 11)[:65], ",") }, Reject, "too many"},
+		{"a later participant's name too long", func(f url.Values, in *Input) { f["NachnameTN"] = []string{"Meier", strings.Repeat("x", 201)} }, Reject, "too long"},
 		{"a bare domain is a company name", func(f url.Values, in *Input) { f.Set("Rechnungsadresse", "arc42.de GmbH\nStraße 1") }, Accept, ""},
 		{"one signal is a hint", func(f url.Values, in *Input) { f.Del("js_ok") }, Accept, ""},
 		{"two signals drop", func(f url.Values, in *Input) { f.Del("js_ok"); f.Set("Rechnungsadresse", "Cusco") }, Drop, "score"},
@@ -109,6 +117,50 @@ func TestOutcomes(t *testing.T) {
 				t.Errorf("outcome %v reason %q, want %v containing %q", d.Outcome, d.Reason, c.want, c.reason)
 			}
 		})
+	}
+}
+
+// The form posts every participant block under the same four names, empty
+// fields included, so the n-th values are one person. An empty block is
+// skipped; a salutation outside the select's values is discarded.
+func TestPairsTheParticipantBlocks(t *testing.T) {
+	f := germanForm()
+	f["AnredeTN"] = []string{"Frau", "", "Herr", "Dr."}
+	f["NachnameTN"] = []string{"Meier", "", "Kurz", "Lang"}
+	f["VornameTN"] = []string{"Eva", "", "", "Tim"}
+	f["EmailTN"] = []string{"eva@example.org", "", "kurz@example.org", ""}
+	f.Set("Firma", "Beispiel GmbH")
+	d := checker().Check(context.Background(), Input{Form: f, IP: "1.2.3.4"})
+	if d.Outcome != Accept {
+		t.Fatalf("outcome %v (%s)", d.Outcome, d.Reason)
+	}
+	want := []Participant{
+		{Salutation: "Frau", Last: "Meier", First: "Eva", Email: "eva@example.org"},
+		{Salutation: "Herr", Last: "Kurz", Email: "kurz@example.org"},
+		{Last: "Lang", First: "Tim"},
+	}
+	if fmt.Sprint(d.Reg.Participants) != fmt.Sprint(want) || d.Reg.Company != "Beispiel GmbH" {
+		t.Errorf("participants %+v company %q, want %+v", d.Reg.Participants, d.Reg.Company, want)
+	}
+}
+
+func TestNoParticipantBlockMeansNoParticipants(t *testing.T) {
+	f := germanForm()
+	f["AnredeTN"], f["NachnameTN"], f["VornameTN"], f["EmailTN"] = []string{"Frau"}, []string{""}, []string{""}, []string{""}
+	d := checker().Check(context.Background(), Input{Form: f, IP: "1.2.3.4"})
+	if d.Outcome != Accept || len(d.Reg.Participants) != 0 {
+		t.Errorf("outcome %v participants %+v", d.Outcome, d.Reg.Participants)
+	}
+}
+
+// The body cap must admit a form with every participant block at its limit.
+func TestMaxFormBytesCoversTenFullParticipants(t *testing.T) {
+	f := germanForm()
+	for _, k := range []string{"NachnameTN", "VornameTN"} {
+		f[k] = strings.Split(strings.Repeat(strings.Repeat("ü", 200)+",", MaxParticipants-1)+strings.Repeat("ü", 200), ",")
+	}
+	if n := int64(len(f.Encode())); n > MaxFormBytes() {
+		t.Errorf("a legal form encodes to %d bytes, cap is %d", n, MaxFormBytes())
 	}
 }
 
@@ -230,7 +282,7 @@ func TestSignals(t *testing.T) {
 
 // Generators fill every name field from one string: that is two signals.
 func TestFourIdenticalNamesScoreTwice(t *testing.T) {
-	r := Registration{LastName: "Bob", FirstName: "Bob", ParticipantLast: "Bob", ParticipantFirst: "bob",
+	r := Registration{LastName: "Bob", FirstName: "Bob", Participants: []Participant{{Last: "Bob", First: "bob"}},
 		Emails: []string{"bob@example.org"}, Billing: "Firma X, Straße 1, 12345 Ort"}
 	if got := signals(r, true); len(got) != 2 || !has(got, HintSameName) || !has(got, HintSameNames) {
 		t.Errorf("signals %v", got)

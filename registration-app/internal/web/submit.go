@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	"arc42-registration/internal/feed"
 	"arc42-registration/internal/intake"
 	"arc42-registration/internal/mail"
 	"arc42-registration/internal/send"
@@ -67,6 +68,10 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rec := store.Record{Reg: reg, Hints: dec.Hints, Status: store.StatusPending, CreatedAt: s.d.Now()}
+	if dec.Found {
+		// For the sheet only; no mail states a price (spec 2026-09-25, 2).
+		rec.Price = dec.Entry.PriceOn(feed.Day(rec.CreatedAt))
+	}
 	if err := s.d.Store.Save(ctx, rec); err != nil {
 		s.d.Log.Printf("submit %s: store write failed: %v", reg.ID, err)
 		s.redirect(w, r, "fail", reg.Lang)

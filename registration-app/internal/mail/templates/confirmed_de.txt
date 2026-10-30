@@ -9,9 +9,11 @@ Vorname:           {{.FirstName}}
 E-Mail:            {{.Email}}
 {{- with $.CorrectedFrom}}
 E-Mail vorher:     {{.}} (vom Anmeldenden korrigiert){{end}}
-Nachname TN:       {{.ParticipantLast}}
-Vorname TN:        {{.ParticipantFirst}}
-E-Mail TN:         {{.ParticipantEmail}}
+Firma:             {{.Company}}
+Teilnehmende:
+{{- range $i, $p := .Participants}}
+  {{inc $i}}. {{person $p}}{{else}}
+  - (keine angegeben: die anmeldende Person nimmt teil){{end}}
 Rechnungsadresse:
 {{indent .Billing}}
 Bemerkungen:

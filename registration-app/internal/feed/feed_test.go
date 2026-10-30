@@ -153,3 +153,22 @@ func TestAnEmptyFeedIsNotTrusted(t *testing.T) {
 		t.Errorf("got %v, want Unavailable: an empty feed would silently drop every real booking", got)
 	}
 }
+
+func TestPriceOn(t *testing.T) {
+	d := Date{Price: &Price{Amount: 2890, EarlyBird: &EarlyBird{Amount: 2690, Until: "2026-11-02"}}}
+	for day, want := range map[string]int{"2026-11-01": 2690, "2026-11-02": 2690, "2026-11-03": 2890} {
+		if got := d.PriceOn(day); got != want {
+			t.Errorf("PriceOn(%s) = %d, want %d", day, got, want)
+		}
+	}
+	if got := (Date{Price: &Price{Amount: 2200}}).PriceOn("2026-11-01"); got != 2200 {
+		t.Errorf("no early bird: %d", got)
+	}
+	if got := (Date{}).PriceOn("2026-11-01"); got != 0 {
+		t.Errorf("no price: %d", got)
+	}
+	// 23:30 UTC on 2 Nov is already 3 Nov in Berlin.
+	if got := Day(time.Date(2026, 11, 2, 23, 30, 0, 0, time.UTC)); got != "2026-11-03" {
+		t.Errorf("Day = %s", got)
+	}
+}

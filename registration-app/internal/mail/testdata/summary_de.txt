@@ -18,6 +18,8 @@ R-OLD01  Sa 17.10. 08:00  26-12 MSA
   Rechnung:   Weber GmbH ...
   Bemerkung:  -
   Bestätigt:  Di 20.10. 22:00 (letzte Woche noch offen)
+  Sheet:      nicht eingetragen, kein weiterer Versuch. Bitte von Hand
+              aus der BESTÄTIGT-Mail übertragen.
 
 R-CONF1  Do 22.10. 04:00  26-12 MSA
   Name:       Müller, Anna
@@ -26,6 +28,8 @@ R-CONF1  Do 22.10. 04:00  26-12 MSA
   Bemerkung:  Bitte Rechnung an die Einkaufsabteilung, Bestellnummer folgt. Siehe auch hxxps:/ ...
   Hinweise:   several-emails
   Bestätigt:  Do 22.10. 05:00, per Code
+  Sheet:      noch nicht eingetragen (Google nicht erreichbar);
+              nächste Woche ein neuer Versuch
 
 
 OFFEN (2)
