@@ -548,6 +548,27 @@ func TestDroppedAndAcceptedPagesLookAlike(t *testing.T) {
 	}
 }
 
+// A mail rejected downstream of Brevo looks sent to the service, so the page
+// itself must say whom to write to, with the number that finds the row.
+func TestTheSentPageNamesTheRegistrationNumber(t *testing.T) {
+	e := newEnv(t)
+	// In order: the ids count up per submission.
+	for _, c := range []struct {
+		lang string
+		want []string
+	}{
+		{"de", []string{"<strong>R-TEST1</strong>", `href="mailto:info@arc42.de?subject=Anmeldung%20R-TEST1"`, "von Hand"}},
+		{"en", []string{"<strong>R-TEST2</strong>", `href="mailto:info@arc42.de?subject=Registration%20R-TEST2"`, "by hand"}},
+	} {
+		body := e.post("/submit", form(c.lang)).Body.String()
+		for _, w := range c.want {
+			if !strings.Contains(body, w) {
+				t.Errorf("%s sent page lacks %q:\n%s", c.lang, w, body)
+			}
+		}
+	}
+}
+
 // The token is stateless and can be posted again. However often, one
 // registration gets at most two corrections.
 func TestReplayingACorrectionTokenIsBounded(t *testing.T) {
