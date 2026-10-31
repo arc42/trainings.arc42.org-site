@@ -26,7 +26,7 @@ flow diagram: [registration-flow.svg](../docs/registration-flow/registration-flo
 | `POST /code` | the 6-digit code typed on the page that stayed open; same effect as `POST /confirm`, locked after 5 wrong codes |
 | `POST /correct` | corrects a mistyped address (at most 2 per registration, within 30 minutes) and sends the registrant mail, with a new code, to the corrected address |
 | `GET /healthz` | fly's health check, and the Monday ping that sends the weekly summary (below) |
-| `POST /brevo/events?t=…` | Brevo's delivery events: a mail that did not arrive (below). Exists only when `BREVO_WEBHOOK_TOKEN` is set |
+| `POST /brevo/events` | Brevo's delivery events: a mail that did not arrive (below). Exists only when `BREVO_WEBHOOK_TOKEN` is set |
 
 ## Configuration
 
@@ -174,7 +174,9 @@ Setup, once:
 3. `fly secrets set -a arc42-registration BREVO_WEBHOOK_TOKEN=$(openssl rand -hex 24)`,
    and keep the value for the next step.
 4. Brevo, Transactional, Settings, Webhooks, add a webhook: URL
-   `https://register.arc42.org/brevo/events?t=<token>`, events delivered,
+   `https://register.arc42.org/brevo/events`, authentication method
+   "Token", the token from step 3 (the form refuses a URL with `?t=`; the
+   service reads the token from that header or from `?t=`), events delivered,
    soft bounce, hard bounce, blocked, invalid email. Nothing else: opens and
    clicks would only add personal data to the log.
 

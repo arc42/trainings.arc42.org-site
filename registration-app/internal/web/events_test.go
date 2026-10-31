@@ -209,3 +209,24 @@ func TestStoreFailureAsksBrevoToRetrySheetFailureDoesNot(t *testing.T) {
 		t.Errorf("store down: status %d, want 500", rec.Code)
 	}
 }
+
+// Brevo's form refuses a URL with ?t= and sends its "Token" field as a
+// header instead. A header, when there is one, is the token.
+func TestTheTokenCanComeAsAHeader(t *testing.T) {
+	e, _ := hookEnv(t)
+	for h, want := range map[string]int{
+		"Bearer " + hookToken: http.StatusOK,
+		"bearer " + hookToken: http.StatusOK,
+		hookToken:             http.StatusOK,
+		"Bearer wrong":        http.StatusUnauthorized,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/brevo/events", strings.NewReader(brevo("delivered", "anna@example.org", "R-TEST1", 2000)))
+		req.Header.Set("Authorization", h)
+		rec := httptest.NewRecorder()
+		e.srv.ServeHTTP(rec, req)
+		e.server.Wait()
+		if rec.Code != want {
+			t.Errorf("Authorization %q: status %d, want %d", h, rec.Code, want)
+		}
+	}
+}

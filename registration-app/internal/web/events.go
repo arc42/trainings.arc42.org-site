@@ -55,9 +55,18 @@ var failed = map[string]bool{
 const maxEventBody = 64 << 10
 
 func (s *Server) handleBrevoEvents(w http.ResponseWriter, r *http.Request) {
-	// The token is in the URL because Brevo's webhook settings do not
-	// document basic auth; a query parameter works in every form of them.
-	if subtle.ConstantTimeCompare([]byte(r.URL.Query().Get("t")), []byte(s.d.Cfg.WebhookToken)) != 1 {
+	// Two places for the same token. Brevo's webhook form refuses a URL
+	// with a query string (31 Oct 2026) and offers "Token" authentication
+	// instead, which arrives as an Authorization header, with or without
+	// "Bearer ". The query parameter stays for webhooks created by API.
+	tok := r.URL.Query().Get("t")
+	if h := r.Header.Get("Authorization"); h != "" {
+		tok = strings.TrimSpace(h)
+		if len(tok) > 7 && strings.EqualFold(tok[:7], "bearer ") {
+			tok = strings.TrimSpace(tok[7:])
+		}
+	}
+	if subtle.ConstantTimeCompare([]byte(tok), []byte(s.d.Cfg.WebhookToken)) != 1 {
 		s.d.Log.Printf("brevo events: wrong or missing token")
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
