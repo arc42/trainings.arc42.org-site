@@ -302,8 +302,12 @@ func (s *Sheet) append(ctx context.Context, tab string, width int, values [][]an
 	}
 	// The tab name quoted, as A1 notation wants for names with spaces.
 	rng := "'" + strings.ReplaceAll(tab, "'", "''") + "'!A:" + string(rune('A'+width-1))
+	// OVERWRITE, not INSERT_ROWS: the row goes into the first empty row
+	// below the table. Inserting a row is a change to the tab's structure,
+	// which Google refuses when the back office protects the header row
+	// ("You are trying to edit a protected cell", 31 Oct 2026).
 	u := s.API + "/v4/spreadsheets/" + url.PathEscape(s.ID) + "/values/" + url.PathEscape(rng) +
-		":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"
+		":append?valueInputOption=RAW&insertDataOption=OVERWRITE"
 	body, err := json.Marshal(map[string]any{"values": values})
 	if err != nil {
 		return err

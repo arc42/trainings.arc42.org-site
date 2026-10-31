@@ -85,6 +85,13 @@ Unter dieser ID gibt es kein Sheet mehr: gelöscht oder im Papierkorb.
    als "Bearbeiter" teilen und seine ID (aus der URL, zwischen /d/ und
    /edit) setzen:
      fly secrets set -a arc42-registration SHEET_ID=<id>
+{{- else if and (eq .Status 400) .Protected}}
+Der Bereich, in den die neue Zeile sollte, ist geschützt. Eine geschützte
+Kopfzeile allein stört nicht: die Zeile kommt in die erste freie Zeile
+darunter. Geschützt sein dürfen deshalb nur Zeilen, die schon gefüllt
+sind. Ein Schutz für das ganze Blatt oder für leere Zeilen darunter muss
+weg, oder er nimmt dieses Konto als Bearbeiter aus:
+  {{.Account}}
 {{- else if and (eq .Status 400) .Delivery}}
 Vermutlich gibt es das Tabellenblatt "{{.Tab}}" nicht, oder es heißt anders.
 Ein Blatt mit genau diesem Namen anlegen, Kopfzeile A bis I:

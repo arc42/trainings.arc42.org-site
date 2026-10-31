@@ -190,7 +190,7 @@ func TestAppend(t *testing.T) {
 	if f.tokens != 1 {
 		t.Errorf("%d token requests, want 1: the token is cached", f.tokens)
 	}
-	want := "/v4/spreadsheets/1Jtiv-test/values/%27Tabelle1%27%21A:L:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"
+	want := "/v4/spreadsheets/1Jtiv-test/values/%27Tabelle1%27%21A:L:append?valueInputOption=RAW&insertDataOption=OVERWRITE"
 	if len(f.appends) != 2 || f.appends[0] != want {
 		t.Errorf("append %v\nwant %s", f.appends, want)
 	}
@@ -217,7 +217,7 @@ func TestAppendDelivery(t *testing.T) {
 	if err := s.AppendDelivery(context.Background(), d); err != nil {
 		t.Fatal(err)
 	}
-	want := "/v4/spreadsheets/1Jtiv-test/values/%27Zustellung%27%21A:I:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"
+	want := "/v4/spreadsheets/1Jtiv-test/values/%27Zustellung%27%21A:I:append?valueInputOption=RAW&insertDataOption=OVERWRITE"
 	if len(f.appends) != 1 || f.appends[0] != want {
 		t.Errorf("append %v\nwant %s", f.appends, want)
 	}
