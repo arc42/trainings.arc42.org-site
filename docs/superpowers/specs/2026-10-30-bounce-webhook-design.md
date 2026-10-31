@@ -1,7 +1,7 @@
 # Registration service: learn when Brevo could not deliver a mail
 
 **Date:** 2026-10-30
-**Status:** implemented (30 Oct 2026), not yet deployed
+**Status:** implemented and deployed (30 Oct 2026); token header added 31 Oct 2026
 **Scope:** `registration-app/` (a new `POST /brevo/events` handler in `web`,
 two columns in `store`, a second tab in `sheet`, one line per row in the
 summary), one webhook in the Brevo account, one notification rule on the
@@ -104,7 +104,11 @@ sheet row that turns out to be a false alarm.
 1. **Authentication.** A token in the URL, `?t=<token>`: Brevo's docs
    mention neither basic auth nor a bearer token for the receiving end
    (the create-webhook API has an undocumented `auth` object and custom
-   headers), and a URL works in the UI and the API alike. The token is the
+   headers), and a URL works in the API. **Amended 31 Oct 2026:** the UI
+   form refuses a URL with a query string and offers "Token"
+   authentication, sent as an `Authorization` header; the handler reads
+   the token from that header (with or without `Bearer `) when present,
+   otherwise from `?t=`. The token is the
    fly secret `BREVO_WEBHOOK_TOKEN`, at least 32 characters, compared in
    constant time. Wrong or missing: `401`, one log line. Unset secret: the
    route does not exist, so a deployment without the webhook has no open
@@ -201,7 +205,8 @@ like a comment: SpamCop's answer quotes a URL.
 
 In Brevo, by hand, documented in the README: Transactional → Settings →
 Webhooks → new webhook, URL
-`https://register.arc42.org/brevo/events?t=<token>`, the events of
+`https://register.arc42.org/brevo/events`, authentication "Token" with
+the token, the events of
 section 3. Test deployments
 leave the token unset.
 
