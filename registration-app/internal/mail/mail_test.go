@@ -296,6 +296,9 @@ func TestSheetAlertMails(t *testing.T) {
 		// The delivery tab (spec 2026-10-30) not created yet.
 		"sheet_alert_delivery_de.txt": {Stage: "append", Status: 400, Tab: "Zustellung", Delivery: true,
 			Detail: `{"error":{"code":400,"message":"Unable to parse range: 'Zustellung'!A:I","status":"INVALID_ARGUMENT"}}`},
+		// 31 Oct 2026: a protection Google would not let the row past.
+		"sheet_alert_protected_de.txt": {Stage: "append", Status: 400, Tab: "Zustellung", Delivery: true,
+			Detail: `{"error":{"code":400,"message":"You are trying to edit a protected cell or object. Please contact the spreadsheet owner to remove protection if you need to edit.","status":"INVALID_ARGUMENT"}}`},
 	} {
 		p.At, p.ID, p.SheetID = at, "R-7F3KQ", "1JtivdvHqR-test"
 		if p.Tab == "" {

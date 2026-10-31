@@ -34,6 +34,7 @@ func SheetAlert(p SheetProblem) (Rendered, error) {
 	data := map[string]any{
 		"At": long(p.At), "ID": p.ID, "Stage": p.Stage, "Status": p.Status, "Detail": p.Detail,
 		"Account": p.Account, "Project": project, "SheetID": p.SheetID, "Tab": p.Tab, "Delivery": p.Delivery,
+		"Protected": strings.Contains(p.Detail, "protected cell"),
 	}
 	var t bytes.Buffer
 	if err := textT.ExecuteTemplate(&t, "sheet_alert_de.txt", data); err != nil {
