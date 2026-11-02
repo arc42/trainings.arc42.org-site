@@ -134,8 +134,11 @@ a missing spreadsheet. Delete the test rows afterwards.
 Setup: a Google Cloud project with the Sheets API enabled, a service account
 without roles, a JSON key for it (`fly secrets set GOOGLE_SA_KEY="$(cat
 key.json)" SHEET_ID=…`), and the spreadsheet shared with the account's
-address as **editor**. The service logs that address at start (`sheet: tab
-"Tabelle1" as …`).
+address as **editor**. The tab is `SHEET_TAB` in `fly.toml`
+(`Registrations`); renaming the tab in the sheet without changing that line
+makes every append a 400 (`Unable to parse range`), mailed as `ACHTUNG`.
+The service logs tab and address at start (`sheet: tab "Registrations" as
+…`).
 
 ## Mails that did not arrive
 
