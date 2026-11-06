@@ -7,11 +7,24 @@
 # language (de|en) is REQUIRED on every date - no default, validation fails loudly.
 # url_en (optional, per course) = English detail page, https://trainings.arc42.org/courses/<id>/
 #
-# NO PROSE IN THIS FILE. Everything here is rendered on German AND English
-# pages, so a hand-written sentence is wrong on half of them. Sentences live in
-# _includes/*-label.html, which branch on the page language. This is why price,
-# credits and few_seats are numbers and flags rather than the strings they
-# strings they used to be:
+# NO PROSE WITHOUT A STATED LANGUAGE. Everything here is rendered on German AND
+# English pages, so a hand-written sentence of unknown language is wrong on half
+# of them. Sentences live in _includes/*-label.html, which branch on the page
+# language. This is why price, credits and few_seats are numbers and flags
+# rather than the strings they used to be.
+#
+# The one exception is the course description: blurb_de (German) and blurb_en
+# (English), per course, both optional. The language is in the key name, so a
+# consumer picks the right one and never renders a German sentence to an
+# English reader. The old single `blurb` is retired (the validator rejects it);
+# the feed still publishes a generated `blurb` (blurb_en, else blurb_de).
+#
+# show_on (optional, per course) = list of consumer sites that advertise the
+# course. Absent means every consumer site. An empty list is an error.
+# trainings.arc42.org ignores it and shows every course. Known names:
+# faq.arc42.org, docs.arc42.org, arc42.org, examples.arc42.org, www.arc42.de,
+# softwareknigge.arc42.org, www.gernotstarke.de, www.systems42.org
+# (other names are allowed: lowercase letters, digits, dots, hyphens).
 #
 #   price:                     credit_points:      seats_limited: true
 #     amount: 2890               methodical: 20
@@ -39,7 +52,7 @@ courses:
   - id: msa
     short_title: "MSA"
     title: "Mastering Software Architectures"
-    blurb: >-
+    blurb_en: >-
       Two expert trainers at all times, highly practical and pragmatic,
       ideal preparation for iSAQB CPSA-Foundation certification.
     certification: "iSAQB CPSA-Foundation"
@@ -169,7 +182,7 @@ courses:
   - id: improve
     short_title: "IMPROVE"
     title: "IMPROVE: Evolve and maintain systems"
-    blurb: >-
+    blurb_en: >-
       Learn to effectively evolve and maintain systems.
     certification: "iSAQB CPSA-A (Advanced)"
     credit_points:
@@ -236,7 +249,7 @@ courses:
   - id: req4arc
     short_title: "Req4Arc"
     title: "Req4Arc: Getting your Requirements right"
-    blurb: >-
+    blurb_en: >-
       What to do if your requirements need improvement.
     certification: "iSAQB CPSA-A (Advanced)"
     credit_points:
@@ -291,7 +304,7 @@ courses:
   - id: adoc
     short_title: "ADOC"
     title: "ADOC: Architecture Documentation"
-    blurb: >-
+    blurb_en: >-
       How to efficiently and effectively create and maintain useful technical
       documentation, with a strong focus on arc42. Within this practical course
       you improve your own documentation! From the founders and maintainers of arc42.

@@ -21,6 +21,8 @@ layout: none
 #   credits   "20 methodische und 10 ..."                    early_bird }
 #   few_seats "only few seats available"       credit_points { methodical, ... }
 #                                              seats_limited true
+#   blurb     generated: blurb_en, else          blurb_de, blurb_en
+#             blurb_de                           show_on (optional list)
 #
 # No published key ever changes type, so no consumer has to do anything, ever.
 # The legacy strings are now GENERATED rather than stored, which is the whole
@@ -43,7 +45,11 @@ layout: none
   {%- capture creditstr -%}{% include credits-label.html credits=course.credit_points lang="de" %}{%- endcapture -%}
   {%- assign creditstr = creditstr | strip -%}
     {
-      {% if course.blurb %}"blurb": {{ course.blurb | strip | jsonify }},
+      {%- assign blurb_legacy = course.blurb_en | default: course.blurb_de -%}
+      {% if blurb_legacy %}"blurb": {{ blurb_legacy | strip | jsonify }},
+      {% endif %}{% if course.blurb_de %}"blurb_de": {{ course.blurb_de | strip | jsonify }},
+      {% endif %}{% if course.blurb_en %}"blurb_en": {{ course.blurb_en | strip | jsonify }},
+      {% endif %}{% if course.show_on %}"show_on": {{ course.show_on | jsonify }},
       {% endif %}{% if course.certification %}"certification": {{ course.certification | jsonify }},
       {% endif %}{% if creditstr != "" %}"credits": {{ creditstr | append: " Punkte" | jsonify }},
       "credit_points": {{ course.credit_points | jsonify }},
