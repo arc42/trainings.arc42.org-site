@@ -22,6 +22,8 @@ jobs:
           for f in admin-app/internal/validate/testdata/ci_accepts/*.yml; do
             ruby scripts/validate_trainings.rb "$f" || exit 1
           done
+      - name: Consumer check follows show_on (offline)
+        run: bash scripts/test/verify_consumers_test.sh
       - name: Build site
         run: bundle exec jekyll build
       - name: Every upcoming date is on both home pages

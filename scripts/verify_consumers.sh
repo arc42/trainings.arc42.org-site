@@ -30,7 +30,10 @@
 # real is lost by being tolerant here.
 #
 # The second check has to respect what each site renders, which is not the same
-# rule everywhere, so $SITES carries it per site:
+# rule everywhere, so $SITES carries it per site. It also respects each course's
+# optional `show_on` list: a course that names sites is expected only on those
+# (a new course such as MAS is advertised on a few sites, and demanding it on
+# faq or docs would turn the check red every week). No show_on = every site.
 #
 #   chrono      the next 8 dates across all courses, in date order
 #               (faq, docs, arc42.org; softwareknigge the next 5;
@@ -71,13 +74,13 @@ LEAD="${LEAD:-3}"
 # refreshes on its own daily schedule, so right after a notify run it is
 # legitimately behind: such a site is checked in the scheduled and manual runs
 # only, never in the run that follows a notify.
-SITES="faq.arc42.org|chrono|https://faq.arc42.org/questions/A-3/
+SITES="${SITES:-faq.arc42.org|chrono|https://faq.arc42.org/questions/A-3/
 docs.arc42.org|chrono|https://docs.arc42.org/section-1/
 arc42.org|chrono|https://arc42.org/
 examples.arc42.org|per-course|https://examples.arc42.org/
 www.arc42.de|chrono|https://www.arc42.de/termine
 softwareknigge.arc42.org|chrono|https://softwareknigge.arc42.org/05-diktator.html
-www.gernotstarke.de|trainer=Gernot Starke|https://www.gernotstarke.de/training|daily"
+www.gernotstarke.de|trainer=Gernot Starke|https://www.gernotstarke.de/training|daily}"
 
 # Ids that begin with a course id but are not dates. Empty today: every such id
 # on all four sites is a date. If a consumer ever adds one (say id="msa-intro"),
@@ -95,31 +98,24 @@ today=$(date -u +%Y-%m-%d)
 # Published and bookable. Cancelled and full dates are dropped by the consumers
 # themselves, so requiring them on a page would be a false alarm.
 published=$(printf '%s' "$feed" | jq -r --arg t "$today" '
-  [.courses[].dates[] | select(.end >= $t and .status != "cancelled" and .status != "full")]
+  [.courses[] | (.dates // [])[] | select(.end >= $t and .status != "cancelled" and .status != "full")]
   | sort_by(.start) | .[].id')
 course_ids=$(printf '%s' "$feed" | jq -r '.courses[].id')
 
 # Every id the feed knows about, bookable or not: what a page is allowed to show.
-all_ids=$(printf '%s' "$feed" | jq -r '.courses[].dates[].id')
+all_ids=$(printf '%s' "$feed" | jq -r '.courses[] | (.dates // [])[].id')
 
-# The earliest bookable date of each course, in date order: what a per-course
-# consumer renders.
-per_course=$(printf '%s' "$feed" | jq -r --arg t "$today" '
-  [ .courses[]
-    | [ (.dates // [])[] | select(.end >= $t and .status != "cancelled" and .status != "full") ]
-    | sort_by(.start) | .[0] // empty ]
-  | sort_by(.start) | .[].id')
+# jq prelude: does this course advertise itself on $site? Absent show_on = yes.
+# The expectations below are computed per site, inside check_all.
+SHOWN='def shown: select((.show_on // null) == null or (.show_on | index($site)));
+  def live: select(.end >= $t and .status != "cancelled" and .status != "full");'
 
 if [ -z "$published" ]; then
   problem "the feed publishes no bookable dates at all - checking the consumers would be meaningless"
   exit 1
 fi
 
-lead_chrono=$(printf '%s\n' "$published" | head -"$LEAD")
-lead_per_course=$(printf '%s\n' "$per_course" | head -"$LEAD")
 note "feed: $(printf '%s\n' "$published" | wc -l | tr -d ' ') bookable dates"
-note "  chrono sites must show:     $(printf '%s' "$lead_chrono" | tr '\n' ' ')"
-note "  per-course sites must show: $(printf '%s' "$lead_per_course" | tr '\n' ' ')"
 
 # Every id on the page that looks like a date id, i.e. starts with a course id.
 page_date_ids() {
@@ -142,14 +138,23 @@ check_all() {
       continue
     fi
     case "$rule" in
-      per-course) expect="$lead_per_course" ;;
+      per-course)
+        # The earliest bookable date of each course, in date order.
+        expect=$(printf '%s' "$feed" | jq -r --arg t "$today" --arg site "$name" "$SHOWN"'
+          [ .courses[] | shown
+            | [ (.dates // [])[] | live ]
+            | sort_by(.start) | .[0] // empty ]
+          | sort_by(.start) | .[].id' | head -"$LEAD") ;;
       trainer=*)
-        expect=$(printf '%s' "$feed" | jq -r --arg t "$today" --arg who "${rule#trainer=}" '
-          [ .courses[] as $c | $c.dates[]
-            | select(.end >= $t and .status != "cancelled" and .status != "full")
+        expect=$(printf '%s' "$feed" | jq -r --arg t "$today" --arg site "$name" --arg who "${rule#trainer=}" "$SHOWN"'
+          [ .courses[] | shown as $c | ($c.dates // [])[]
+            | live
             | select((.trainers // $c.trainers) | index($who)) ]
           | sort_by(.start) | .[].id' | head -"$LEAD") ;;
-      *)          expect="$lead_chrono" ;;
+      *)
+        expect=$(printf '%s' "$feed" | jq -r --arg t "$today" --arg site "$name" "$SHOWN"'
+          [ .courses[] | shown | (.dates // [])[] | live ]
+          | sort_by(.start) | .[].id' | head -"$LEAD") ;;
     esac
     if ! html=$(curl --fail --silent --show-error --location "$url"); then
       problem "$name: could not fetch $url"
