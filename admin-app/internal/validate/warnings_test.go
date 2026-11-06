@@ -398,3 +398,18 @@ func TestCreditPointsWithoutCertificationWarn(t *testing.T) {
 		t.Errorf("a course with neither warns: %q", got)
 	}
 }
+
+// The operator knows "the home page", not the site's name for its layout.
+func TestShortTitleWarningSaysHomePageCard(t *testing.T) {
+	c := masCourse()
+	c.ShortTitle = "Mastering AI-Driven Specification, the long way"
+	for _, w := range CourseWarnings(c) {
+		if w.Field == "short_title" {
+			if want := "47 characters is long for the home page card; 32 or fewer fits"; w.Message != want {
+				t.Errorf("message = %q, want %q", w.Message, want)
+			}
+			return
+		}
+	}
+	t.Error("no short title warning")
+}

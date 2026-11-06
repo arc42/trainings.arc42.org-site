@@ -35,7 +35,7 @@ const (
 	// four days; anything past a working week is far more likely a typo in the
 	// year than a genuinely long training.
 	maxCourseDays = 7
-	// maxShortTitle is what fits the timeline card before it wraps badly.
+	// maxShortTitle is what fits the home page card before it wraps badly.
 	maxShortTitle = 32
 	maxBlurb      = 320
 )
@@ -111,7 +111,7 @@ func CourseWarnings(c model.Course) []Warning {
 	}
 
 	if n := len([]rune(c.ShortTitle)); n > maxShortTitle {
-		add("short_title", "Short title", "%d characters is long for the timeline card; %d or fewer fits", n, maxShortTitle)
+		add("short_title", "Short title", "%d characters is long for the home page card; %d or fewer fits", n, maxShortTitle)
 	}
 	if isPlainHTTP(c.URL) {
 		add("url", "Course URL", "links must start with https://")
