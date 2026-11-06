@@ -460,7 +460,7 @@ func TestCourseSaveLeavesDatesAlone(t *testing.T) {
 		// posts trainers now.
 		"trainer":        {"Dr. Peter Hruschka", "Dr. Gernot Starke"},
 		"trainers_other": {"Jane Guest"},
-		// No blurb, which warns; this test is about the dates surviving.
+		// Acknowledged up front; this test is about the dates surviving.
 		"confirm_warnings": {"1"},
 	}
 	rec := httptest.NewRecorder()
@@ -606,7 +606,7 @@ func TestNewCourseFormRendersAndCreates(t *testing.T) {
 	form := url.Values{
 		"id": {"flex"}, "short_title": {"FLEX"}, "title": {"Flexible Architectures"},
 		"url": {"https://example.org/flex"}, "trainer": {"Dr. Gernot Starke"},
-		// No blurb, which warns; this test is about creating the course.
+		// No description, which warns; this test is about creating the course.
 		"confirm_warnings": {"1"},
 	}
 	rec = httptest.NewRecorder()
@@ -999,10 +999,10 @@ func TestCourseWarningsGateTheFirstSave(t *testing.T) {
 
 	form := url.Values{
 		"id": {"flex"}, "short_title": {"FLEX"},
-		"title":   {"FLEX: Flexible Architectures"},
-		"url":     {"http://example.org/flex"}, // plain http
-		"blurb":   {"A course about flexible architectures."},
-		"trainer": {"Dr. Gernot Starke"},
+		"title":    {"FLEX: Flexible Architectures"},
+		"url":      {"http://example.org/flex"}, // plain http
+		"blurb_en": {"A course about flexible architectures."},
+		"trainer":  {"Dr. Gernot Starke"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", form))
@@ -1091,7 +1091,8 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 			"availability-hint", "price-hint", "alumni-hint", "currency-hint", "eb-hint", "ebu-hint",
 		}},
 		{"/courses/new", []string{
-			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-hint",
+			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-de-hint",
+			"blurb-en-hint", "show-on-hint",
 			"cert-hint", "credits-hint",
 		}},
 	} {

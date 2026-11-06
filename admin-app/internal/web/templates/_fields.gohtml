@@ -41,8 +41,19 @@
 {{if .}}
 <div class="warnings" role="status">
   <h2>Have a look at these</h2>
-  <ul>{{range .}}<li><b>{{.Field}}</b> — {{.Message}}</li>{{end}}</ul>
+  <ul>{{range .}}<li><b>{{with .Label}}{{.}}{{else}}{{.Field}}{{end}}</b> — {{.Message}}</li>{{end}}</ul>
   <p>Nothing here blocks the save. If you meant it, use <b>Save anyway</b>.</p>
+</div>
+{{end}}
+{{end}}
+
+{{/* notes expects a []string. Information about how the site will show
+     what is entered, not a question: a note, not a status, and never part of
+     the "Save anyway" gate — the actions partial only looks at warnings. */}}
+{{define "notes"}}
+{{if .}}
+<div class="notes" role="note">
+  <ul>{{range .}}<li>{{.}}</li>{{end}}</ul>
 </div>
 {{end}}
 {{end}}

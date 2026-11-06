@@ -228,6 +228,20 @@ ul.problems li::marker { color: var(--danger); }
 .warnings li b { font-family: var(--mono, monospace); font-weight: 600; }
 .warnings p { margin: 0.6rem 0 0.25rem; color: var(--ink-muted); font-size: 0.9rem; }
 
+/* Notes are information, not a question: neither amber nor red, because
+   nothing here needs a decision. The form-group surface and hairline keep it
+   visibly part of the page without competing with a warning above it.
+   Base ink on --surface-1 is 9.08:1. */
+.notes {
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  color: var(--ink);
+}
+.notes ul { margin: 0; padding-left: 1.2rem; }
+.notes li { margin-bottom: 0.25rem; }
+
 /* The "?" toggle sits at the end of the label text. 1.75rem keeps it a real
    touch target without it competing with the field it explains. */
 button.help {

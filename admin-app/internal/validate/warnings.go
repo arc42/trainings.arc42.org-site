@@ -13,8 +13,13 @@ import (
 // anyway if they meant it. Every rule here encodes a house convention or a
 // combination that has actually gone wrong, not a law: the December run that
 // starts on 30 November is off-convention on purpose, and must stay possible.
+//
+// Label is what the operator sees: the visible label of the form control the
+// warning is about, never a YAML key. Field stays the control's name, for
+// tests and for String().
 type Warning struct {
-	Field   string // e.g. "status", matching the form control it belongs to
+	Field   string // e.g. "availability", the name of the form control
+	Label   string // e.g. "Availability", the control's visible label
 	Message string
 }
 
@@ -41,31 +46,31 @@ const (
 // nagging about it on every edit would be noise.
 func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
 	var ws []Warning
-	add := func(field, format string, args ...any) {
-		ws = append(ws, Warning{Field: field, Message: fmt.Sprintf(format, args...)})
+	add := func(field, label, format string, args ...any) {
+		ws = append(ws, Warning{Field: field, Label: label, Message: fmt.Sprintf(format, args...)})
 	}
 
 	// Only when creating. Editing a date that has already run is routine —
 	// marking it cancelled, correcting a trainer — and nagging about a past
 	// start every time would train the operator to ignore the warning bar.
 	if isNew && d.Start != "" && d.Start < today {
-		add("start", "this date started on %s, which is in the past", d.Start)
+		add("start", "First day", "this date started on %s, which is in the past", d.Start)
 	}
 
 	if days, ok := spanDays(d.Start, d.End); ok {
 		switch {
 		case days == 0:
-			add("end", "starts and ends on the same day — is it really a one-day course?")
+			add("end", "Last day", "starts and ends on the same day — is it really a one-day course?")
 		case days+1 > maxCourseDays:
-			add("end", "runs %d days; published courses run 2 to 4", days+1)
+			add("end", "Last day", "runs %d days; published courses run 2 to 4", days+1)
 		}
 	}
 
 	if d.Format == "online" && d.City != "" {
-		add("city", "an online date normally has no city, but %q is set", d.City)
+		add("city", "City", "an online date normally has no city, but %q is set", d.City)
 	}
 	if d.Format != "online" && d.Format != "" && d.Country == "" {
-		add("country", "a %s date usually names a country", d.Format)
+		add("country", "Country", "a %s date usually names a country", d.Format)
 	}
 
 	// The rule that caused the 23-25 February 2027 date to be published
@@ -74,70 +79,86 @@ func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
 	// form and the back office tells them it is a waiting-list place.
 	switch d.Status {
 	case "full":
-		add("availability", "%q keeps this date out of the registration form on trainings.arc42.org, and its card has no button; nobody can register or join a waiting list", d.Status)
+		add("availability", "Availability", "%q keeps this date out of the registration form on trainings.arc42.org, and its card has no button; nobody can register or join a waiting list", d.Status)
 	case "cancelled":
-		add("availability", "%q hides this date everywhere; nobody can register", d.Status)
+		add("availability", "Availability", "%q hides this date everywhere; nobody can register", d.Status)
 	}
 	// No warning for "few seats" on a fully booked date any more: the form
 	// offers one availability choice, so that pair cannot be entered
 	// (model.Date.SetAvailability), and a hand-edited one is repaired on save.
 
-	// A date the site cannot render is worse than an invalid one: it validates,
-	// it publishes to the feed, and it is simply absent from both home pages.
-	if !model.HasCardTemplate(courseID, d.Format) {
-		add("format", "the site has no %s card for %q, so this date would render as nothing on the home pages - add _includes/timeline_%s.html first",
-			d.Format, courseID, cardTemplateType(courseID, d.Format))
-	}
+	// No card-template warning any more: a course without a hand-made card is
+	// rendered by the site's data-driven card, so every date has a card.
 
 	if want := model.BookingCode(courseID, d.Start, d.Language); want != "" && d.Code != "" && d.Code != want {
-		add("code", "the house convention for this course and date is %q", want)
+		add("code", "Booking code", "the house convention for this course and date is %q", want)
 	}
 	if isNew {
 		if want := model.DateID(courseID, d.Start, d.Language); want != "" && d.ID != "" && d.ID != want {
-			add("id", "ids are usually %q; this one will not match its siblings", want)
+			add("id", "Date ID", "ids are usually %q; this one will not match its siblings", want)
 		}
 	}
 	return ws
 }
 
-// cardTemplateType mirrors the derivation in _includes/timeline_auto.html.
-func cardTemplateType(courseID, format string) string {
-	if format == "online" {
-		return courseID + "_online"
-	}
-	return courseID
-}
-
 // CourseWarnings judges one course.
 func CourseWarnings(c model.Course) []Warning {
 	var ws []Warning
-	add := func(field, format string, args ...any) {
-		ws = append(ws, Warning{Field: field, Message: fmt.Sprintf(format, args...)})
-	}
-
-	// A brand-new course has no card templates in the site repo yet, so every
-	// date added to it would render as nothing until they exist.
-	if !model.HasAnyCardTemplate(c.ID) {
-		add("id", "the site has no timeline card for %q yet - add _includes/timeline_%s.html (and timeline_%s_online.html) plus their cases in timeline_course.html, or its dates will not appear on the home pages", c.ID, c.ID, c.ID)
+	add := func(field, label, format string, args ...any) {
+		ws = append(ws, Warning{Field: field, Label: label, Message: fmt.Sprintf(format, args...)})
 	}
 
 	if n := len([]rune(c.ShortTitle)); n > maxShortTitle {
-		add("short_title", "%d characters is long for the timeline card; %d or fewer fits", n, maxShortTitle)
+		add("short_title", "Short title", "%d characters is long for the timeline card; %d or fewer fits", n, maxShortTitle)
 	}
 	if isPlainHTTP(c.URL) {
-		add("url", "the feed schema requires https, and this is plain http")
+		add("url", "Course URL", "links must start with https://")
 	}
 	// url_en is optional — most courses have no English page — but when it is
 	// given it is a published link like any other.
 	if isPlainHTTP(c.URLEn) {
-		add("url_en", "the English course page is plain http; use https")
+		add("url_en", "English course page", "links must start with https://")
 	}
-	if c.Blurb() == "" {
-		add("blurb", "without a blurb the timeline card shows the course name alone")
-	} else if n := len([]rune(c.Blurb())); n > maxBlurb {
-		add("blurb", "%d characters is long for a card; two or three sentences read better", n)
+
+	// A hand-made card ignores the descriptions in the data, so any warning
+	// about them would be untrue; CourseNotes says so instead.
+	if model.HasHandMadeCard(c.ID) {
+		return ws
+	}
+	if c.BlurbDE == "" && c.BlurbEN == "" {
+		add("blurb_de", "Description", "The home page cards for this course will show no description.")
+	}
+	for _, b := range []struct{ field, label, text string }{
+		{"blurb_de", "Description (German)", c.BlurbDE},
+		{"blurb_en", "Description (English)", c.BlurbEN},
+	} {
+		if n := len([]rune(b.text)); n > maxBlurb {
+			add(b.field, b.label, "%d characters is long for a card; two or three sentences read better", n)
+		}
 	}
 	return ws
+}
+
+// CourseNotes are information about a course, not questions: they never gate
+// a save and never ask for "Save anyway". They say how the home pages will
+// show the course, where that is not what the operator would expect from the
+// form alone.
+func CourseNotes(c model.Course) []string {
+	if model.HasHandMadeCard(c.ID) {
+		// The language notes below describe the standard card; a hand-made
+		// one shows neither description, so only this line is true.
+		return []string{"This course still has its own hand-made card on the home pages. Changes to its descriptions show up there once it is switched to the standard card."}
+	}
+	// The card falls back to the other language rather than show nothing, so
+	// one description is enough — but the operator should know which page
+	// shows text in the "wrong" language.
+	switch {
+	case c.BlurbDE != "" && c.BlurbEN == "":
+		return []string{"Only a German description: the English home page shows it in German too."}
+	case c.BlurbEN != "" && c.BlurbDE == "":
+		return []string{"Only an English description: the German home page shows it in English too."}
+	}
+	return nil
 }
 
 // spanDays returns the number of nights between two "YYYY-MM-DD" dates. It

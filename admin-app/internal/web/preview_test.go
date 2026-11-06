@@ -20,12 +20,13 @@ func TestDumpPreview(t *testing.T) {
 	s := testServer(t, gh.URL)
 
 	for name, target := range map[string]string{
-		"date-new.html":   "/dates/new",
-		"date-edit.html":  "/dates/msa-a",
-		"course-new.html": "/courses/new",
-		"courses.html":    "/courses",
-		"confirm.html":    "/dates/msa-a/delete",
-		"list.html":       "/",
+		"date-new.html":    "/dates/new",
+		"date-edit.html":   "/dates/msa-a",
+		"course-new.html":  "/courses/new",
+		"course-edit.html": "/courses/msa",
+		"courses.html":     "/courses",
+		"confirm.html":     "/dates/msa-a/delete",
+		"list.html":        "/",
 	} {
 		rec := httptest.NewRecorder()
 		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, target, nil))
