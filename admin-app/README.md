@@ -51,13 +51,23 @@ need neither a network nor a configuration file.
    into a single entry, which is what later becomes the PR body. The draft bar
    polls `/keepalive` every 60 seconds while a draft is dirty, so fly's idle
    timer cannot stop the machine out from under an editing session.
+   The course form has a description per language (German, English), a *Shown
+   on* list of consumer sites (nothing ticked means every site) and, for the
+   few courses that still have a hand-made home-page card, an info line saying
+   that card ignores the descriptions. That list is `HandMadeCards` in
+   [`model.go`](internal/model/model.go), a copy because the app cannot see the
+   site's `_includes/`; delete a course from it when it moves to the standard
+   card. Being stale costs a wrong info line, nothing more.
 
 4. **Review.** `GET /propose` re-reads the file from GitHub and shows a change
    report: one card per change, one row per field that actually moved, with the
    old value beside the new one. The unified YAML diff is still there, one
    `<details>` further down, because it is the only view that shows collateral
    damage a field-by-field comparison cannot — a key dropped by a re-render, say.
-   The same screen validates the result against the schema **fetched live from
+   Problems are shown in plain words and split in two: an entry problem (fix
+   the form) blocks the proposal; an app fault (the app could not check
+   something itself) is reported but does not block the PR, because CI checks
+   the file again. The same screen validates the result against the schema **fetched live from
    the repository**, so the app cannot drift from what CI will enforce on the
    pull request. The proposed title and description are prefilled from the same
    report and stay editable.

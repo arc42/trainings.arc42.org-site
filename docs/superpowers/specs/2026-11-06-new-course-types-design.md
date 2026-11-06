@@ -1,7 +1,7 @@
 # New course types without a developer
 
 **Date:** 2026-11-06
-**Status:** decisions settled with Gernot (6 Nov 2026); document awaiting his read-through
+**Status:** implemented on branch feature/new-course-types (6 Nov 2026)
 **Scope:** `admin-app/` (pre-PR check, messages, warnings, course form),
 the site's timeline cards (`_includes/timeline_*.html`), `_data/trainings.yml`,
 `api/trainings.json` and `api/trainings.schema.json` (additive fields, one

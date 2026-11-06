@@ -384,16 +384,31 @@ price:                     credit_points:        seats_limited: true
 
 Every bookable date needs a `price`. There is no template fallback any more.
 
-Every date also needs a **card template**, and its name is derived rather than
-chosen: `timeline_<course id>.html`, or `timeline_<course id>_online.html` when
-`format: online`, plus a matching `when` case in
-[`_includes/timeline_course.html`](/_includes/timeline_course.html). A date
-whose template is missing still validates and still publishes to the feed, but
-renders as an HTML comment on both home pages, so nobody can see or book it.
-`scripts/validate_trainings.rb` checks for the file and fails CI, and the admin
-app warns on the form. All four courses currently have both variants, including
-`timeline_req4arc_online.html`, which was written before the first online
-REQ4ARC date exists.
+A new course needs **no card template**. [`_includes/timeline_course.html`](/_includes/timeline_course.html)
+dispatches on `timeline_<course id>.html` (or `_online` for `format: online`)
+and falls back to the data-driven
+[`_includes/timeline_card.html`](/_includes/timeline_card.html), which renders
+the course from its data. Four courses (`msa`, `improve`, `req4arc`, `adoc`)
+still have hand-made templates; they override the data-driven card for as long
+as they exist and ignore the descriptions. The admin app keeps a copy of that
+list (`HandMadeCards` in `admin-app/internal/model/model.go`); shrink it when a
+course is migrated. `scripts/check_home_cards.rb` (`make check-cards`, also a
+CI step) checks the built `_site/`: every upcoming date must have a card on
+both home pages.
+
+### Descriptions and `show_on`
+
+The description is stored per language, as `blurb_de` and `blurb_en`; the old
+single `blurb` key is retired in the data. The feed still publishes `blurb`
+(ADR-0004), generated: `blurb_en` if present, else `blurb_de`, else omitted.
+The two new keys are published as well. A course may also carry `show_on`, a
+list of consumer site names (`faq.arc42.org`, `docs.arc42.org`, `arc42.org`,
+`examples.arc42.org`, `www.arc42.de`, `softwareknigge.arc42.org`,
+`www.gernotstarke.de`, `www.systems42.org`; other names matching
+`^[a-z0-9.-]+$` are allowed). Absent means every site, `[]` is an error.
+trainings.arc42.org ignores it and shows every course.
+`scripts/verify_consumers.sh` expects a course only on the sites it lists;
+`make check-consumers-test` tests that offline.
 
 `price-label.html`, `credits-label.html` and `money.html` turn those into
 `Frühbucherpreis bei Anmeldung bis 2. November 2026: 2.690 €, Normalpreis:
