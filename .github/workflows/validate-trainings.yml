@@ -2,9 +2,9 @@ name: Validate training data
 on:
   push:
     branches: ["**"]
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "admin-app/internal/validate/testdata/**"]
+    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "_includes/**", "_pages/home*.html", "admin-app/internal/validate/testdata/**"]
   pull_request:
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "admin-app/internal/validate/testdata/**"]
+    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "_includes/**", "_pages/home*.html", "admin-app/internal/validate/testdata/**"]
 jobs:
   validate:
     if: github.repository == 'arc42/trainings.arc42.org-site'
@@ -24,5 +24,7 @@ jobs:
           done
       - name: Build site
         run: bundle exec jekyll build
+      - name: Every upcoming date is on both home pages
+        run: ruby scripts/check_home_cards.rb
       - name: Validate published JSON against schema
         run: npx --yes ajv-cli@5 validate -s api/trainings.schema.json -d _site/api/trainings.json
