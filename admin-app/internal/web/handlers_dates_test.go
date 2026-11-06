@@ -415,7 +415,7 @@ func TestSaveRejectsInvalidDate(t *testing.T) {
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
-	if !strings.Contains(rec.Body.String(), "before start") {
+	if !strings.Contains(rec.Body.String(), "the last day (2 Jan 2026) is before the first day (5 Jan 2026)") {
 		t.Errorf("invalid date was accepted:\n%s", rec.Body.String())
 	}
 	// The problem names the field by the label the operator can see on the
@@ -989,7 +989,7 @@ func TestConfirmingWarningsDoesNotBypassErrors(t *testing.T) {
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
-	if !strings.Contains(rec.Body.String(), "before start") {
+	if !strings.Contains(rec.Body.String(), "before the first day") {
 		t.Errorf("an error was bypassed by the warning acknowledgement:\n%s", rec.Body.String())
 	}
 	if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {

@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,7 +27,7 @@ func twoCourses() model.Trainings {
 
 func TestExplainRuleProblem(t *testing.T) {
 	p := Explain(twoCourses(), Problem{
-		Field: "dates.mas-jan-2027.end", Message: "end 2027-01-12 is before start 2027-01-13",
+		Field: "dates.mas-jan-2027.end", Message: "the last day (12 Jan 2027) is before the first day (13 Jan 2027)",
 	})
 	if p.Kind != EntryProblem {
 		t.Errorf("Kind = %v, want EntryProblem", p.Kind)
@@ -40,13 +41,16 @@ func TestExplainRuleProblem(t *testing.T) {
 	if p.Link != "/dates/mas-jan-2027" {
 		t.Errorf("Link = %q, want the date's edit form", p.Link)
 	}
-	if p.Message != "end 2027-01-12 is before start 2027-01-13" {
+	if p.Message != "the last day (12 Jan 2027) is before the first day (13 Jan 2027)" {
 		t.Errorf("Message = %q, want it unchanged", p.Message)
 	}
 }
 
 func TestExplainSchemaPointer(t *testing.T) {
-	p := Explain(twoCourses(), Problem{Field: "courses/1/dates/1/start", Message: "does not match pattern"})
+	p := Explain(twoCourses(), Problem{
+		Field: "courses/1/dates/1/start", Keyword: "pattern",
+		Message: `does not match pattern '^\d{4}-\d{2}-\d{2}$'`,
+	})
 	if p.Kind != EntryProblem {
 		t.Errorf("Kind = %v, want EntryProblem", p.Kind)
 	}
@@ -59,13 +63,102 @@ func TestExplainSchemaPointer(t *testing.T) {
 	if p.Link != "/dates/mas-mar-2027" {
 		t.Errorf("Link = %q", p.Link)
 	}
+	// The library's message is not for the operator; the regular expression
+	// goes to Detail, the plain words to Message.
+	if p.Message != "must be a date like 2027-01-13" || strings.Contains(p.Message, "^") {
+		t.Errorf("Message = %q", p.Message)
+	}
+	if !strings.Contains(p.Detail, "does not match pattern") {
+		t.Errorf("Detail = %q, want the original message", p.Detail)
+	}
 }
 
-// An array index inside a property (the third trainer) is still that
+// Each schema keyword an entry can violate gets plain words.
+func TestExplainSchemaKeywordsSpeakPlainly(t *testing.T) {
+	for _, tc := range []struct{ field, keyword, want string }{
+		{"courses/0/url", "pattern", "must start with https://"},
+		{"courses/0/short_title", "minLength", "must not be empty"},
+		{"courses/0/trainers", "minItems", "must not be empty"},
+		{"courses/1/dates/1/city", "required", "must not be empty"},
+		{"courses/1/dates/1/country", "pattern", "must be two capital letters, e.g. DE"},
+		{"courses/1/dates/1/language", "enum", "must be one of the choices on the form"},
+		{"courses/1/dates/1/price/amount", "minimum", "must not be negative"},
+	} {
+		p := Explain(twoCourses(), Problem{Field: tc.field, Keyword: tc.keyword, Message: "raw"})
+		if p.Kind != EntryProblem || p.Message != tc.want {
+			t.Errorf("%s %s: got %v %q, want %q", tc.field, tc.keyword, p.Kind, p.Message, tc.want)
+		}
+	}
+}
+
+// A wrong JSON type is how the app wrote the feed; no form can produce one.
+func TestExplainSchemaTypeErrorIsAppFault(t *testing.T) {
+	p := Explain(twoCourses(), Problem{Field: "courses/0/trainers", Keyword: "type", Message: "expected array, but got null"})
+	if p.Kind != AppProblem {
+		t.Errorf("Kind = %v, want AppProblem", p.Kind)
+	}
+}
+
+// "required" is reported at the object that lacks the property. Schema splits
+// it so the problem lands on the empty field, not in the app's pile.
+func TestSchemaRequiredPointsAtTheProperty(t *testing.T) {
+	tr := ok()
+	tr.Courses[0].Dates[0].City = ""
+	feed, err := FeedJSON(tr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	problems, err := Schema(schemaBytes(t), feed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []Problem
+	for _, p := range problems {
+		if p.Field == "courses/0/dates/0/city" && p.Keyword == "required" {
+			got = append(got, Explain(tr, p))
+		}
+	}
+	if len(got) != 1 || got[0].Kind != EntryProblem || got[0].Label != "City" {
+		t.Errorf("want one entry problem on City, got %+v from %+v", got, problems)
+	}
+}
+
+// TestEveryPatternHasAHint: wherever the schema checks a form-set value
+// against a regular expression, the operator is told what the value must look
+// like instead of being shown the expression.
+func TestEveryPatternHasAHint(t *testing.T) {
+	var schema map[string]any
+	if err := json.Unmarshal(schemaBytes(t), &schema); err != nil {
+		t.Fatal(err)
+	}
+	obj := func(v any, key string) map[string]any { m, _ := v.(map[string]any)[key].(map[string]any); return m }
+	var visit func(node map[string]any, path string)
+	visit = func(node map[string]any, path string) {
+		for name, child := range obj(node, "properties") {
+			prop := strings.TrimPrefix(path+"/"+name, "/")
+			c := child.(map[string]any)
+			_, own := c["pattern"]
+			items := obj(c, "items")
+			_, itemsToo := items["pattern"]
+			if f, onForm := formFields[prop]; onForm && (own || itemsToo) && f.Hint == "" {
+				t.Errorf("%s (%s) has a pattern but no Hint", prop, f.Label)
+			}
+			if _, ok := c["properties"]; ok {
+				visit(c, prop)
+			}
+			if _, ok := items["properties"]; ok {
+				visit(items, prop)
+			}
+		}
+	}
+	visit(obj(obj(schema, "properties"), "courses")["items"].(map[string]any), "")
+}
+
+// An array index inside a property (the second site) is still that
 // property's form field.
 func TestExplainSchemaPointerIntoAList(t *testing.T) {
-	p := Explain(twoCourses(), Problem{Field: "courses/0/trainers/2", Message: "expected string"})
-	if p.Kind != EntryProblem || p.Label != "Trainers" || p.Where != "MSA" || p.Link != "/courses/msa" {
+	p := Explain(twoCourses(), Problem{Field: "courses/0/show_on/1", Keyword: "pattern", Message: "does not match pattern"})
+	if p.Kind != EntryProblem || p.Label != "Shown on" || p.Where != "MSA" || p.Link != "/courses/msa" {
 		t.Errorf("got %+v", p)
 	}
 }
@@ -96,7 +189,7 @@ func TestExplainUnknownPropertyIsAppFault(t *testing.T) {
 // The registration link is derived by the server, never typed: a schema
 // complaint about it cannot be the operator's.
 func TestExplainServerDerivedFieldIsAppFault(t *testing.T) {
-	p := Explain(twoCourses(), Problem{Field: "courses/1/dates/0/url", Message: "does not match pattern"})
+	p := Explain(twoCourses(), Problem{Field: "courses/1/dates/0/url", Keyword: "pattern", Message: "does not match pattern"})
 	if p.Kind != AppProblem {
 		t.Errorf("Kind = %v, want AppProblem", p.Kind)
 	}

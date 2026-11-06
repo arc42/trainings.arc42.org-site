@@ -14,7 +14,9 @@
 </div>
 {{end}}
 {{with .AppFaults}}
-<div class="problems" role="alert">
+{{/* Calmer than the red box on purpose: nothing here is the operator's to
+     fix, and an alarm would say otherwise. status, not alert. */}}
+<div class="app-fault" role="status">
   <p>This is not caused by your entries, and your draft is saved.
     The admin app could not check it before opening the pull request.
     Please send Gernot a screenshot of this page.</p>

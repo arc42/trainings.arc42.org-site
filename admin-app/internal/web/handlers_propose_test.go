@@ -570,8 +570,11 @@ func TestProposeAppFaultDoesNotBlock(t *testing.T) {
 		!strings.Contains(detail, "could not fetch the schema") {
 		t.Errorf("the technical detail is not inside a <details>:\n%s", body)
 	}
-	if strings.Contains(body, "Fix these in your entries") {
+	if strings.Contains(body, "Fix these in your entries") || strings.Contains(body, `role="alert"`) {
 		t.Error("an app fault is presented as the operator's to fix")
+	}
+	if !strings.Contains(body, `<div class="app-fault" role="status">`) {
+		t.Errorf("the app fault is not in its calmer status box:\n%s", body)
 	}
 
 	// Submitting applies the same rule.
@@ -658,9 +661,80 @@ func TestProposePageNoLongerClaimsCI(t *testing.T) {
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
 	body := rec.Body.String()
+	if !strings.Contains(body, "This is not caused by your entries, and your draft is saved.") {
+		t.Fatalf("the page does not show the app fault this test is about:\n%s", body)
+	}
 	for _, claim := range []string{"CI would reject them anyway", "CI would reject them too"} {
 		if strings.Contains(body, claim) {
 			t.Errorf("app faults only, and the page still says %q", claim)
 		}
+	}
+}
+
+// http:// on the course URL is only a warning on the course form, so it can
+// reach the review. The schema's answer is a regular expression; the operator
+// gets the field and plain words.
+func TestProposeSchemaProblemSpeaksPlainly(t *testing.T) {
+	gh, fake := fakeGitHubFiles(t, map[string][]byte{
+		"_data/trainings.yml":       []byte(fixtureYAML),
+		"api/trainings.schema.json": realSchema(t),
+	})
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+	form := newMASForm()
+	form.Set("url", "http://www.arc42.de/info-mas/")
+	form.Set("confirm_warnings", "1")
+	if rec, _, ok := postCourse(t, s, "/courses/new", form); !ok {
+		t.Fatalf("course not saved:\n%s", rec.Body.String())
+	}
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
+	body := rec.Body.String()
+	list := between(body, "Fix these in your entries", "CI would reject them too.")
+	if !strings.Contains(list, "MAS — Course URL: must start with https://") {
+		t.Errorf("the problem is not in plain words:\n%s", body)
+	}
+	// "courses/1", a pointer; "/courses/mas" is the Edit link and fine.
+	for _, leak := range []string{"pattern", "^", "courses/1"} {
+		if strings.Contains(list, leak) {
+			t.Errorf("problem list shows %q:\n%s", leak, list)
+		}
+	}
+	if strings.Contains(body, "This is not caused by your entries") {
+		t.Errorf("an entry problem also shows up as the app's fault:\n%s", body)
+	}
+	if strings.Contains(body, `action="/propose"`) || fake.Proposals() != 0 {
+		t.Error("the pull request form is offered despite a problem in the entries")
+	}
+}
+
+// A public date without a city fails a rule and the schema's "required". The
+// schema reports that at the date, not at the city; it used to land as an app
+// fault next to the rule's entry problem, contradicting it.
+func TestProposeMissingCityIsOneEntryProblem(t *testing.T) {
+	yaml := strings.Replace(masBadDateYAML, `end: "2027-01-12"`, `end: "2027-01-14"`, 1)
+	yaml = strings.Replace(yaml, "format: online", "format: public", 1)
+	gh, _ := fakeGitHubFiles(t, map[string][]byte{
+		"_data/trainings.yml":       []byte(yaml),
+		"api/trainings.schema.json": realSchema(t),
+	})
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+	form := newMASForm()
+	form.Set("title", "Methodische Architektur-Skills, neu")
+	if rec, _, ok := postCourse(t, s, "/courses/mas", form); !ok {
+		t.Fatalf("course edit not saved:\n%s", rec.Body.String())
+	}
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
+	body := rec.Body.String()
+	list := between(body, "Fix these in your entries", "CI would reject them too.")
+	if n := strings.Count(list, "— City:"); n != 1 {
+		t.Errorf("City is named %d times, want once:\n%s", n, list)
+	}
+	if strings.Contains(body, "This is not caused by your entries") {
+		t.Errorf("the missing city is also filed as the app's fault:\n%s", body)
 	}
 }

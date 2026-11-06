@@ -31,13 +31,13 @@ func TestRulesAcceptValidData(t *testing.T) {
 func TestRuleEndBeforeStart(t *testing.T) {
 	tr := ok()
 	tr.Courses[0].Dates[0].End = "2025-12-31"
-	assertProblem(t, Rules(tr), "before start")
+	assertProblem(t, Rules(tr), "the last day (31 Dec 2025) is before the first day (1 Jan 2026)")
 }
 
 func TestRuleNonOnlineNeedsCity(t *testing.T) {
 	tr := ok()
 	tr.Courses[0].Dates[0].City = ""
-	assertProblem(t, Rules(tr), "city")
+	assertProblem(t, Rules(tr), "must not be empty unless the format is online")
 }
 
 func TestRuleOnlineDoesNotNeedCity(t *testing.T) {
@@ -54,7 +54,7 @@ func TestRuleDuplicateDateID(t *testing.T) {
 	d := tr.Courses[0].Dates[0]
 	d.Code = "B"
 	tr.Courses[0].Dates = append(tr.Courses[0].Dates, d)
-	assertProblem(t, Rules(tr), "duplicate date id")
+	assertProblem(t, Rules(tr), "another date already has the date ID a")
 }
 
 func TestRuleDuplicateBookingCode(t *testing.T) {
@@ -62,7 +62,7 @@ func TestRuleDuplicateBookingCode(t *testing.T) {
 	d := tr.Courses[0].Dates[0]
 	d.ID = "b"
 	tr.Courses[0].Dates = append(tr.Courses[0].Dates, d)
-	assertProblem(t, Rules(tr), "duplicate booking code")
+	assertProblem(t, Rules(tr), "another date already has the booking code A")
 }
 
 func TestSchemaRejectsBadLanguage(t *testing.T) {

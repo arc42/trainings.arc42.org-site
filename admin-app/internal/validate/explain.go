@@ -12,6 +12,11 @@ import (
 type formField struct {
 	Name  string // the control's name= attribute
 	Label string // its visible label, verbatim, so the operator can find it
+	// Hint says, in plain words, what a value must look like where the schema
+	// checks it against a pattern. A regular expression is not an answer to
+	// "what is wrong with my entry"; TestEveryPatternHasAHint keeps these
+	// complete.
+	Hint string
 }
 
 // formFields maps every property an operator can set to the control that sets
@@ -29,39 +34,67 @@ type formField struct {
 // here too. TestFormFieldsCoverForms enforces it, both ways.
 var formFields = map[string]formField{
 	// courseform.gohtml
-	"id":                          {"id", "Course ID"},
-	"short_title":                 {"short_title", "Short title"},
-	"title":                       {"title", "Full title"},
-	"url":                         {"url", "Course URL"},
-	"url_en":                      {"url_en", "English course page (optional)"},
-	"trainers":                    {"trainer", "Trainers"},
-	"show_on":                     {"show_on", "Shown on"},
-	"blurb_de":                    {"blurb_de", "Description (German)"},
-	"blurb_en":                    {"blurb_en", "Description (English)"},
-	"certification":               {"certification", "Certification"},
-	"credit_points/methodical":    {"credits_methodical", "iSAQB points, methodical"},
-	"credit_points/technical":     {"credits_technical", "iSAQB points, technical"},
-	"credit_points/communication": {"credits_communication", "iSAQB points, communication"},
+	"id":                          {"id", "Course ID", mustBeAnID},
+	"short_title":                 {"short_title", "Short title", ""},
+	"title":                       {"title", "Full title", ""},
+	"url":                         {"url", "Course URL", mustBeHTTPS},
+	"url_en":                      {"url_en", "English course page (optional)", mustBeHTTPS},
+	"trainers":                    {"trainer", "Trainers", ""},
+	"show_on":                     {"show_on", "Shown on", "must be site names like www.arc42.de: lower-case letters, digits, dots and hyphens"},
+	"blurb_de":                    {"blurb_de", "Description (German)", ""},
+	"blurb_en":                    {"blurb_en", "Description (English)", ""},
+	"certification":               {"certification", "Certification", ""},
+	"credit_points/methodical":    {"credits_methodical", "iSAQB points, methodical", ""},
+	"credit_points/technical":     {"credits_technical", "iSAQB points, technical", ""},
+	"credit_points/communication": {"credits_communication", "iSAQB points, communication", ""},
 
 	// dateform.gohtml. No "dates/url": the server derives the registration
 	// link from the date id, so nobody can have typed a wrong one.
-	"dates/id":       {"id", "Date ID"},
-	"dates/code":     {"code", "Booking code"},
-	"dates/start":    {"start", "First day"},
-	"dates/end":      {"end", "Last day"},
-	"dates/format":   {"format", "Format"},
-	"dates/city":     {"city", "City"},
-	"dates/country":  {"country", "Country"},
-	"dates/language": {"language", "Language taught in"},
-	"dates/trainers": {"trainer", "Trainers"},
+	"dates/id":       {"id", "Date ID", mustBeAnID},
+	"dates/code":     {"code", "Booking code", ""},
+	"dates/start":    {"start", "First day", mustBeADate},
+	"dates/end":      {"end", "Last day", mustBeADate},
+	"dates/format":   {"format", "Format", ""},
+	"dates/city":     {"city", "City", ""},
+	"dates/country":  {"country", "Country", "must be two capital letters, e.g. DE"},
+	"dates/language": {"language", "Language taught in", ""},
+	"dates/trainers": {"trainer", "Trainers", ""},
 	// One choice on the form, two keys in the file (model.Date.SetAvailability).
-	"dates/status":                  {"availability", "Availability"},
-	"dates/seats_limited":           {"availability", "Availability"},
-	"dates/price/amount":            {"price_amount", "Regular price"},
-	"dates/price/alumni":            {"price_alumni", "Alumni price"},
-	"dates/price/currency":          {"price_currency", "Currency"},
-	"dates/price/early_bird/amount": {"early_bird_amount", "Early-bird price"},
-	"dates/price/early_bird/until":  {"early_bird_until", "Early-bird deadline"},
+	"dates/status":                  {"availability", "Availability", ""},
+	"dates/seats_limited":           {"availability", "Availability", ""},
+	"dates/price/amount":            {"price_amount", "Regular price", ""},
+	"dates/price/alumni":            {"price_alumni", "Alumni price", ""},
+	"dates/price/currency":          {"price_currency", "Currency", "must be three capital letters, e.g. EUR"},
+	"dates/price/early_bird/amount": {"early_bird_amount", "Early-bird price", ""},
+	"dates/price/early_bird/until":  {"early_bird_until", "Early-bird deadline", mustBeADate},
+}
+
+const (
+	mustBeAnID   = "must be lower-case letters, digits and hyphens only"
+	mustBeHTTPS  = "must start with https://"
+	mustBeADate  = "must be a date like 2027-01-13"
+	mustBeFilled = "must not be empty"
+)
+
+// plainMessage says what the schema found wrong, in the words of the form.
+// Only keywords a form entry can violate get an answer; ok is false for the
+// rest (a wrong JSON type, an extra property, a malformed object), because
+// those are about how the app wrote the feed, not about what was typed.
+func plainMessage(keyword string, f formField) (msg string, ok bool) {
+	switch keyword {
+	case "required", "minLength", "minItems":
+		return mustBeFilled, true
+	case "pattern":
+		if f.Hint != "" {
+			return f.Hint, true
+		}
+		return "is not in the expected form", true
+	case "enum":
+		return "must be one of the choices on the form", true
+	case "minimum":
+		return "must not be negative", true
+	}
+	return "", false
 }
 
 // Explain says where a problem is, in the operator's words: which course,
@@ -72,7 +105,8 @@ var formFields = map[string]formField{
 //   - "courses.<id>.<prop>" from the course form's own checks,
 //   - "courses/<i>/dates/<j>/<prop>", a schema pointer into FeedJSON's output.
 //
-// Anything it cannot place on a form field is returned as an AppProblem.
+// Anything it cannot place on a form field is returned as an AppProblem, and so
+// is a schema problem of a kind no form entry can cause (plainMessage).
 func Explain(t model.Trainings, p Problem) Problem {
 	switch {
 	case strings.HasPrefix(p.Field, "dates."):
@@ -117,9 +151,24 @@ func explainPointer(t model.Trainings, p Problem) Problem {
 		if !ok {
 			return asAppFault(p)
 		}
-		return onForm(p, "dates/"+propPath(rest[2:]), where(c, &d), "/dates/"+d.ID)
+		return schemaOnForm(p, "dates/"+propPath(rest[2:]), where(c, &d), "/dates/"+d.ID)
 	}
-	return onForm(p, propPath(rest), where(c, nil), "/courses/"+c.ID)
+	return schemaOnForm(p, propPath(rest), where(c, nil), "/courses/"+c.ID)
+}
+
+// schemaOnForm is onForm for a schema problem, whose message is the library's
+// ("does not match pattern '^https://'") and is replaced by a plain one. The
+// original stays in Detail.
+func schemaOnForm(p Problem, prop, where, link string) Problem {
+	msg, ok := plainMessage(p.Keyword, formFields[prop])
+	if !ok {
+		return asAppFault(p)
+	}
+	p = onForm(p, prop, where, link)
+	if p.Kind == EntryProblem {
+		p.Detail, p.Message = p.String(), msg
+	}
+	return p
 }
 
 // at resolves the index in segs[0]. The pointer came from a feed rendered from
@@ -189,10 +238,8 @@ func where(c model.Course, d *model.Date) string {
 		return name
 	}
 	var parts []string
-	if day, err := time.Parse("2006-01-02", d.Start); err == nil {
-		parts = append(parts, day.Format("2 Jan 2006"))
-	} else if d.Start != "" {
-		parts = append(parts, d.Start)
+	if d.Start != "" {
+		parts = append(parts, day(d.Start))
 	}
 	if place := (model.Row{Date: *d}).Location(); place != "" {
 		parts = append(parts, place)
@@ -201,4 +248,14 @@ func where(c model.Course, d *model.Date) string {
 		return name
 	}
 	return name + ", " + strings.Join(parts, " ")
+}
+
+// day writes a "YYYY-MM-DD" date the way the operator reads one: "13 Jan
+// 2027". Anything unparseable is shown as it is, rather than hidden.
+func day(iso string) string {
+	t, err := time.Parse("2006-01-02", iso)
+	if err != nil {
+		return iso
+	}
+	return t.Format("2 Jan 2006")
 }

@@ -286,7 +286,11 @@ func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request, sess Sess
 // CI checks the pull request again, and stays the authority on it.
 func (s *Server) proposeProblems(r *http.Request, client *gh.Client, d *Draft) (entries, faults []validate.Problem) {
 	m := d.Doc.Model()
+	// Rules first: where a rule and the schema object to the same field (a
+	// public date without a city), the rule's message is the one written for
+	// this case, and the operator needs to hear about the field once.
 	all := append(validate.Rules(m), s.schemaProblems(r, client, d)...)
+	seen := map[string]bool{}
 	for _, p := range validate.ExplainAll(m, all) {
 		if p.Kind == validate.AppProblem {
 			// The page asks the operator for a screenshot; the log is the
@@ -295,7 +299,10 @@ func (s *Server) proposeProblems(r *http.Request, client *gh.Client, d *Draft) (
 			faults = append(faults, p)
 			continue
 		}
-		entries = append(entries, p)
+		if key := p.Link + "\x00" + p.Label; !seen[key] {
+			seen[key] = true
+			entries = append(entries, p)
+		}
 	}
 	return entries, faults
 }

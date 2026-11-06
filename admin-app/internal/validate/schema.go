@@ -153,12 +153,28 @@ func asValidationError(err error, target **jsonschema.ValidationError) bool {
 
 // flatten turns the schema library's error tree into leaf problems, which are
 // the ones that name an actual field.
+//
+// A "required" failure is reported at the object that lacks the property
+// ("courses/0/dates/0: missing properties: 'city'"), which no form field sets.
+// It is split here into one problem per missing property, pointing at the
+// property itself, so Explain can send the operator to the field that is empty
+// instead of filing it as the app's fault.
 func flatten(ve *jsonschema.ValidationError) []Problem {
 	if len(ve.Causes) == 0 {
-		return []Problem{{
-			Field:   strings.TrimPrefix(ve.InstanceLocation, "/"),
-			Message: ve.Message,
-		}}
+		field := strings.TrimPrefix(ve.InstanceLocation, "/")
+		keyword := ve.KeywordLocation[strings.LastIndex(ve.KeywordLocation, "/")+1:]
+		if names, ok := strings.CutPrefix(ve.Message, "missing properties: "); ok && keyword == "required" {
+			var out []Problem
+			for _, n := range strings.Split(names, ", ") {
+				n = strings.Trim(n, "'")
+				out = append(out, Problem{
+					Field: strings.TrimPrefix(field+"/"+n, "/"), Keyword: keyword,
+					Message: "missing property '" + n + "'",
+				})
+			}
+			return out
+		}
+		return []Problem{{Field: field, Keyword: keyword, Message: ve.Message}}
 	}
 	var out []Problem
 	for _, c := range ve.Causes {

@@ -20,6 +20,7 @@ import (
 type Problem struct {
 	Field   string // e.g. "dates.msa-dez-2026.end", or a schema pointer
 	Message string
+	Keyword string // for a schema problem, the keyword that failed: "pattern", "type", ...
 
 	Kind   ProblemKind
 	Where  string // e.g. "MAS, 13 Jan 2027 online"; empty for a course being created
@@ -49,7 +50,9 @@ func (p Problem) String() string {
 	return p.Field + ": " + p.Message
 }
 
-// Rules applies the cross-field checks JSON Schema cannot express.
+// Rules applies the cross-field checks JSON Schema cannot express. The messages
+// are read by the operator, next to the field's form label: plain words, dates
+// as "13 Jan 2027", never a key name.
 func Rules(t model.Trainings) []Problem {
 	var problems []Problem
 	seenID := map[string]bool{}
@@ -64,7 +67,7 @@ func Rules(t model.Trainings) []Problem {
 			if d.Start != "" && d.End != "" && d.End < d.Start {
 				problems = append(problems, Problem{
 					Field:   field + ".end",
-					Message: fmt.Sprintf("end %s is before start %s", d.End, d.Start),
+					Message: fmt.Sprintf("the last day (%s) is before the first day (%s)", day(d.End), day(d.Start)),
 				})
 			}
 
@@ -72,7 +75,7 @@ func Rules(t model.Trainings) []Problem {
 			if d.Format != "online" && d.City == "" {
 				problems = append(problems, Problem{
 					Field:   field + ".city",
-					Message: "a non-online date needs a city",
+					Message: "must not be empty unless the format is online",
 				})
 			}
 
@@ -80,7 +83,7 @@ func Rules(t model.Trainings) []Problem {
 			if seenID[d.ID] {
 				problems = append(problems, Problem{
 					Field:   field + ".id",
-					Message: fmt.Sprintf("duplicate date id %q", d.ID),
+					Message: fmt.Sprintf("another date already has the date ID %s", d.ID),
 				})
 			}
 			seenID[d.ID] = true
@@ -90,7 +93,7 @@ func Rules(t model.Trainings) []Problem {
 			if seenCode[d.Code] {
 				problems = append(problems, Problem{
 					Field:   field + ".code",
-					Message: fmt.Sprintf("duplicate booking code %q", d.Code),
+					Message: fmt.Sprintf("another date already has the booking code %s", d.Code),
 				})
 			}
 			seenCode[d.Code] = true
