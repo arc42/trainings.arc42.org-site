@@ -127,6 +127,12 @@ func CourseWarnings(c model.Course) []Warning {
 	if model.HasHandMadeCard(c.ID) {
 		return ws
 	}
+	// The standard card shows the credits only next to a certification: a
+	// course without one shows nothing about iSAQB (spec G5), so points
+	// entered for it would be dropped from the home pages without a word.
+	if !c.CreditPoints.Empty() && strings.TrimSpace(c.Certification) == "" {
+		add("certification", "Certification", "credit points are iSAQB credits, but no certification is named — the card will not show them")
+	}
 	if c.BlurbDE == "" && c.BlurbEN == "" {
 		add("blurb_de", "Description", "The home page cards for this course will show no description.")
 	}

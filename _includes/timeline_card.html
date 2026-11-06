@@ -43,8 +43,14 @@
   {%- assign tc_blurb = include.course.blurb_en | default: include.course.blurb_de | strip -%}
   {%- assign tc_trainer_join = " and " -%}
   {%- assign tc_trainer_label = "With" -%}
+  {%- comment -%}
+    An url_en that is the German url again (MAS: one systems42.org page for
+    both languages) is no English page: labelling it "More info" with
+    hreflang="en" would promise English and deliver whatever that page is.
+  {%- endcomment -%}
   {%- assign tc_url_en = include.course.url_en | strip -%}
-  {%- if tc_url_en != "" -%}
+  {%- assign tc_url_de = include.course.url | strip -%}
+  {%- if tc_url_en != "" and tc_url_en != tc_url_de -%}
     {%- assign tc_info_url = tc_url_en -%}
     {%- assign tc_info_hreflang = "en" -%}
     {%- assign tc_info_label = "More info" -%}
@@ -87,7 +93,10 @@
             <p class="timeline-few-seats">{{ include.few_seats }}</p>
         {% endif %}
 
-        {% if include.credits %}
+        {%- comment -%} Credits are iSAQB credits: a course without a
+            certification shows nothing about iSAQB (G5), whatever the data
+            says about points. The admin app warns about that combination. {%- endcomment -%}
+        {% if include.credits and tc_cert != "" %}
         <p class="date-small">
             {% if include.page_lang == "de" %}iSAQB-Punkte{% else %}iSAQB credits{% endif %}: {{ include.credits }}
         </p>

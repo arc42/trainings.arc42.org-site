@@ -369,3 +369,32 @@ func TestConventionWarningsAdviseTheFreeVariant(t *testing.T) {
 		}
 	}
 }
+
+// Credit points are iSAQB credits. The standard card shows them only for a
+// course that names its certification (spec G5), so points without one would
+// silently vanish from the home pages.
+func TestCreditPointsWithoutCertificationWarn(t *testing.T) {
+	c := masCourse()
+	c.BlurbDE = "Methodik für Architekten."
+	c.CreditPoints = &model.CreditPoints{Methodical: 10}
+	var got []Warning
+	for _, w := range CourseWarnings(c) {
+		if w.Field == "certification" {
+			got = append(got, w)
+		}
+	}
+	want := Warning{Field: "certification", Label: "Certification",
+		Message: "credit points are iSAQB credits, but no certification is named — the card will not show them"}
+	if len(got) != 1 || got[0] != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	c.Certification = "iSAQB Advanced Level"
+	if got := fields(CourseWarnings(c)); strings.Contains(got, "certification") {
+		t.Errorf("a certified course with points warns: %q", got)
+	}
+	c.Certification, c.CreditPoints = "", nil
+	if got := fields(CourseWarnings(c)); strings.Contains(got, "certification") {
+		t.Errorf("a course with neither warns: %q", got)
+	}
+}
