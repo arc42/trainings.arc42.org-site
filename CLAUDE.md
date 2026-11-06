@@ -35,8 +35,8 @@ change a template, grep the built output to prove the change — do not claim a
 Liquid change works because it looks right in the source.
 
 `ruby scripts/validate_trainings.rb` validates `_data/trainings.yml`; CI runs it
-on changes to that file, the schema, `scripts/**` and the two registration
-includes (`.github/workflows/validate-trainings.yml`).
+on every pull request, and on pushes that change that file, the schema,
+`scripts/**` or the includes (`.github/workflows/validate-trainings.yml`).
 
 ## Contracts that break silently
 

@@ -3,8 +3,9 @@ on:
   push:
     branches: ["**"]
     paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "_includes/**", "_pages/home*.html", "admin-app/internal/validate/testdata/**"]
+  # No paths filter on pull requests: a required check that a filter skips stays
+  # "Expected — waiting" forever and blocks every admin-app or registration-app PR.
   pull_request:
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "_includes/**", "_pages/home*.html", "admin-app/internal/validate/testdata/**"]
 jobs:
   validate:
     if: github.repository == 'arc42/trainings.arc42.org-site'
