@@ -1,0 +1,19 @@
+courses:
+  - id: flex
+    short_title: "FLEX"
+    title: "Flexible Architecture Training"
+    url: "https://example.org/flex"
+    trainers:
+      - "Gernot Starke"
+    dates:
+      - id: c
+        code: "C"
+        start: "2026-03-01"
+        end: "2026-03-02"
+        city: "Berlin"
+        country: "DE"
+        language: de
+        format: inhouse
+        url: "https://example.org/c"
+        status: open
+        price: {amount: 1000, currency: EUR}

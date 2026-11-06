@@ -73,7 +73,11 @@ func FeedJSON(t model.Trainings) ([]byte, error) {
 	for _, c := range t.Courses {
 		jc := jsonCourse{
 			ID: c.ID, ShortTitle: c.ShortTitle, Title: c.Title, Blurb: c.Blurb,
-			URL: c.URL, URLEn: c.URLEn, Trainers: c.Trainers,
+			URL: c.URL, URLEn: c.URLEn,
+			// Required lists are never null: a nil slice marshals to null and
+			// the schema (rightly) wants an array. A course may have no dates yet.
+			Trainers: append([]string{}, c.Trainers...),
+			Dates:    []jsonDate{},
 		}
 		if c.Certification != "" {
 			v := c.Certification

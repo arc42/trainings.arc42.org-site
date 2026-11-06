@@ -2,9 +2,9 @@ name: Validate training data
 on:
   push:
     branches: ["**"]
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html"]
+    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "admin-app/internal/validate/testdata/**"]
   pull_request:
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html"]
+    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "admin-app/internal/validate/testdata/**"]
 jobs:
   validate:
     if: github.repository == 'arc42/trainings.arc42.org-site'
@@ -17,6 +17,11 @@ jobs:
           bundler-cache: true
       - name: Validate trainings.yml (structure, language, dates)
         run: ruby scripts/validate_trainings.rb
+      - name: Validate fixtures the admin app must also accept
+        run: |
+          for f in admin-app/internal/validate/testdata/ci_accepts/*.yml; do
+            ruby scripts/validate_trainings.rb "$f" || exit 1
+          done
       - name: Build site
         run: bundle exec jekyll build
       - name: Validate published JSON against schema
