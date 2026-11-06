@@ -415,7 +415,9 @@ func TestSaveRejectsInvalidDate(t *testing.T) {
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
-	if !strings.Contains(rec.Body.String(), "the last day (2 Jan 2026) is before the first day (5 Jan 2026)") {
+	// Read after its label: "Last day — 2 Jan 2026 is before …", not "Last
+	// day — the last day (2 Jan 2026) is before …".
+	if !strings.Contains(rec.Body.String(), "<b>Last day</b> — 2 Jan 2026 is before the first day, 5 Jan 2026") {
 		t.Errorf("invalid date was accepted:\n%s", rec.Body.String())
 	}
 	// The problem names the field by the label the operator can see on the
@@ -641,7 +643,7 @@ func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
 		"id": {"msa"}, "short_title": {"Dup"}, "title": {"Dup"},
 		"url": {"https://example.org/x"}, "trainer": {"Dr. Gernot Starke"},
 	}))
-	if !strings.Contains(rec.Body.String(), "already exists") {
+	if !strings.Contains(rec.Body.String(), "<b>Course ID</b> — msa is already used by another course") {
 		t.Errorf("duplicate course id was accepted:\n%s", rec.Body.String())
 	}
 
@@ -650,8 +652,17 @@ func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
 		"id": {"flex"}, "short_title": {"FLEX"}, "title": {"Flexible"},
 		"url": {"https://example.org/flex"},
 	}))
-	if !strings.Contains(rec.Body.String(), "at least one trainer") {
+	if !strings.Contains(rec.Body.String(), "<b>Trainers</b> — name at least one<") {
 		t.Errorf("course without a trainer was accepted:\n%s", rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", url.Values{
+		"short_title": {"FLEX"}, "title": {"Flexible"},
+		"url": {"https://example.org/flex"}, "trainer": {"Dr. Gernot Starke"},
+	}))
+	if !strings.Contains(rec.Body.String(), "<b>Course ID</b> — must not be empty") {
+		t.Errorf("course without an id was accepted:\n%s", rec.Body.String())
 	}
 }
 

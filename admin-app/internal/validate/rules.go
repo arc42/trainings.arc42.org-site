@@ -51,8 +51,9 @@ func (p Problem) String() string {
 }
 
 // Rules applies the cross-field checks JSON Schema cannot express. The messages
-// are read by the operator, next to the field's form label: plain words, dates
-// as "13 Jan 2027", never a key name.
+// are read by the operator right after the field's form label ("Last day: …"),
+// so they never repeat it: plain words, dates as "13 Jan 2027", never a key
+// name.
 func Rules(t model.Trainings) []Problem {
 	var problems []Problem
 	// The first date to use each value, so a duplicate can say whose it is.
@@ -70,7 +71,7 @@ func Rules(t model.Trainings) []Problem {
 			if d.Start != "" && d.End != "" && d.End < d.Start {
 				problems = append(problems, Problem{
 					Field:   field + ".end",
-					Message: fmt.Sprintf("the last day (%s) is before the first day (%s)", day(d.End), day(d.Start)),
+					Message: fmt.Sprintf("%s is before the first day, %s", day(d.End), day(d.Start)),
 				})
 			}
 

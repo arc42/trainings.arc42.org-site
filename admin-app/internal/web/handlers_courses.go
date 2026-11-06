@@ -161,12 +161,12 @@ func courseProblems(c model.Course, existing []model.Course, isNew bool) []valid
 	var problems []validate.Problem
 	field := "courses." + c.ID
 	if c.ID == "" {
-		problems = append(problems, validate.Problem{Field: "courses.id", Message: "a course needs an id"})
+		problems = append(problems, validate.Problem{Field: "courses.id", Message: "must not be empty"})
 	}
 	for _, ex := range existing {
 		if isNew && ex.ID == c.ID {
 			problems = append(problems, validate.Problem{
-				Field: field + ".id", Message: "a course with id " + c.ID + " already exists",
+				Field: field + ".id", Message: c.ID + " is already used by another course",
 			})
 		}
 	}
@@ -179,7 +179,7 @@ func courseProblems(c model.Course, existing []model.Course, isNew bool) []valid
 	}
 	if len(c.Trainers) == 0 {
 		problems = append(problems, validate.Problem{
-			Field: field + ".trainers", Message: "name at least one trainer",
+			Field: field + ".trainers", Message: "name at least one",
 		})
 	}
 	for _, site := range c.ShowOn {

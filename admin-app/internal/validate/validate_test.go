@@ -31,7 +31,7 @@ func TestRulesAcceptValidData(t *testing.T) {
 func TestRuleEndBeforeStart(t *testing.T) {
 	tr := ok()
 	tr.Courses[0].Dates[0].End = "2025-12-31"
-	assertProblem(t, Rules(tr), "the last day (31 Dec 2025) is before the first day (1 Jan 2026)")
+	assertProblem(t, Rules(tr), "31 Dec 2025 is before the first day, 1 Jan 2026")
 }
 
 func TestRuleNonOnlineNeedsCity(t *testing.T) {

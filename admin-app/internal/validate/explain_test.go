@@ -27,7 +27,7 @@ func twoCourses() model.Trainings {
 
 func TestExplainRuleProblem(t *testing.T) {
 	p := Explain(twoCourses(), Problem{
-		Field: "dates.mas-jan-2027.end", Message: "the last day (12 Jan 2027) is before the first day (13 Jan 2027)",
+		Field: "dates.mas-jan-2027.end", Message: "12 Jan 2027 is before the first day, 13 Jan 2027",
 	})
 	if p.Kind != EntryProblem {
 		t.Errorf("Kind = %v, want EntryProblem", p.Kind)
@@ -41,7 +41,7 @@ func TestExplainRuleProblem(t *testing.T) {
 	if p.Link != "/dates/mas-jan-2027" {
 		t.Errorf("Link = %q, want the date's edit form", p.Link)
 	}
-	if p.Message != "the last day (12 Jan 2027) is before the first day (13 Jan 2027)" {
+	if p.Message != "12 Jan 2027 is before the first day, 13 Jan 2027" {
 		t.Errorf("Message = %q, want it unchanged", p.Message)
 	}
 }
