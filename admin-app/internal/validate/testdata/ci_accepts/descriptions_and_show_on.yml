@@ -1,0 +1,22 @@
+courses:
+  - id: mas
+    short_title: "MAS"
+    title: "Master of Software Architecture"
+    blurb_de: >-
+      Ein Kurs nur mit deutscher Beschreibung.
+    show_on: ["www.arc42.de", "arc42.org"]
+    url: "https://example.org/mas"
+    trainers:
+      - "Gernot Starke"
+    dates:
+      - id: mas-1
+        code: "MAS-1"
+        start: "2026-03-01"
+        end: "2026-03-02"
+        city: "Berlin"
+        country: "DE"
+        language: de
+        format: inhouse
+        url: "https://example.org/mas-1"
+        status: open
+        price: {amount: 1000, currency: EUR}

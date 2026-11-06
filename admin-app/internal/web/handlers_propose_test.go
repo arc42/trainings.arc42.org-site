@@ -335,7 +335,7 @@ func TestPRBodyListsAnAdditionAsValues(t *testing.T) {
 func TestPRBodyKeepsValuesInsideTheirCell(t *testing.T) {
 	before := model.Course{ID: "msa", ShortTitle: "MSA"}
 	after := before
-	after.Blurb = "one | two\nthree"
+	after.BlurbEN = "one | two\nthree"
 	body := prBody([]Change{{Kind: "updated", DateID: "course:msa",
 		CourseID: "msa", CourseShortTitle: "MSA",
 		BeforeCourse: &before, AfterCourse: &after}}, "gernotstarke")

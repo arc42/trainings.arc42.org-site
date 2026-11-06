@@ -213,3 +213,20 @@ func TestSpanCollapsesAOneDayRun(t *testing.T) {
 		}
 	}
 }
+
+func TestCourseDiffLabelsDescriptions(t *testing.T) {
+	before := Course{ID: "mas"}
+	after := Course{ID: "mas", BlurbDE: "Text", BlurbEN: "Text", ShowOn: []string{"arc42.org", "www.arc42.de"}}
+	got := DiffCourses(before, after)
+	var labels []string
+	for _, fc := range got {
+		labels = append(labels, fc.Label)
+	}
+	want := "Description (German)|Description (English)|Shown on"
+	if strings.Join(labels, "|") != want {
+		t.Fatalf("labels = %v", labels)
+	}
+	if got[2].After != "arc42.org, www.arc42.de" {
+		t.Errorf("shown on = %q", got[2].After)
+	}
+}

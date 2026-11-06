@@ -85,7 +85,7 @@ func TestCourseWarnings(t *testing.T) {
 	ok := model.Course{
 		ID: "msa", ShortTitle: "MSA",
 		Title: "Mastering Software Architectures", URL: "https://www.arc42.de/info-msa/",
-		Blurb: "Two expert trainers at all times, highly practical and pragmatic.",
+		BlurbEN: "Two expert trainers at all times, highly practical and pragmatic.",
 	}
 	if got := fields(CourseWarnings(ok)); got != "" {
 		t.Errorf("a clean course warns about nothing, got %q", got)
@@ -104,7 +104,7 @@ func TestCourseWarnings(t *testing.T) {
 	}
 
 	bare := ok
-	bare.Blurb = ""
+	bare.BlurbEN = ""
 	if got := fields(CourseWarnings(bare)); !strings.Contains(got, "blurb") {
 		t.Errorf("expected an empty blurb warning, got %q", got)
 	}
@@ -146,8 +146,8 @@ func TestEnglishCourseURLIsHeldToTheSameRuleAsTheMainOne(t *testing.T) {
 	c := model.Course{
 		ID: "msa", ShortTitle: "MSA",
 		Title: "Mastering Software Architectures", URL: "https://www.arc42.de/info-msa/",
-		Blurb: "Two expert trainers at all times, highly practical and pragmatic.",
-		URLEn: "http://trainings.arc42.org/courses/msa/",
+		BlurbEN: "Two expert trainers at all times, highly practical and pragmatic.",
+		URLEn:   "http://trainings.arc42.org/courses/msa/",
 	}
 	if got := fields(CourseWarnings(c)); !strings.Contains(got, "url_en") {
 		t.Errorf("expected an http url_en warning, got %q", got)
@@ -204,7 +204,7 @@ func TestEveryPublishedCourseHasCards(t *testing.T) {
 func TestUnknownCourseWarnsAboutMissingCards(t *testing.T) {
 	c := model.Course{
 		ID: "brandnew", ShortTitle: "New", Title: "A New Course",
-		URL: "https://www.arc42.de/info-new/", Blurb: "Something new.",
+		URL: "https://www.arc42.de/info-new/", BlurbEN: "Something new.",
 		Trainers: []string{"Gernot Starke"},
 	}
 	got := fields(CourseWarnings(c))

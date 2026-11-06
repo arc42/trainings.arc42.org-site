@@ -155,7 +155,7 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	get := func(k string) string { return strings.TrimSpace(r.PostFormValue(k)) }
 	c := model.Course{
 		ID: get("id"), ShortTitle: get("short_title"), Title: get("title"),
-		Blurb: get("blurb"), Certification: get("certification"),
+		BlurbEN: get("blurb"), Certification: get("certification"),
 		CreditPoints: parseCreditPoints(get), URL: get("url"), URLEn: get("url_en"),
 		Trainers: parseTrainers(r),
 	}

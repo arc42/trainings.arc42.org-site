@@ -58,7 +58,9 @@ func (d *Doc) Model() model.Trainings {
 			ID:            scalar(cn, "id"),
 			ShortTitle:    scalar(cn, "short_title"),
 			Title:         scalar(cn, "title"),
-			Blurb:         scalar(cn, "blurb"),
+			BlurbDE:       scalar(cn, "blurb_de"),
+			BlurbEN:       blurbEN(cn),
+			ShowOn:        stringList(cn, "show_on"),
 			Certification: scalar(cn, "certification"),
 			CreditPoints:  creditPoints(cn),
 			URL:           scalar(cn, "url"),
@@ -87,6 +89,16 @@ func (d *Doc) Model() model.Trainings {
 		t.Courses = append(t.Courses, c)
 	}
 	return t
+}
+
+// blurbEN reads blurb_en, falling back to the retired "blurb" key so that a
+// draft written before the split still opens. The renderer never writes
+// "blurb" again, so the next save migrates it.
+func blurbEN(cn *yaml.Node) string {
+	if v := scalar(cn, "blurb_en"); v != "" {
+		return v
+	}
+	return scalar(cn, "blurb")
 }
 
 // mapValue returns the value node for a key in a mapping node, or nil.

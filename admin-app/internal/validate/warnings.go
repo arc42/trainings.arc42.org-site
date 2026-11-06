@@ -132,9 +132,9 @@ func CourseWarnings(c model.Course) []Warning {
 	if isPlainHTTP(c.URLEn) {
 		add("url_en", "the English course page is plain http; use https")
 	}
-	if c.Blurb == "" {
+	if c.Blurb() == "" {
 		add("blurb", "without a blurb the timeline card shows the course name alone")
-	} else if n := len([]rune(c.Blurb)); n > maxBlurb {
+	} else if n := len([]rune(c.Blurb())); n > maxBlurb {
 		add("blurb", "%d characters is long for a card; two or three sentences read better", n)
 	}
 	return ws

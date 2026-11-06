@@ -10,13 +10,24 @@ type Course struct {
 	ID            string
 	ShortTitle    string
 	Title         string
-	Blurb         string
+	BlurbDE       string   // German card text; optional
+	BlurbEN       string   // English card text; optional
+	ShowOn        []string // consumer sites that list this course; nil = every site
 	Certification string
 	CreditPoints  *CreditPoints
 	URL           string
 	URLEn         string // optional: English detail page, https://trainings.arc42.org/courses/<id>/
 	Trainers      []string
 	Dates         []Date
+}
+
+// Blurb is the feed's generated "blurb": the English text, else the German
+// one. Consumers that predate the per-language texts keep reading one string.
+func (c Course) Blurb() string {
+	if c.BlurbEN != "" {
+		return c.BlurbEN
+	}
+	return c.BlurbDE
 }
 
 type Date struct {
