@@ -9,10 +9,12 @@ language a training is actually HELD in (d.language) travels separately as
 delivery_lang and shows up as a small per-card note.
 Dates are interleaved chronologically across courses via sortable
 "start|courseIndex|dateIndex" keys (ISO strings sort lexicographically).
-timeline_course.html and the timeline_<type>.html templates are unchanged;
-type = course.id, plus "_online" suffix when format == "online".
+type = course.id, plus "_online" suffix when format == "online";
+timeline_course.html dispatches on it to a hand-made timeline_<type>.html, or
+to the data-driven timeline_card.html, which reads course and course_date.
 trainer is only passed for explicit per-date overrides, matching the old
-frontmatter behaviour (course-default trainers stay baked into the templates).
+frontmatter behaviour (course-default trainers stay baked into the hand-made
+templates; the data-driven card reads both from course and course_date).
 {% endcomment %}
 {%- assign page_lang = include.page_lang | default: "en" -%}
 {%- if page_lang == "de" -%}{%- assign trainer_join = " und " -%}{%- else -%}{%- assign trainer_join = " and " -%}{%- endif -%}
@@ -105,6 +107,8 @@ frontmatter behaviour (course-default trainers stay baked into the templates).
   {%- endif -%}
   {% include timeline_course.html
      type=type
+     course=c
+     course_date=d
      position=position
      date=datelabel
      location=d.city
