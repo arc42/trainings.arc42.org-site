@@ -58,7 +58,7 @@
        "all sites" box: the YAML leaves show_on out, and an empty list would
        mean a course shown nowhere. */}}
   {{$shown := .Course.ShowOn}}
-  <fieldset class="group">
+  <fieldset class="group" aria-describedby="show-on-hint">
     <legend>Shown on</legend>
     {{/* No id on the first line on purpose: form.js folds every .hint[id]
          behind a "?", and what an empty group means has to stay in view, or
@@ -66,7 +66,7 @@
     <p class="hint">No box ticked: every site shows this course. trainings.arc42.org always shows every course.</p>
     <p class="hint" id="show-on-hint">Tick the sites that should advertise this
       course. A site not in the list goes in the last field.</p>
-    <ul class="checks" aria-describedby="show-on-hint">
+    <ul class="checks">
       {{range .KnownSites}}
       <li><label class="check">
         <input type="checkbox" name="show_on" value="{{.}}" {{if has $shown .}}checked{{end}}>

@@ -263,3 +263,44 @@ func TestWarningsShowTheFormLabel(t *testing.T) {
 		t.Error("the reshown form lost its note")
 	}
 }
+
+func TestSameSitesComparesSetsBothWays(t *testing.T) {
+	for _, c := range []struct {
+		a, b []string
+		want bool
+	}{
+		{nil, nil, true},
+		{[]string{"arc42.org", "www.arc42.de"}, []string{"www.arc42.de", "arc42.org"}, true},
+		{[]string{"arc42.org", "arc42.org"}, []string{"www.arc42.de", "arc42.org"}, false},
+		{[]string{"www.arc42.de", "arc42.org"}, []string{"arc42.org", "arc42.org"}, false},
+		{[]string{"arc42.org"}, nil, false},
+	} {
+		if got := sameSites(c.a, c.b); got != c.want {
+			t.Errorf("sameSites(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
+		}
+	}
+}
+
+// A hand edit can leave a duplicate in show_on; nothing dedupes it. The
+// operator's change must still win over the stored list.
+func TestCourseFormEditOverDuplicatedShowOnKeepsTheChange(t *testing.T) {
+	gh, _ := fakeGitHubWith(t, strings.Replace(masYAML,
+		`show_on: ["arc42.org", "www.arc42.de", "example.org"]`,
+		`show_on: ["arc42.org", "arc42.org"]`, 1))
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	form := url.Values{
+		"id": {"mas"}, "short_title": {"MAS"}, "title": {"Methodische Architektur-Skills"},
+		"url": {"https://www.arc42.de/info-mas/"}, "trainer": {"Dr. Peter Hruschka"},
+		"blurb_de": {"Methodik für Architekten."}, "blurb_en": {"Methods for architects."},
+		"show_on": {"www.arc42.de", "arc42.org"},
+	}
+	rec, c, ok := postCourse(t, s, "/courses/mas", form)
+	if !ok {
+		t.Fatalf("edit not saved:\n%s", rec.Body.String())
+	}
+	if want := []string{"www.arc42.de", "arc42.org"}; !slices.Equal(c.ShowOn, want) {
+		t.Errorf("ShowOn = %q, want %q: the operator's change was lost", c.ShowOn, want)
+	}
+}

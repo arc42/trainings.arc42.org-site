@@ -84,20 +84,23 @@ func parseShowOn(r *http.Request) []string {
 	return out
 }
 
-// sameSites reports whether two show_on lists name the same sites in any
-// order. The form posts in KnownSites order, so a hand-edited order would
+// sameSites reports whether two show_on lists name the same set of sites, in
+// any order. The form posts in KnownSites order, so a hand-edited order would
 // otherwise come back rearranged and show up as a change in the pull request
-// although the operator changed nothing.
+// although the operator changed nothing. Containment is checked both ways and
+// length is ignored: a hand edit can leave a duplicate (nothing dedupes
+// show_on), and ["arc42.org", "arc42.org"] must not pass for the same list as
+// ["www.arc42.de", "arc42.org"] just because the lengths match.
 func sameSites(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for _, site := range a {
-		if !slices.Contains(b, site) {
-			return false
+	within := func(xs, ys []string) bool {
+		for _, x := range xs {
+			if !slices.Contains(ys, x) {
+				return false
+			}
 		}
+		return true
 	}
-	return true
+	return within(a, b) && within(b, a)
 }
 
 // siteName is the pattern api/trainings.schema.json and the site's validator
