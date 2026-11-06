@@ -237,17 +237,22 @@ func where(c model.Course, d *model.Date) string {
 	if d == nil {
 		return name
 	}
+	if w := when(*d); w != "" {
+		return name + ", " + w
+	}
+	return name
+}
+
+// when names a date without its course: "13 Jan 2027 online".
+func when(d model.Date) string {
 	var parts []string
 	if d.Start != "" {
 		parts = append(parts, day(d.Start))
 	}
-	if place := (model.Row{Date: *d}).Location(); place != "" {
+	if place := (model.Row{Date: d}).Location(); place != "" {
 		parts = append(parts, place)
 	}
-	if len(parts) == 0 {
-		return name
-	}
-	return name + ", " + strings.Join(parts, " ")
+	return strings.Join(parts, " ")
 }
 
 // day writes a "YYYY-MM-DD" date the way the operator reads one: "13 Jan

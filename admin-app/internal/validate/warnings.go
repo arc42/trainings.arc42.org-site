@@ -43,8 +43,10 @@ const (
 // DateWarnings judges one date. today is passed in rather than read from the
 // clock so the rules stay testable. isNew suppresses the conventions that only
 // apply to something being created: a published id can never change, so
-// nagging about it on every edit would be noise.
-func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
+// nagging about it on every edit would be noise. taken is what the other dates
+// use: the convention for a second run in one month is its free "-2" variant,
+// and advising the value its sibling already has would contradict Rules.
+func DateWarnings(d model.Date, courseID, today string, isNew bool, taken model.Taken) []Warning {
 	var ws []Warning
 	add := func(field, label, format string, args ...any) {
 		ws = append(ws, Warning{Field: field, Label: label, Message: fmt.Sprintf(format, args...)})
@@ -90,11 +92,11 @@ func DateWarnings(d model.Date, courseID, today string, isNew bool) []Warning {
 	// No card-template warning any more: a course without a hand-made card is
 	// rendered by the site's data-driven card, so every date has a card.
 
-	if want := model.BookingCode(courseID, d.Start, d.Language); want != "" && d.Code != "" && d.Code != want {
+	if want := taken.BookingCode(courseID, d.Start, d.Language); want != "" && d.Code != "" && d.Code != want {
 		add("code", "Booking code", "the house convention for this course and date is %q", want)
 	}
 	if isNew {
-		if want := model.DateID(courseID, d.Start, d.Language); want != "" && d.ID != "" && d.ID != want {
+		if want := taken.DateID(courseID, d.Start, d.Language); want != "" && d.ID != "" && d.ID != want {
 			add("id", "Date ID", "ids are usually %q; this one will not match its siblings", want)
 		}
 	}

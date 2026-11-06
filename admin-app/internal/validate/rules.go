@@ -55,8 +55,11 @@ func (p Problem) String() string {
 // as "13 Jan 2027", never a key name.
 func Rules(t model.Trainings) []Problem {
 	var problems []Problem
-	seenID := map[string]bool{}
-	seenCode := map[string]bool{}
+	// The first date to use each value, so a duplicate can say whose it is.
+	seenID := map[string]model.Date{}
+	seenCode := map[string]model.Date{}
+	// Every value in the file, so a suggestion is never another taken one.
+	all := t.TakenExcept("")
 
 	for _, c := range t.Courses {
 		for _, d := range c.Dates {
@@ -80,24 +83,39 @@ func Rules(t model.Trainings) []Problem {
 			}
 
 			// 3. Date ids are unique across the whole file.
-			if seenID[d.ID] {
+			if first, dup := seenID[d.ID]; dup {
 				problems = append(problems, Problem{
-					Field:   field + ".id",
-					Message: fmt.Sprintf("another date already has the date ID %s", d.ID),
+					Field: field + ".id",
+					Message: fmt.Sprintf("%s is already used by %s — use %s",
+						d.ID, when(first), model.NextFree(orElse(model.DateID(c.ID, d.Start, d.Language), d.ID), all.IDs)),
 				})
+			} else {
+				seenID[d.ID] = d
 			}
-			seenID[d.ID] = true
 
-			// 4. Booking codes are unique — they are the Formspark option
-			//    values, so a collision silently misroutes a registration.
-			if seenCode[d.Code] {
+			// 4. Booking codes are unique — they are the registration form's
+			//    option values, so a collision silently misroutes a
+			//    registration.
+			if first, dup := seenCode[d.Code]; dup {
 				problems = append(problems, Problem{
-					Field:   field + ".code",
-					Message: fmt.Sprintf("another date already has the booking code %s", d.Code),
+					Field: field + ".code",
+					Message: fmt.Sprintf("%s is already used by %s — use %s",
+						d.Code, when(first), model.NextFree(orElse(model.BookingCode(c.ID, d.Start, d.Language), d.Code), all.Codes)),
 				})
+			} else {
+				seenCode[d.Code] = d
 			}
-			seenCode[d.Code] = true
 		}
 	}
 	return problems
+}
+
+// orElse is a, unless it is empty. The suggestion for a duplicate starts from
+// the house convention, so the third run of a month is told "-3" rather than
+// "-2-2"; a date too incomplete to derive one falls back to its own value.
+func orElse(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }

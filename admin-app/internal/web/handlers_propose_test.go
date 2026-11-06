@@ -738,3 +738,75 @@ func TestProposeMissingCityIsOneEntryProblem(t *testing.T) {
 		t.Errorf("the missing city is also filed as the app's fault:\n%s", body)
 	}
 }
+
+// Spec §8 point 3, end to end: MAS is proposed without dates, that pull
+// request becomes main, and then two German January 2027 dates are added. Both
+// derived "mas-jan-2027" and "27-01 MAS"; the second was refused as a
+// duplicate and the warnings advised the taken value. The second now gets
+// "-2", with no warning to acknowledge.
+func TestTwoDatesInOneMonthBothProposeAfterTheCourse(t *testing.T) {
+	var proposed string
+	fake := func(yaml string) (*httptest.Server, *ghfake.Fake) {
+		f := ghfake.New(ghfake.Options{
+			Repo: "arc42/site", Login: "gernotstarke", CanPush: true,
+			Files: map[string][]byte{
+				"_data/trainings.yml":       []byte(yaml),
+				"api/trainings.schema.json": realSchema(t),
+			},
+			OnProposal:   func(p ghfake.Proposal) { proposed = p.Content },
+			OnUnexpected: func(method, path string) { t.Errorf("unexpected %s %s", method, path) },
+		})
+		return httptest.NewServer(f.Handler()), f
+	}
+	propose := func(s *Server) string {
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/propose", url.Values{
+			"title": {"t"}, "body": {"b"},
+		}))
+		return rec.Body.String()
+	}
+
+	gh1, f1 := fake(fixtureYAML)
+	defer gh1.Close()
+	s1 := testServer(t, gh1.URL)
+	if rec, _, ok := postCourse(t, s1, "/courses/new", newMASForm()); !ok {
+		t.Fatalf("course not saved:\n%s", rec.Body.String())
+	}
+	if body := propose(s1); f1.Proposals() != 1 {
+		t.Fatalf("the course alone opened %d PRs, want 1:\n%s", f1.Proposals(), body)
+	}
+
+	// The pull request was merged: its content is now main.
+	gh2, f2 := fake(proposed)
+	defer gh2.Close()
+	s2 := testServer(t, gh2.URL)
+	for _, run := range [][2]string{{"2027-01-13", "2027-01-14"}, {"2027-01-27", "2027-01-28"}} {
+		// No id and no code, as with scripting off, and no confirm_warnings:
+		// a warning would stop the save and show "Save anyway".
+		form := url.Values{
+			"course_id": {"mas"}, "start": {run[0]}, "end": {run[1]},
+			"language": {"de"}, "format": {"online"}, "availability": {"open"},
+		}
+		rec := httptest.NewRecorder()
+		s2.Routes().ServeHTTP(rec, signedIn(t, s2, http.MethodPost, "/dates/new", form))
+		if rec.Code != http.StatusSeeOther {
+			t.Fatalf("date %s not saved (status %d):\n%s", run[0], rec.Code, rec.Body.String())
+		}
+	}
+	d, _ := s2.drafts.Get("sid")
+	doc := string(d.Doc.Bytes())
+	for _, want := range []string{"id: mas-jan-2027\n", `"27-01 MAS"`, "id: mas-jan-2027-2\n", `"27-01 MAS-2"`} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("draft lacks %q:\n%s", want, doc)
+		}
+	}
+
+	rec := httptest.NewRecorder()
+	s2.Routes().ServeHTTP(rec, signedIn(t, s2, http.MethodGet, "/propose", nil))
+	if body := rec.Body.String(); strings.Contains(body, `class="problems`) {
+		t.Errorf("two dates in one month show problems:\n%s", body)
+	}
+	if body := propose(s2); f2.Proposals() != 1 {
+		t.Errorf("opened %d PRs, want exactly 1:\n%s", f2.Proposals(), body)
+	}
+}

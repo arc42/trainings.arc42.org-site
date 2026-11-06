@@ -118,20 +118,35 @@
       return o ? o.getAttribute(name) || "" : "";
     };
 
-    // Mirrors model.BookingCode. The two must agree — keep them in step.
+    // What the other dates already use, rendered by the server (takenJSON).
+    var takenOf = function (el) {
+      try { return JSON.parse(el.getAttribute("data-taken") || "[]"); }
+      catch (e) { return []; }
+    };
+    var takenCodes = takenOf(code), takenIDs = takenOf(idField);
+    // Mirrors model.NextFree: a second run in the same month and language
+    // gets "-2", so the form never fills in a value another date has.
+    var nextFree = function (base, taken) {
+      if (!base || taken.indexOf(base) < 0) return base;
+      for (var n = 2; ; n++) {
+        if (taken.indexOf(base + "-" + n) < 0) return base + "-" + n;
+      }
+    };
+
+    // Mirrors model.Taken.BookingCode. The two must agree — keep them in step.
     var derivedCode = function () {
       var token = attr("data-code-token");
       if (!token || start.value.length !== 10) return "";
-      return start.value.slice(2, 4) + "-" + start.value.slice(5, 7) + " " + token +
-        (language.value === "en" ? "-EN" : "");
+      return nextFree(start.value.slice(2, 4) + "-" + start.value.slice(5, 7) + " " + token +
+        (language.value === "en" ? "-EN" : ""), takenCodes);
     };
-    // Mirrors model.DateID.
+    // Mirrors model.Taken.DateID.
     var derivedID = function () {
       if (!course.value || start.value.length !== 10) return "";
       var m = parseInt(start.value.slice(5, 7), 10);
       if (!(m >= 1 && m <= 12)) return "";
-      return course.value + "-" + MONTHS[m - 1] + "-" + start.value.slice(0, 4) +
-        (language.value === "en" ? "-en" : "");
+      return nextFree(course.value + "-" + MONTHS[m - 1] + "-" + start.value.slice(0, 4) +
+        (language.value === "en" ? "-en" : ""), takenIDs);
     };
 
     // Mirrors model.IDMask / model.CodeMask. The server renders these for the

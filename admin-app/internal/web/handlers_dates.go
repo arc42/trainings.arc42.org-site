@@ -92,6 +92,9 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 		// handler never wrote used to abort rendering halfway down the form.
 		"CourseID": "", "KnownTrainers": model.KnownTrainers,
 		"OtherTrainers": otherTrainers(blank.Trainers),
+		// What the other dates use, so form.js derives the free "-2" variant
+		// for a second run in one month, exactly as parseDateForm does.
+		"Taken": m.TakenExcept(""),
 	}
 	// "Duplicate" is the common real action — next year's run of a course — so
 	// /dates/new?from=<id> pre-fills from an existing date with a cleared id.
@@ -119,13 +122,15 @@ func (s *Server) handleDateForm(w http.ResponseWriter, r *http.Request, sess Ses
 		data["CourseID"] = row.CourseID
 		data["OtherTrainers"] = otherTrainers(row.Date.Trainers)
 		data["IsNew"] = false
+		data["Taken"] = m.TakenExcept(id)
 	}
 	s.render(w, "dateform.gohtml", data)
 }
 
 // parseDateForm reads the detail form. Empty optional fields stay empty and are
-// omitted from the YAML rather than written as "".
-func parseDateForm(r *http.Request, isNew bool) (model.Date, string) {
+// omitted from the YAML rather than written as "". taken is what the other
+// dates already use, so a derived id or code is never one of theirs.
+func parseDateForm(r *http.Request, isNew bool, taken model.Taken) (model.Date, string) {
 	get := func(k string) string { return strings.TrimSpace(r.PostFormValue(k)) }
 	courseID := get("course_id")
 	d := model.Date{
@@ -139,12 +144,13 @@ func parseDateForm(r *http.Request, isNew bool) (model.Date, string) {
 	// language. form.js shows them live, but the server is the one that owes
 	// the value: with scripting off both fields arrive empty, and an operator
 	// should not have to know the convention to add a date. An edit never
-	// re-derives the id — a published id is a bookmarked anchor.
+	// re-derives the id — a published id is a bookmarked anchor. A second run
+	// in the same month and language gets "-2" rather than its sibling's value.
 	if d.Code == "" {
-		d.Code = model.BookingCode(courseID, d.Start, d.Language)
+		d.Code = taken.BookingCode(courseID, d.Start, d.Language)
 	}
 	if isNew && d.ID == "" {
-		d.ID = model.DateID(courseID, d.Start, d.Language)
+		d.ID = taken.DateID(courseID, d.Start, d.Language)
 	}
 	// The form no longer asks for the registration link. Every published date
 	// points at the same anchored page, so the id already determines it.
@@ -199,7 +205,8 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 		return
 	}
 	isNew := r.PathValue("id") == "new"
-	nd, courseID := parseDateForm(r, isNew)
+	taken := d.Doc.Model().TakenExcept(editedID(r, isNew))
+	nd, courseID := parseDateForm(r, isNew, taken)
 
 	// Validate the prospective document before touching the draft, so a
 	// rejected edit leaves no trace.
@@ -212,7 +219,7 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 			"Title": title, "Courses": m.Courses, "Draft": d, "Login": sess.Login,
 			"Formats": model.Formats, "Languages": model.Languages, "Availabilities": model.Availabilities,
 			"IsNew": isNew, "Date": nd, "CourseID": courseID,
-			"Problems": problems, "Warnings": warnings,
+			"Problems": problems, "Warnings": warnings, "Taken": taken,
 			"KnownTrainers": model.KnownTrainers, "OtherTrainers": otherTrainers(nd.Trainers),
 		})
 	}
@@ -227,7 +234,7 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 	// carry a genuinely invalid date past the blocking rules.
 	if r.PostFormValue("confirm_warnings") != "1" {
 		today := s.now().Format("2006-01-02")
-		if warnings := validate.DateWarnings(nd, courseID, today, isNew); len(warnings) > 0 {
+		if warnings := validate.DateWarnings(nd, courseID, today, isNew, taken); len(warnings) > 0 {
 			reshow("Have a look at these", nil, warnings)
 			return
 		}
@@ -243,6 +250,15 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// editedID is the id of the date a form is about, "" while creating one. Its
+// own id and code are not taken: they are the values being edited.
+func editedID(r *http.Request, isNew bool) string {
+	if isNew {
+		return ""
+	}
+	return r.PathValue("id")
 }
 
 // applyToModel produces the model as it would look after the edit, for

@@ -44,7 +44,7 @@ func TestDateWarningsFireOnImplausibleEntries(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			d := ok
 			c.mutate(&d)
-			got := fields(DateWarnings(d, "msa", "2026-08-16", true))
+			got := fields(DateWarnings(d, "msa", "2026-08-16", true, model.Taken{}))
 			if c.want == "" {
 				if got != "" {
 					t.Errorf("expected no warnings, got %q", got)
@@ -65,7 +65,7 @@ func TestPublicDateWithoutCountryWarns(t *testing.T) {
 		ID: "msa-feb-2027", Code: "27-02 MSA", Start: "2027-02-23", End: "2027-02-25",
 		Language: "de", Format: "public", City: "München", Status: "open",
 	}
-	if got := fields(DateWarnings(d, "msa", "2026-08-16", true)); !strings.Contains(got, "country") {
+	if got := fields(DateWarnings(d, "msa", "2026-08-16", true, model.Taken{})); !strings.Contains(got, "country") {
 		t.Errorf("expected a country warning, got %q", got)
 	}
 }
@@ -77,7 +77,7 @@ func TestIDConventionIsOnlyCheckedForNewDates(t *testing.T) {
 		ID: "msa-27-02-online", Code: "27-02 MSA-EN", Start: "2027-02-23",
 		End: "2027-02-25", Language: "en", Format: "online", Status: "open",
 	}
-	if got := fields(DateWarnings(d, "msa", "2026-08-16", false)); strings.Contains(got, "id") {
+	if got := fields(DateWarnings(d, "msa", "2026-08-16", false, model.Taken{})); strings.Contains(got, "id") {
 		t.Errorf("an existing date must not be nagged about its id, got %q", got)
 	}
 }
@@ -135,10 +135,10 @@ func TestPastStartIsOnlyWarnedForNewDates(t *testing.T) {
 		ID: "msa-jan-2026", Code: "26-01 MSA", Start: "2026-01-01", End: "2026-01-02",
 		City: "München", Country: "DE", Language: "de", Format: "public", Status: "open",
 	}
-	if got := fields(DateWarnings(d, "msa", "2026-08-16", true)); !strings.Contains(got, "start") {
+	if got := fields(DateWarnings(d, "msa", "2026-08-16", true, model.Taken{})); !strings.Contains(got, "start") {
 		t.Errorf("a new date in the past must warn, got %q", got)
 	}
-	if got := fields(DateWarnings(d, "msa", "2026-08-16", false)); strings.Contains(got, "start") {
+	if got := fields(DateWarnings(d, "msa", "2026-08-16", false, model.Taken{})); strings.Contains(got, "start") {
 		t.Errorf("an existing past date must not be nagged, got %q", got)
 	}
 }
@@ -166,7 +166,7 @@ func TestEnglishCourseURLIsHeldToTheSameRuleAsTheMainOne(t *testing.T) {
 func TestStatusWarningNamesTheRightSite(t *testing.T) {
 	d := model.Date{ID: "msa-feb-2027-en", Code: "27-02 MSA-EN", Start: "2027-02-23",
 		End: "2027-02-25", Language: "en", Format: "online", Status: "full"}
-	for _, w := range DateWarnings(d, "msa", "2026-08-16", false) {
+	for _, w := range DateWarnings(d, "msa", "2026-08-16", false, model.Taken{}) {
 		if w.Field == "availability" && strings.Contains(w.Message, "arc42.de") {
 			t.Errorf("status warning still mentions arc42.de: %q", w.Message)
 		}
@@ -203,7 +203,7 @@ func TestNoCardTemplateWarningForANewCourse(t *testing.T) {
 		if f != "online" {
 			d.City, d.Country = "München", "DE"
 		}
-		ws = append(ws, DateWarnings(d, "mas", "2026-11-06", true)...)
+		ws = append(ws, DateWarnings(d, "mas", "2026-11-06", true, model.Taken{})...)
 	}
 	for _, w := range ws {
 		for _, leak := range []string{"card", "template", "_includes"} {
@@ -300,7 +300,7 @@ func TestWarningsCarryFormLabels(t *testing.T) {
 	off.Code, off.ID = "27-04-MAS", "mas-27-04"
 	dates = append(dates, off)
 	for _, d := range dates {
-		ws = append(ws, DateWarnings(d, "mas", "2026-11-06", true)...)
+		ws = append(ws, DateWarnings(d, "mas", "2026-11-06", true, model.Taken{})...)
 	}
 
 	seen := map[string]bool{}
@@ -336,4 +336,36 @@ func TestHTTPWarningSaysWhatToType(t *testing.T) {
 		}
 	}
 	t.Error("no warning for a plain http course URL")
+}
+
+// A second MAS run in January 2027 is "27-01 MAS-2", because "27-01 MAS" is
+// taken. The convention warnings must measure against that free variant: they
+// used to tell the operator to use the very value the duplicate rule refused.
+func TestConventionWarningsAdviseTheFreeVariant(t *testing.T) {
+	tr := model.Trainings{Courses: []model.Course{{ID: "mas", Dates: []model.Date{
+		{ID: "mas-jan-2027", Code: "27-01 MAS", Start: "2027-01-13", Language: "de"},
+	}}}}
+	taken := tr.TakenExcept("")
+	d := model.Date{
+		ID: "mas-jan-2027-2", Code: "27-01 MAS-2", Start: "2027-01-27", End: "2027-01-28",
+		Language: "de", Format: "online", Status: "open",
+	}
+	if ws := DateWarnings(d, "mas", "2026-11-06", true, taken); len(ws) != 0 {
+		t.Errorf("the free variant draws warnings: %v", ws)
+	}
+
+	d.ID, d.Code = "mas-jan-2027-x", "27-01 MAS-X"
+	for _, w := range DateWarnings(d, "mas", "2026-11-06", true, taken) {
+		for _, bad := range []string{`"27-01 MAS"`, `"mas-jan-2027"`} {
+			if strings.Contains(w.Message, bad) {
+				t.Errorf("a warning advises the taken %s: %s", bad, w)
+			}
+		}
+		if w.Field == "code" && !strings.Contains(w.Message, `"27-01 MAS-2"`) {
+			t.Errorf("code warning does not advise 27-01 MAS-2: %s", w)
+		}
+		if w.Field == "id" && !strings.Contains(w.Message, `"mas-jan-2027-2"`) {
+			t.Errorf("id warning does not advise mas-jan-2027-2: %s", w)
+		}
+	}
 }

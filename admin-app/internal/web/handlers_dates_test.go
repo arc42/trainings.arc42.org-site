@@ -854,7 +854,9 @@ func TestDuplicateClearsIdentityAndDates(t *testing.T) {
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new?from=msa-a", nil))
 	body := rec.Body.String()
 
-	for _, stale := range []string{`value="msa-a"`, `value="2026-01-01"`, `value="2026-01-02"`, "26-01 MSA"} {
+	// As values: the form does list every code in use (data-taken), so that
+	// form.js never derives one of them.
+	for _, stale := range []string{`value="msa-a"`, `value="2026-01-01"`, `value="2026-01-02"`, `value="26-01 MSA"`} {
 		if strings.Contains(body, stale) {
 			t.Errorf("duplicate carried over %s from the source date", stale)
 		}
@@ -1321,5 +1323,29 @@ func TestStatusDropdownExplainsEachStatus(t *testing.T) {
 	}
 	if strings.Contains(body, "registration form on arc42.de") {
 		t.Error("status hint still refers to arc42.de's retired form")
+	}
+}
+
+// form.js derives the free "-2" variant from the values the other dates use,
+// which the server lists on the two inputs. An edit form leaves out the date's
+// own values: listing them would push its own code to "-2" the moment the
+// first day is touched.
+func TestDateFormListsTheIdentifiersOtherDatesUse(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	get := func(path string) string {
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, path, nil))
+		return rec.Body.String()
+	}
+	if body := get("/dates/new"); !strings.Contains(body, `data-taken="[&#34;msa-a&#34;,&#34;msa-b&#34;]"`) ||
+		!strings.Contains(body, `data-taken="[&#34;25-09 MSA-EN&#34;,&#34;26-01 MSA&#34;]"`) {
+		t.Errorf("the new-date form does not list the ids and codes in use:\n%s", body)
+	}
+	if body := get("/dates/msa-a"); !strings.Contains(body, `data-taken="[&#34;msa-b&#34;]"`) ||
+		!strings.Contains(body, `data-taken="[&#34;25-09 MSA-EN&#34;]"`) {
+		t.Errorf("the edit form lists the date's own values as taken:\n%s", body)
 	}
 }

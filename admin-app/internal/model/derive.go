@@ -1,6 +1,9 @@
 package model
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 // The two identifiers on a date carry the same three facts — course, year,
 // month — but serve different readers, so the file keeps both:
@@ -77,6 +80,54 @@ func DateID(courseID, start, language string) string {
 		id += "-en"
 	}
 	return id
+}
+
+// NextFree returns base, or when another date already uses it, the first of
+// base-2, base-3, … that nobody does. Two runs of one course in the same month
+// and language are a real schedule (MAS, January 2027), and both derivations
+// above give them the same value: the second used to be blocked as a
+// duplicate, and the convention warnings then advised the taken value. A
+// numbered suffix mirrors the "-EN" one, so the code still reads as the month.
+func NextFree(base string, taken map[string]bool) string {
+	if base == "" || !taken[base] {
+		return base
+	}
+	for n := 2; ; n++ {
+		if v := base + "-" + strconv.Itoa(n); !taken[v] {
+			return v
+		}
+	}
+}
+
+// Taken is the date ids and booking codes the file already uses, except those
+// of the date being edited: its own values are not a collision.
+type Taken struct {
+	IDs, Codes map[string]bool
+}
+
+// TakenExcept collects every date's id and code, leaving out the date with id
+// except ("" while creating one).
+func (t Trainings) TakenExcept(except string) Taken {
+	tk := Taken{IDs: map[string]bool{}, Codes: map[string]bool{}}
+	for _, c := range t.Courses {
+		for _, d := range c.Dates {
+			if except != "" && d.ID == except {
+				continue
+			}
+			tk.IDs[d.ID], tk.Codes[d.Code] = true, true
+		}
+	}
+	return tk
+}
+
+// DateID is the package's DateID, moved on to the first free variant.
+func (tk Taken) DateID(courseID, start, language string) string {
+	return NextFree(DateID(courseID, start, language), tk.IDs)
+}
+
+// BookingCode is the package's BookingCode, moved on to the first free variant.
+func (tk Taken) BookingCode(courseID, start, language string) string {
+	return NextFree(BookingCode(courseID, start, language), tk.Codes)
 }
 
 // RegistrationURL derives the public link for a date. Every published date
