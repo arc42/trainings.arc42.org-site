@@ -4,11 +4,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"arc42-trainings-admin/internal/ghfake"
 	"arc42-trainings-admin/internal/model"
 )
 
@@ -466,5 +469,198 @@ func TestTwoProposalsAboutOneDateOnOneDayBothSucceed(t *testing.T) {
 		signedIn(t, s, http.MethodPost, "/dates/msa-a/delete", url.Values{}))
 	if got := propose(t, s); !strings.Contains(got, "/pull/2") {
 		t.Fatalf("removing a date after editing it the same day failed:\n%s", got)
+	}
+}
+
+// fakeGitHubFiles is fakeGitHub over an explicit file set, for the tests that
+// need the real schema, or no schema at all.
+func fakeGitHubFiles(t *testing.T, files map[string][]byte) (*httptest.Server, *ghfake.Fake) {
+	t.Helper()
+	f := ghfake.New(ghfake.Options{
+		Repo: "arc42/site", Login: "gernotstarke", CanPush: true, Files: files,
+		OnUnexpected: func(method, path string) { t.Errorf("unexpected %s %s", method, path) },
+	})
+	return httptest.NewServer(f.Handler()), f
+}
+
+func realSchema(t *testing.T) []byte {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("..", "..", "..", "api", "trainings.schema.json"))
+	if err != nil {
+		t.Fatalf("read schema: %v", err)
+	}
+	return b
+}
+
+// between returns the part of body from the first from up to the next to, or
+// "" when from is absent.
+func between(body, from, to string) string {
+	i := strings.Index(body, from)
+	if i < 0 {
+		return ""
+	}
+	rest := body[i:]
+	if j := strings.Index(rest, to); j >= 0 {
+		return rest[:j]
+	}
+	return rest
+}
+
+// The report that started this: a new course with no dates became
+// "courses/4/dates: expected array, but got null" and no way to open the pull
+// request. Against the repository's real schema, a course without dates is
+// fine, and the page says what it means for the home pages.
+func TestProposeNewCourseWithoutDatesOpensPR(t *testing.T) {
+	gh, fake := fakeGitHubFiles(t, map[string][]byte{
+		"_data/trainings.yml":       []byte(fixtureYAML),
+		"api/trainings.schema.json": realSchema(t),
+	})
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+	if rec, _, ok := postCourse(t, s, "/courses/new", newMASForm()); !ok {
+		t.Fatalf("course not saved:\n%s", rec.Body.String())
+	}
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
+	body := rec.Body.String()
+	if strings.Contains(body, `class="problems`) {
+		t.Errorf("a course without dates shows problems:\n%s", body)
+	}
+	if !strings.Contains(body, "MAS has no dates yet. It will appear on the home pages once it has one.") {
+		t.Errorf("no note about the missing dates:\n%s", body)
+	}
+	if !strings.Contains(body, `action="/propose"`) {
+		t.Errorf("the pull request form is missing:\n%s", body)
+	}
+
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/propose", url.Values{
+		"title": {"New course: MAS"}, "body": {"b"},
+	}))
+	if n := fake.Proposals(); n != 1 {
+		t.Errorf("opened %d PRs, want 1:\n%s", n, rec.Body.String())
+	}
+}
+
+// When the app cannot check the draft itself, that is not the operator's
+// doing, and it must not hold the proposal hostage: CI checks it again.
+func TestProposeAppFaultDoesNotBlock(t *testing.T) {
+	gh, fake := fakeGitHubFiles(t, map[string][]byte{
+		"_data/trainings.yml": []byte(fixtureYAML), // no schema: the read fails
+	})
+	defer gh.Close()
+	s := dirtyServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
+	body := rec.Body.String()
+	for _, want := range []string{
+		"This is not caused by your entries, and your draft is saved.",
+		"Please send Gernot a screenshot of this page.",
+		"You can still open the pull request: CI checks it again.",
+		`action="/propose"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q:\n%s", want, body)
+		}
+	}
+	detail := between(body, "<details>", "</details>")
+	if !strings.Contains(detail, "<summary>Technical detail</summary>") ||
+		!strings.Contains(detail, "could not fetch the schema") {
+		t.Errorf("the technical detail is not inside a <details>:\n%s", body)
+	}
+	if strings.Contains(body, "Fix these in your entries") {
+		t.Error("an app fault is presented as the operator's to fix")
+	}
+
+	// Submitting applies the same rule.
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/propose", url.Values{
+		"title": {"t"}, "body": {"b"},
+	}))
+	if n := fake.Proposals(); n != 1 {
+		t.Errorf("opened %d PRs, want 1:\n%s", n, rec.Body.String())
+	}
+}
+
+// masBadDateYAML has a date whose last day precedes its first. The date form
+// would refuse it; a hand edit on GitHub does not.
+const masBadDateYAML = `courses:
+  - id: mas
+    short_title: "MAS"
+    title: "Methodische Architektur-Skills"
+    url: "https://www.arc42.de/info-mas/"
+    trainers: ["Dr. Peter Hruschka"]
+    dates:
+      - id: mas-jan-2027
+        code: "27-01 MAS"
+        start: "2027-01-13"
+        end: "2027-01-12"
+        language: de
+        format: online
+        url: "https://trainings.arc42.org/#mas-jan-2027"
+        status: open
+`
+
+func TestProposeEntryProblemLinksToForm(t *testing.T) {
+	gh, fake := fakeGitHubWith(t, masBadDateYAML)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+	// Any edit makes the draft dirty; a course edit does not re-run the date
+	// rules, so it gets through to the review.
+	form := newMASForm()
+	form.Set("title", "Methodische Architektur-Skills, neu")
+	if rec, _, ok := postCourse(t, s, "/courses/mas", form); !ok {
+		t.Fatalf("course edit not saved:\n%s", rec.Body.String())
+	}
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
+	body := rec.Body.String()
+	list := between(body, "Fix these in your entries", "CI would reject them too.")
+	if list == "" {
+		t.Fatalf("no entry problems shown:\n%s", body)
+	}
+	for _, want := range []string{"MAS, 13 Jan 2027 online", "Last day", `<a href="/dates/mas-jan-2027"`} {
+		if !strings.Contains(list, want) {
+			t.Errorf("problem list is missing %q:\n%s", want, list)
+		}
+	}
+	for _, leak := range []string{"dates.", "courses/"} {
+		if strings.Contains(list, leak) {
+			t.Errorf("problem list shows the internal %q:\n%s", leak, list)
+		}
+	}
+	if strings.Contains(body, `action="/propose"`) {
+		t.Error("the pull request form is offered despite a problem in the entries")
+	}
+
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/propose", url.Values{
+		"title": {"t"}, "body": {"b"},
+	}))
+	if n := fake.Proposals(); n != 0 {
+		t.Errorf("opened %d PRs past a problem in the entries", n)
+	}
+	if !strings.Contains(rec.Body.String(), "MAS, 13 Jan 2027 online") {
+		t.Errorf("submit does not say what to fix:\n%s", rec.Body.String())
+	}
+}
+
+// "CI would reject them anyway" was said about problems CI would never have
+// seen. It is only true of the operator's entries.
+func TestProposePageNoLongerClaimsCI(t *testing.T) {
+	gh, _ := fakeGitHubFiles(t, map[string][]byte{"_data/trainings.yml": []byte(fixtureYAML)})
+	defer gh.Close()
+	s := dirtyServer(t, gh.URL)
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
+	body := rec.Body.String()
+	for _, claim := range []string{"CI would reject them anyway", "CI would reject them too"} {
+		if strings.Contains(body, claim) {
+			t.Errorf("app faults only, and the page still says %q", claim)
+		}
 	}
 }

@@ -241,6 +241,9 @@ ul.problems li::marker { color: var(--danger); }
 }
 .notes ul { margin: 0; padding-left: 1.2rem; }
 .notes li { margin-bottom: 0.25rem; }
+/* The boxes can stack: an app fault above a note on the review page, a
+   warning above a note on the course form. Without a gap they read as one. */
+.problems + .problems, .problems + .notes, .warnings + .notes { margin-top: 0.75rem; }
 
 /* The "?" toggle sits at the end of the label text. 1.75rem keeps it a real
    touch target without it competing with the field it explains. */

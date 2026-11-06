@@ -1,8 +1,30 @@
 {{define "propose.gohtml"}}{{template "layout" .}}{{end}}
 {{define "content"}}
 <h1>Review &amp; propose</h1>
-{{if .Problems}}<ul class="problems">{{range .Problems}}<li>{{.String}}</li>{{end}}</ul>
-<p>Fix these before opening a pull request — CI would reject them anyway.</p>{{end}}
+{{/* Two piles, because they ask different things of the operator. Their own
+     entries they can fix, and the link takes them to the field. What the app
+     got wrong they cannot fix, and must not be told to: they get the reason,
+     a way to report it, and the pull request anyway, since CI checks it again.
+     "CI would reject them" is said only of the first pile, where it is true. */}}
+{{with .EntryProblems}}
+<div class="problems" role="alert">
+  <h2>Fix these in your entries</h2>
+  <ul>{{range .}}<li>{{with .Where}}{{.}} — {{end}}{{.Label}}: {{.Message}}{{with .Link}} <a href="{{.}}">Edit</a>{{end}}</li>{{end}}</ul>
+  <p>Fix these before opening a pull request — CI would reject them too.</p>
+</div>
+{{end}}
+{{with .AppFaults}}
+<div class="problems" role="alert">
+  <p>This is not caused by your entries, and your draft is saved.
+    The admin app could not check it before opening the pull request.
+    Please send Gernot a screenshot of this page.</p>
+  <p>You can still open the pull request: CI checks it again.</p>
+  <details><summary>Technical detail</summary>
+    <ul>{{range .}}<li><code>{{.Detail}}</code></li>{{end}}</ul>
+  </details>
+</div>
+{{end}}
+{{template "notes" .Notes}}
 
 {{/* One card per change, listing only the fields that actually moved. The
      unified diff below is still here, and still what CI sees, but it is not
@@ -49,7 +71,7 @@
 </details>
 {{end}}
 
-{{if not .Problems}}
+{{if not .EntryProblems}}
 <form method="post" action="/propose" class="detail" data-submit-once>
 <label>Pull request title<input name="title" value="{{.PRTitle}}" required></label>
 <label>Description<textarea name="body" rows="12">{{.PRBody}}</textarea></label>

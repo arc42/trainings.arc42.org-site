@@ -218,7 +218,7 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 	}
 
 	if problems := validate.Rules(probe); len(problems) > 0 {
-		reshow("Fix these first", problems, nil)
+		reshow("Fix these first", validate.ExplainAll(probe, problems), nil)
 		return
 	}
 

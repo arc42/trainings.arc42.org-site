@@ -250,7 +250,7 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	}
 
 	if problems := courseProblems(c, d.Doc.Model().Courses, isNew); len(problems) > 0 {
-		reshow("Fix these first", problems, nil)
+		reshow("Fix these first", validate.ExplainAll(d.Doc.Model(), problems), nil)
 		return
 	}
 

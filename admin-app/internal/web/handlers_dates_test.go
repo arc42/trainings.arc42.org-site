@@ -418,6 +418,11 @@ func TestSaveRejectsInvalidDate(t *testing.T) {
 	if !strings.Contains(rec.Body.String(), "before start") {
 		t.Errorf("invalid date was accepted:\n%s", rec.Body.String())
 	}
+	// The problem names the field by the label the operator can see on the
+	// form, never by its place in the file.
+	if !strings.Contains(rec.Body.String(), "<b>Last day</b>") || strings.Contains(rec.Body.String(), "dates.msa-a") {
+		t.Errorf("the problem is not labelled for the operator:\n%s", rec.Body.String())
+	}
 }
 
 func TestDeleteDateRecordsRemoval(t *testing.T) {

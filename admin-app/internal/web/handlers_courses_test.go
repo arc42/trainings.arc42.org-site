@@ -100,9 +100,12 @@ func TestCourseFormRejectsBadSiteName(t *testing.T) {
 	form.Set("show_on_other", "Not A Site")
 	// Problems are blocking: acknowledging warnings must not get past them.
 	form.Set("confirm_warnings", "1")
-	_, _, saved := postCourse(t, s, "/courses/new", form)
+	rec, _, saved := postCourse(t, s, "/courses/new", form)
 	if saved {
 		t.Fatal("a course with an impossible site name was saved")
+	}
+	if body := rec.Body.String(); !strings.Contains(body, "<b>Shown on</b>") || strings.Contains(body, "courses.mas") {
+		t.Errorf("the problem is not labelled for the operator:\n%s", body)
 	}
 
 	c := model.Course{ID: "mas", ShortTitle: "MAS", Title: "MAS", URL: "https://x.org",

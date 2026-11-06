@@ -24,12 +24,14 @@
 </fieldset>
 {{end}}
 
-{{/* problems expects the []validate.Problem slice directly */}}
+{{/* problems expects the []validate.Problem slice directly, explained
+     (validate.Explain), so each names its field by the label on this form.
+     Never .String or .Field: those are the field's place in the file. */}}
 {{define "problems"}}
 {{if .}}
 <div class="problems" role="alert">
   <h2>Fix these before saving</h2>
-  <ul>{{range .}}<li>{{.String}}</li>{{end}}</ul>
+  <ul>{{range .}}<li>{{with .Label}}<b>{{.}}</b> — {{end}}{{.Message}}</li>{{end}}</ul>
 </div>
 {{end}}
 {{end}}

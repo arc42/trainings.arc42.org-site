@@ -13,10 +13,34 @@ import (
 	"arc42-trainings-admin/internal/model"
 )
 
+// A Problem blocks a pull request, unless it is the app's own fault (see
+// ProblemKind). Field and Message are what the check found; the rest is filled
+// in by Explain, so the operator is told where to look in words they know:
+// the course, the date, and the label of the form field.
 type Problem struct {
-	Field   string // e.g. "dates.msa-dez-2026.end"
+	Field   string // e.g. "dates.msa-dez-2026.end", or a schema pointer
 	Message string
+
+	Kind   ProblemKind
+	Where  string // e.g. "MAS, 13 Jan 2027 online"; empty for a course being created
+	Label  string // the form field's visible label, e.g. "Last day"
+	Link   string // the form that sets it, e.g. "/dates/mas-jan-2027"
+	Detail string // the raw technical text, for whoever fixes an app fault
 }
+
+// ProblemKind says whose a problem is. The zero value is EntryProblem on
+// purpose: a problem nobody explained still blocks the pull request.
+type ProblemKind int
+
+const (
+	// EntryProblem is something the operator typed and can fix on a form.
+	EntryProblem ProblemKind = iota
+	// AppProblem is something the operator could not have caused: the schema
+	// could not be fetched, the feed could not be rendered, or the schema
+	// rejected a value no form sets. It does not block the pull request; CI
+	// checks it again. (Not "AppFault": that is the constructor in explain.go.)
+	AppProblem
+)
 
 func (p Problem) String() string {
 	if p.Field == "" {
