@@ -415,8 +415,15 @@ func TestSaveRejectsInvalidDate(t *testing.T) {
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
-	if !strings.Contains(rec.Body.String(), "before start") {
+	// Read after its label: "Last day — 2 Jan 2026 is before …", not "Last
+	// day — the last day (2 Jan 2026) is before …".
+	if !strings.Contains(rec.Body.String(), "<b>Last day</b> — 2 Jan 2026 is before the first day, 5 Jan 2026") {
 		t.Errorf("invalid date was accepted:\n%s", rec.Body.String())
+	}
+	// The problem names the field by the label the operator can see on the
+	// form, never by its place in the file.
+	if !strings.Contains(rec.Body.String(), "<b>Last day</b>") || strings.Contains(rec.Body.String(), "dates.msa-a") {
+		t.Errorf("the problem is not labelled for the operator:\n%s", rec.Body.String())
 	}
 }
 
@@ -460,7 +467,7 @@ func TestCourseSaveLeavesDatesAlone(t *testing.T) {
 		// posts trainers now.
 		"trainer":        {"Dr. Peter Hruschka", "Dr. Gernot Starke"},
 		"trainers_other": {"Jane Guest"},
-		// No blurb, which warns; this test is about the dates surviving.
+		// Acknowledged up front; this test is about the dates surviving.
 		"confirm_warnings": {"1"},
 	}
 	rec := httptest.NewRecorder()
@@ -606,7 +613,7 @@ func TestNewCourseFormRendersAndCreates(t *testing.T) {
 	form := url.Values{
 		"id": {"flex"}, "short_title": {"FLEX"}, "title": {"Flexible Architectures"},
 		"url": {"https://example.org/flex"}, "trainer": {"Dr. Gernot Starke"},
-		// No blurb, which warns; this test is about creating the course.
+		// No description, which warns; this test is about creating the course.
 		"confirm_warnings": {"1"},
 	}
 	rec = httptest.NewRecorder()
@@ -636,7 +643,7 @@ func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
 		"id": {"msa"}, "short_title": {"Dup"}, "title": {"Dup"},
 		"url": {"https://example.org/x"}, "trainer": {"Dr. Gernot Starke"},
 	}))
-	if !strings.Contains(rec.Body.String(), "already exists") {
+	if !strings.Contains(rec.Body.String(), "<b>Course ID</b> — msa is already used by another course") {
 		t.Errorf("duplicate course id was accepted:\n%s", rec.Body.String())
 	}
 
@@ -645,8 +652,17 @@ func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
 		"id": {"flex"}, "short_title": {"FLEX"}, "title": {"Flexible"},
 		"url": {"https://example.org/flex"},
 	}))
-	if !strings.Contains(rec.Body.String(), "at least one trainer") {
+	if !strings.Contains(rec.Body.String(), "<b>Trainers</b> — name at least one<") {
 		t.Errorf("course without a trainer was accepted:\n%s", rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", url.Values{
+		"short_title": {"FLEX"}, "title": {"Flexible"},
+		"url": {"https://example.org/flex"}, "trainer": {"Dr. Gernot Starke"},
+	}))
+	if !strings.Contains(rec.Body.String(), "<b>Course ID</b> — must not be empty") {
+		t.Errorf("course without an id was accepted:\n%s", rec.Body.String())
 	}
 }
 
@@ -849,7 +865,9 @@ func TestDuplicateClearsIdentityAndDates(t *testing.T) {
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/dates/new?from=msa-a", nil))
 	body := rec.Body.String()
 
-	for _, stale := range []string{`value="msa-a"`, `value="2026-01-01"`, `value="2026-01-02"`, "26-01 MSA"} {
+	// As values: the form does list every code in use (data-taken), so that
+	// form.js never derives one of them.
+	for _, stale := range []string{`value="msa-a"`, `value="2026-01-01"`, `value="2026-01-02"`, `value="26-01 MSA"`} {
 		if strings.Contains(body, stale) {
 			t.Errorf("duplicate carried over %s from the source date", stale)
 		}
@@ -984,7 +1002,7 @@ func TestConfirmingWarningsDoesNotBypassErrors(t *testing.T) {
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/dates/msa-a", form))
-	if !strings.Contains(rec.Body.String(), "before start") {
+	if !strings.Contains(rec.Body.String(), "before the first day") {
 		t.Errorf("an error was bypassed by the warning acknowledgement:\n%s", rec.Body.String())
 	}
 	if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {
@@ -999,10 +1017,10 @@ func TestCourseWarningsGateTheFirstSave(t *testing.T) {
 
 	form := url.Values{
 		"id": {"flex"}, "short_title": {"FLEX"},
-		"title":   {"FLEX: Flexible Architectures"},
-		"url":     {"http://example.org/flex"}, // plain http
-		"blurb":   {"A course about flexible architectures."},
-		"trainer": {"Dr. Gernot Starke"},
+		"title":    {"FLEX: Flexible Architectures"},
+		"url":      {"http://example.org/flex"}, // plain http
+		"blurb_en": {"A course about flexible architectures."},
+		"trainer":  {"Dr. Gernot Starke"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", form))
@@ -1091,7 +1109,8 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 			"availability-hint", "price-hint", "alumni-hint", "currency-hint", "eb-hint", "ebu-hint",
 		}},
 		{"/courses/new", []string{
-			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-hint",
+			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-de-hint",
+			"blurb-en-hint", "show-on-hint",
 			"cert-hint", "credits-hint",
 		}},
 	} {
@@ -1315,5 +1334,29 @@ func TestStatusDropdownExplainsEachStatus(t *testing.T) {
 	}
 	if strings.Contains(body, "registration form on arc42.de") {
 		t.Error("status hint still refers to arc42.de's retired form")
+	}
+}
+
+// form.js derives the free "-2" variant from the values the other dates use,
+// which the server lists on the two inputs. An edit form leaves out the date's
+// own values: listing them would push its own code to "-2" the moment the
+// first day is touched.
+func TestDateFormListsTheIdentifiersOtherDatesUse(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	get := func(path string) string {
+		rec := httptest.NewRecorder()
+		s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, path, nil))
+		return rec.Body.String()
+	}
+	if body := get("/dates/new"); !strings.Contains(body, `data-taken="[&#34;msa-a&#34;,&#34;msa-b&#34;]"`) ||
+		!strings.Contains(body, `data-taken="[&#34;25-09 MSA-EN&#34;,&#34;26-01 MSA&#34;]"`) {
+		t.Errorf("the new-date form does not list the ids and codes in use:\n%s", body)
+	}
+	if body := get("/dates/msa-a"); !strings.Contains(body, `data-taken="[&#34;msa-b&#34;]"`) ||
+		!strings.Contains(body, `data-taken="[&#34;25-09 MSA-EN&#34;]"`) {
+		t.Errorf("the edit form lists the date's own values as taken:\n%s", body)
 	}
 }

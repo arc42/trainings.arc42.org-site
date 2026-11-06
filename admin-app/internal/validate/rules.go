@@ -13,10 +13,35 @@ import (
 	"arc42-trainings-admin/internal/model"
 )
 
+// A Problem blocks a pull request, unless it is the app's own fault (see
+// ProblemKind). Field and Message are what the check found; the rest is filled
+// in by Explain, so the operator is told where to look in words they know:
+// the course, the date, and the label of the form field.
 type Problem struct {
-	Field   string // e.g. "dates.msa-dez-2026.end"
+	Field   string // e.g. "dates.msa-dez-2026.end", or a schema pointer
 	Message string
+	Keyword string // for a schema problem, the keyword that failed: "pattern", "type", ...
+
+	Kind   ProblemKind
+	Where  string // e.g. "MAS, 13 Jan 2027 online"; empty for a course being created
+	Label  string // the form field's visible label, e.g. "Last day"
+	Link   string // the form that sets it, e.g. "/dates/mas-jan-2027"
+	Detail string // the raw technical text, for whoever fixes an app fault
 }
+
+// ProblemKind says whose a problem is. The zero value is EntryProblem on
+// purpose: a problem nobody explained still blocks the pull request.
+type ProblemKind int
+
+const (
+	// EntryProblem is something the operator typed and can fix on a form.
+	EntryProblem ProblemKind = iota
+	// AppProblem is something the operator could not have caused: the schema
+	// could not be fetched, the feed could not be rendered, or the schema
+	// rejected a value no form sets. It does not block the pull request; CI
+	// checks it again. (Not "AppFault": that is the constructor in explain.go.)
+	AppProblem
+)
 
 func (p Problem) String() string {
 	if p.Field == "" {
@@ -25,11 +50,17 @@ func (p Problem) String() string {
 	return p.Field + ": " + p.Message
 }
 
-// Rules applies the cross-field checks JSON Schema cannot express.
+// Rules applies the cross-field checks JSON Schema cannot express. The messages
+// are read by the operator right after the field's form label ("Last day: …"),
+// so they never repeat it: plain words, dates as "13 Jan 2027", never a key
+// name.
 func Rules(t model.Trainings) []Problem {
 	var problems []Problem
-	seenID := map[string]bool{}
-	seenCode := map[string]bool{}
+	// The first date to use each value, so a duplicate can say whose it is.
+	seenID := map[string]model.Date{}
+	seenCode := map[string]model.Date{}
+	// Every value in the file, so a suggestion is never another taken one.
+	all := t.TakenExcept("")
 
 	for _, c := range t.Courses {
 		for _, d := range c.Dates {
@@ -40,7 +71,7 @@ func Rules(t model.Trainings) []Problem {
 			if d.Start != "" && d.End != "" && d.End < d.Start {
 				problems = append(problems, Problem{
 					Field:   field + ".end",
-					Message: fmt.Sprintf("end %s is before start %s", d.End, d.Start),
+					Message: fmt.Sprintf("%s is before the first day, %s", day(d.End), day(d.Start)),
 				})
 			}
 
@@ -48,29 +79,44 @@ func Rules(t model.Trainings) []Problem {
 			if d.Format != "online" && d.City == "" {
 				problems = append(problems, Problem{
 					Field:   field + ".city",
-					Message: "a non-online date needs a city",
+					Message: "must not be empty unless the format is online",
 				})
 			}
 
 			// 3. Date ids are unique across the whole file.
-			if seenID[d.ID] {
+			if first, dup := seenID[d.ID]; dup {
 				problems = append(problems, Problem{
-					Field:   field + ".id",
-					Message: fmt.Sprintf("duplicate date id %q", d.ID),
+					Field: field + ".id",
+					Message: fmt.Sprintf("%s is already used by %s — use %s",
+						d.ID, when(first), model.NextFree(orElse(model.DateID(c.ID, d.Start, d.Language), d.ID), all.IDs)),
 				})
+			} else {
+				seenID[d.ID] = d
 			}
-			seenID[d.ID] = true
 
-			// 4. Booking codes are unique — they are the Formspark option
-			//    values, so a collision silently misroutes a registration.
-			if seenCode[d.Code] {
+			// 4. Booking codes are unique — they are the registration form's
+			//    option values, so a collision silently misroutes a
+			//    registration.
+			if first, dup := seenCode[d.Code]; dup {
 				problems = append(problems, Problem{
-					Field:   field + ".code",
-					Message: fmt.Sprintf("duplicate booking code %q", d.Code),
+					Field: field + ".code",
+					Message: fmt.Sprintf("%s is already used by %s — use %s",
+						d.Code, when(first), model.NextFree(orElse(model.BookingCode(c.ID, d.Start, d.Language), d.Code), all.Codes)),
 				})
+			} else {
+				seenCode[d.Code] = d
 			}
-			seenCode[d.Code] = true
 		}
 	}
 	return problems
+}
+
+// orElse is a, unless it is empty. The suggestion for a duplicate starts from
+// the house convention, so the third run of a month is told "-3" rather than
+// "-2-2"; a date too incomplete to derive one falls back to its own value.
+func orElse(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }

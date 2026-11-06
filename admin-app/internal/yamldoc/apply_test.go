@@ -197,7 +197,7 @@ func TestAddCourseAppendsAValidCourse(t *testing.T) {
 	err = doc.AddCourse(model.Course{
 		ID: "flex", ShortTitle: "FLEX", Title: "Flexible Architectures",
 		URL: "https://example.org/flex", Trainers: []string{"Dr. Gernot Starke"},
-		Blurb: "A course about keeping architectures able to change.",
+		BlurbEN: "A course about keeping architectures able to change.",
 	})
 	if err != nil {
 		t.Fatalf("AddCourse: %v", err)
@@ -307,5 +307,55 @@ func TestCourseURLEnSurvivesUpdateCourse(t *testing.T) {
 	}
 	if strings.Contains(string(doc.Bytes()), "url_en") {
 		t.Errorf("empty url_en must be omitted:\n%s", doc.Bytes())
+	}
+}
+
+func TestRenderRoundTripsAwkwardDescriptions(t *testing.T) {
+	de := `Zwei „Erfinder“: KI & Spezifikation — "immer" dabei.`
+	en := "Use # freely. " + strings.Repeat("A long sentence that must be wrapped over several lines. ", 3)
+	en = strings.TrimSpace(en)
+	doc, _ := Parse([]byte(twoDates))
+	if err := doc.AddCourse(model.Course{
+		ID: "flex", ShortTitle: "FLEX", Title: "Flexible",
+		URL: "https://example.org/flex", Trainers: []string{"A"},
+		BlurbDE: de, BlurbEN: en,
+	}); err != nil {
+		t.Fatalf("AddCourse: %v", err)
+	}
+	re, err := Parse(doc.Bytes())
+	if err != nil {
+		t.Fatalf("reparse: %v\n%s", err, doc.Bytes())
+	}
+	c := re.Model().Courses[1]
+	if c.BlurbDE != de || c.BlurbEN != en {
+		t.Errorf("round trip changed text:\nDE %q\nEN %q", c.BlurbDE, c.BlurbEN)
+	}
+}
+
+func TestRenderWritesNoShowOnWhenEmpty(t *testing.T) {
+	out := RenderCourse(model.Course{ID: "x", ShortTitle: "X", Title: "X", ShowOn: nil}, "  ")
+	if strings.Contains(out, "show_on") {
+		t.Errorf("show_on written for an empty list:\n%s", out)
+	}
+	out = RenderCourse(model.Course{ID: "x", ShowOn: []string{"arc42.org"}}, "  ")
+	if !strings.Contains(out, `show_on: ["arc42.org"]`) {
+		t.Errorf("show_on missing:\n%s", out)
+	}
+}
+
+func TestUpdateCourseReplacesLegacyBlurb(t *testing.T) {
+	src := "courses:\n  - id: old\n    short_title: \"OLD\"\n    title: \"Old\"\n    blurb: >-\n      Legacy text.\n    url: \"https://example.org/old\"\n    trainers: [\"A\"]\n    dates: []\n"
+	doc, err := Parse([]byte(src))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	c := doc.Model().Courses[0]
+	c.Title = "Older"
+	if err := doc.UpdateCourse("old", c); err != nil {
+		t.Fatalf("UpdateCourse: %v", err)
+	}
+	out := string(doc.Bytes())
+	if strings.Contains(out, "\n    blurb:") || !strings.Contains(out, "blurb_en: >-") {
+		t.Errorf("legacy key not migrated:\n%s", out)
 	}
 }

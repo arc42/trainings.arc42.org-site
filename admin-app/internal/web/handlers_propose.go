@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -262,19 +263,48 @@ func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request, sess Sess
 		s.fail(w, "could not read the current file from GitHub", err)
 		return
 	}
-	problems := validate.Rules(d.Doc.Model())
-	problems = append(problems, s.schemaProblems(r, client, d)...)
+	entries, faults := s.proposeProblems(r, client, d)
 
 	s.render(w, "propose.gohtml", map[string]any{
 		// Wide for the same reason as the dates list: the change report and the
 		// YAML diff are tables, and a before/after pair does not fit a reading
 		// measure.
 		"Title": "Review & propose", "Draft": d, "Login": sess.Login, "Wide": true,
-		"Diff":     safeDiff(unifiedDiff(before, d.Doc.Bytes())),
-		"Problems": problems,
-		"PRTitle":  prTitle(d.Changes),
-		"PRBody":   prBody(d.Changes, sess.Login),
+		"Diff":          safeDiff(unifiedDiff(before, d.Doc.Bytes())),
+		"EntryProblems": entries,
+		"AppFaults":     faults,
+		"Notes":         courseNotes(d),
+		"PRTitle":       prTitle(d.Changes),
+		"PRBody":        prBody(d.Changes, sess.Login),
 	})
+}
+
+// proposeProblems is every problem with the draft, explained and split by
+// whose it is. Only the operator's entries block the pull request. An app
+// fault means the app failed to check the draft, not that the draft is wrong,
+// and holding the proposal back would leave the operator with nothing to do:
+// CI checks the pull request again, and stays the authority on it.
+func (s *Server) proposeProblems(r *http.Request, client *gh.Client, d *Draft) (entries, faults []validate.Problem) {
+	m := d.Doc.Model()
+	// Rules first: where a rule and the schema object to the same field (a
+	// public date without a city), the rule's message is the one written for
+	// this case, and the operator needs to hear about the field once.
+	all := append(validate.Rules(m), s.schemaProblems(r, client, d)...)
+	seen := map[string]bool{}
+	for _, p := range validate.ExplainAll(m, all) {
+		if p.Kind == validate.AppProblem {
+			// The page asks the operator for a screenshot; the log is the
+			// copy that does not depend on them sending one.
+			log.Printf("propose: app fault: %s", p.Detail)
+			faults = append(faults, p)
+			continue
+		}
+		if key := p.Link + "\x00" + p.Label; !seen[key] {
+			seen[key] = true
+			entries = append(entries, p)
+		}
+	}
+	return entries, faults
 }
 
 // schemaProblems validates against the repository's own schema, fetched live so
@@ -282,17 +312,50 @@ func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request, sess Sess
 func (s *Server) schemaProblems(r *http.Request, client *gh.Client, d *Draft) []validate.Problem {
 	schema, _, _, err := client.ReadFile(r.Context(), schemaPath)
 	if err != nil {
-		return []validate.Problem{{Message: "could not fetch the schema: " + err.Error()}}
+		return []validate.Problem{validate.AppFault("could not fetch the schema: " + err.Error())}
 	}
 	feed, err := validate.FeedJSON(d.Doc.Model())
 	if err != nil {
-		return []validate.Problem{{Message: "could not render the feed: " + err.Error()}}
+		return []validate.Problem{validate.AppFault("could not render the feed: " + err.Error())}
 	}
 	problems, err := validate.Schema(schema, feed)
 	if err != nil {
-		return []validate.Problem{{Message: err.Error()}}
+		return []validate.Problem{validate.AppFault(err.Error())}
 	}
 	return problems
+}
+
+// courseNotes are the info lines for each course this draft adds or changes:
+// the course form's own notes (validate.CourseNotes), and for a new course
+// without a date, that it will not show yet. Not problems and not warnings.
+// The course form shows its notes only when it is shown again, and a save
+// without warnings goes straight back to the list, so this page is the one
+// place a newly created course's notes are sure to be seen.
+func courseNotes(d *Draft) []string {
+	m := d.Doc.Model()
+	var notes []string
+	for _, ch := range d.Changes {
+		if ch.AfterCourse == nil {
+			continue
+		}
+		c, ok := m.FindCourse(ch.AfterCourse.ID)
+		if !ok {
+			continue
+		}
+		name := c.ShortTitle
+		if name == "" {
+			name = c.ID
+		}
+		for _, n := range validate.CourseNotes(c) {
+			notes = append(notes, name+" — "+n)
+		}
+		// A course is entered before its first date; the operator only needs
+		// to know it will not show yet.
+		if ch.Kind == "added" && len(c.Dates) == 0 {
+			notes = append(notes, name+" has no dates yet. It will appear on the home pages once it has one.")
+		}
+	}
+	return notes
 }
 
 func (s *Server) handleProposeSubmit(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
@@ -328,10 +391,14 @@ func (s *Server) handleProposeSubmit(w http.ResponseWriter, r *http.Request, ses
 		})
 		return
 	}
-	if problems := validate.Rules(d.Doc.Model()); len(problems) > 0 {
+	// The same gate as the review page, so a stale page or a hand-made POST
+	// cannot get past a problem in the entries, and an app fault does not
+	// stop here either.
+	if entries, faults := s.proposeProblems(r, client, d); len(entries) > 0 {
 		s.render(w, "propose.gohtml", map[string]any{
 			"Title": "Fix these first", "Draft": d, "Login": sess.Login, "Wide": true,
-			"Problems": problems, "PRTitle": r.PostFormValue("title"), "PRBody": r.PostFormValue("body"),
+			"EntryProblems": entries, "AppFaults": faults, "Notes": courseNotes(d),
+			"PRTitle": r.PostFormValue("title"), "PRBody": r.PostFormValue("body"),
 		})
 		return
 	}

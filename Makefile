@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help dev build stop site check-links check-consumers clean install update shell logs \
+.PHONY: help dev build stop site check-links check-cards check-consumers check-consumers-test clean install update shell logs \
         app-test app-check app-build training-app-demo training-app-stop app-preview check-go \
         check-flyctl fly-deploy fly-status fly-logs fly-secrets fly-releases \
         reg-test reg-check reg-run reg-demo reg-deploy reg-status reg-logs \
@@ -52,8 +52,14 @@ stop: ## Stop and remove the Jekyll dev container (the demo is not a container â
 site: build ## Generate the static site into _site/
 	docker compose run --rm jekyll bundle exec jekyll build
 
+check-consumers-test: ## Offline test: the consumer check expects a course only where show_on says it is advertised
+	bash scripts/test/verify_consumers_test.sh
+
 check-links: site ## Validate internal links, images, and HTML in the built _site (html-proofer)
 	docker compose run --rm jekyll bundle exec htmlproofer ./_site --disable-external --allow-hash-href
+
+check-cards: site ## Check that every upcoming date has a card on both built home pages (host Ruby)
+	ruby scripts/check_home_cards.rb
 
 check-consumers: ## Check that every consumer site really serves the current feed (live HTTP, no Docker)
 	@# Reads the published pages, not this repo: it answers "did the change reach

@@ -117,23 +117,26 @@
     <legend>Identifiers</legend>
     <label>Date ID
       <input name="id" value="{{.Date.ID}}" pattern="[a-z0-9-]+"
-             aria-describedby="id-hint" placeholder="{{idMask .CourseID}}">
+             aria-describedby="id-hint" placeholder="{{idMask .CourseID}}"
+             data-taken="{{takenJSON .Taken.IDs}}">
       {{if .IsNew}}<small id="id-hint" class="hint">Computed from the course,
         the month and year of the first day and the language, e.g. msa-sep-2027,
         or msa-sep-2027-en for an English run. Month names are English
-        (dec, not dez). It becomes the anchor link on trainings.arc42.org and arc42.de, so it must not
-        change once published. Override it only if the computed id is already
-        taken.</small>
+        (dec, not dez). A second run in the same month and language gets
+        "-2" (msa-sep-2027-2). It becomes the anchor link on trainings.arc42.org
+        and arc42.de, so it must not change once published.</small>
       {{else}}<small id="id-hint" class="hint">The anchor link on trainings.arc42.org
         and arc42.de (#{{.Date.ID}}). It is published, so changing it breaks every
         link and bookmark that points at this date.</small>{{end}}
     </label>
     <label>Booking code
       <input name="code" id="f-code" value="{{.Date.Code}}"
-             aria-describedby="code-hint" placeholder="{{codeMask .CourseID}}">
+             aria-describedby="code-hint" placeholder="{{codeMask .CourseID}}"
+             data-taken="{{takenJSON .Taken.Codes}}">
       <small id="code-hint" class="hint">Computed from the course, the year and
         month of the first day and the language ("-EN" for English), e.g.
-        27-09 MSA. It reaches the back office with every registration. Override
+        27-09 MSA, and 27-09 MSA-2 for a second run in the same month and
+        language. It reaches the back office with every registration. Override
         it only when a run is booked under another month — a course starting
         30 November that is sold as December. Must be unique: a duplicate
         silently misroutes a registration.</small>

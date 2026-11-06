@@ -2,9 +2,10 @@ name: Validate training data
 on:
   push:
     branches: ["**"]
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html"]
+    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html", "_includes/**", "_pages/home*.html", "admin-app/internal/validate/testdata/**"]
+  # No paths filter on pull requests: a required check that a filter skips stays
+  # "Expected — waiting" forever and blocks every admin-app or registration-app PR.
   pull_request:
-    paths: ["_data/trainings.yml", "api/trainings.schema.json", "api/trainings.json", "scripts/**", "_includes/registration-form.html", "_includes/training-date-label.html"]
 jobs:
   validate:
     if: github.repository == 'arc42/trainings.arc42.org-site'
@@ -17,7 +18,16 @@ jobs:
           bundler-cache: true
       - name: Validate trainings.yml (structure, language, dates)
         run: ruby scripts/validate_trainings.rb
+      - name: Validate fixtures the admin app must also accept
+        run: |
+          for f in admin-app/internal/validate/testdata/ci_accepts/*.yml; do
+            ruby scripts/validate_trainings.rb "$f" || exit 1
+          done
+      - name: Consumer check follows show_on (offline)
+        run: bash scripts/test/verify_consumers_test.sh
       - name: Build site
         run: bundle exec jekyll build
+      - name: Every upcoming date is on both home pages
+        run: ruby scripts/check_home_cards.rb
       - name: Validate published JSON against schema
         run: npx --yes ajv-cli@5 validate -s api/trainings.schema.json -d _site/api/trainings.json

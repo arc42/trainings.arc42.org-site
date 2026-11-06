@@ -72,3 +72,61 @@ func TestDateIDSeparatesLanguagesInTheSameMonth(t *testing.T) {
 		t.Errorf("both runs derive %q", de)
 	}
 }
+
+// Two runs of one course in the same month and language derive the same id
+// and code; the second gets the first free "-2", "-3" variant, the way an
+// English run gets "-EN".
+func TestNextFreeAppendsTheFirstFreeSuffix(t *testing.T) {
+	cases := []struct {
+		name  string
+		taken []string
+		want  string
+	}{
+		{"nothing taken: the base itself", nil, "mas-jan-2027"},
+		{"base taken: -2", []string{"mas-jan-2027"}, "mas-jan-2027-2"},
+		{"base and -2 taken: -3", []string{"mas-jan-2027", "mas-jan-2027-2"}, "mas-jan-2027-3"},
+		{"only -2 taken: the base is still free", []string{"mas-jan-2027-2"}, "mas-jan-2027"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			taken := map[string]bool{}
+			for _, v := range c.taken {
+				taken[v] = true
+			}
+			if got := NextFree("mas-jan-2027", taken); got != c.want {
+				t.Errorf("NextFree = %q, want %q", got, c.want)
+			}
+		})
+	}
+	if got := NextFree("", map[string]bool{"": true}); got != "" {
+		t.Errorf("an empty base derives %q, want nothing", got)
+	}
+}
+
+func TestTakenDerivesTheFreeIDAndCode(t *testing.T) {
+	tr := Trainings{Courses: []Course{{ID: "mas", Dates: []Date{
+		{ID: "mas-jan-2027", Code: "27-01 MAS", Start: "2027-01-13", Language: "de"},
+	}}}}
+
+	tk := tr.TakenExcept("")
+	if got := tk.DateID("mas", "2027-01-27", "de"); got != "mas-jan-2027-2" {
+		t.Errorf("DateID = %q, want mas-jan-2027-2", got)
+	}
+	if got := tk.BookingCode("mas", "2027-01-27", "de"); got != "27-01 MAS-2" {
+		t.Errorf("BookingCode = %q, want 27-01 MAS-2", got)
+	}
+	// Another language in the same month never collided in the first place.
+	if got := tk.BookingCode("mas", "2027-01-27", "en"); got != "27-01 MAS-EN" {
+		t.Errorf("BookingCode(en) = %q, want 27-01 MAS-EN", got)
+	}
+
+	// The date being edited does not block its own values, or editing it
+	// would suggest it move to "-2".
+	own := tr.TakenExcept("mas-jan-2027")
+	if got := own.BookingCode("mas", "2027-01-13", "de"); got != "27-01 MAS" {
+		t.Errorf("own code = %q, want 27-01 MAS", got)
+	}
+	if got := own.DateID("mas", "2027-01-13", "de"); got != "mas-jan-2027" {
+		t.Errorf("own id = %q, want mas-jan-2027", got)
+	}
+}

@@ -22,20 +22,20 @@ RETIRED_DATE_KEYS = {
   "few_seats" => "Use seats_limited: true - the wording belongs to whoever renders it."
 }.freeze
 
+# Course-level retired key. A description without a stated language is wrong on
+# half the pages, so `blurb` was split into one key per language.
+RETIRED_COURSE_KEYS = {
+  "blurb" => "Use blurb_en (English) and/or blurb_de (German): every description states its language."
+}.freeze
+
+SHOW_ON_RE = /\A[a-z0-9.-]+\z/
+
 path = ARGV[0] || File.expand_path("../_data/trainings.yml", __dir__)
 
-# The site renders each date through _includes/timeline_<type>.html, where the
-# type is DERIVED: the course id, plus "_online" when format is online
-# (see _includes/timeline_auto.html). timeline_course.html dispatches on it and
-# falls through to an HTML comment for a type it does not know.
-#
-# That fallback is silent by design - a missing template must not break the
-# build for every other date - but it means a perfectly valid date can publish
-# to the feed and render as nothing at all. improve-apr-2027 did exactly that:
-# the first online IMPROVE, valid, in the feed, invisible on both home pages,
-# unbookable. So the check belongs here, where a pull request still fails.
-includes_dir = File.expand_path("../_includes", File.dirname(path))
-card_templates_checkable = Dir.exist?(includes_dir)
+# No card-template check: a course without a hand-made
+# _includes/timeline_<type>.html is rendered by the data-driven
+# _includes/timeline_card.html, so a missing template is not a problem any more.
+
 # permitted_classes: [Date] on purpose. Unquoted YYYY-MM-DD is a Date to YAML,
 # and without this safe_load raises Psych::DisallowedClass and dies with a
 # stack trace - which is a worse error message than the one this script
@@ -60,6 +60,29 @@ codes = Hash.new(0)
   # present it must be a non-empty https URL, exactly like url.
   if c.key?("url_en") && !(c["url_en"].is_a?(String) && c["url_en"].start_with?("https://"))
     errors << "course #{cid}: 'url_en' must be an https URL when present (got #{c['url_en'].inspect})"
+  end
+  RETIRED_COURSE_KEYS.each do |old_key, hint|
+    errors << "course #{cid}: '#{old_key}' was retired. #{hint}" if c.key?(old_key)
+  end
+  %w[blurb_de blurb_en].each do |f|
+    if c.key?(f) && !(c[f].is_a?(String) && !c[f].strip.empty?)
+      errors << "course #{cid}: '#{f}' must be a non-empty string when present"
+    end
+  end
+  # show_on: which consumer sites advertise the course. Absent = every site.
+  if c.key?("show_on")
+    so = c["show_on"]
+    if !so.is_a?(Array)
+      errors << "course #{cid}: 'show_on' must be a list of site names"
+    elsif so.empty?
+      errors << "course #{cid}: 'show_on' is empty - leave it out to mean every site, or name at least one"
+    else
+      so.each do |site|
+        unless site.is_a?(String) && site =~ SHOW_ON_RE
+          errors << "course #{cid}: 'show_on' entry #{site.inspect} must match #{SHOW_ON_RE.source.sub('\\A','^').sub('\\z','$')}"
+        end
+      end
+    end
   end
   if c.key?("credits")
     errors << "course #{cid}: 'credits' was retired. Use credit_points: {methodical:, technical:, communication:} - the prose is built per language by _includes/credits-label.html."
@@ -147,15 +170,6 @@ codes = Hash.new(0)
             # both drop it on their own. Deleting it by hand is optional.
           end
         end
-      end
-    end
-
-    if card_templates_checkable && d["format"].is_a?(String) && c["id"].is_a?(String)
-      type = d["format"] == "online" ? "#{c['id']}_online" : c["id"]
-      unless File.exist?(File.join(includes_dir, "timeline_#{type}.html"))
-        errors << "date #{did}: no card template _includes/timeline_#{type}.html - " \
-                  "this date would render as an HTML comment on both home pages. " \
-                  "Add the template and a `when \"#{type}\"` case in _includes/timeline_course.html."
       end
     end
 

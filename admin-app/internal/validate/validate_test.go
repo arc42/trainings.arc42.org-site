@@ -31,13 +31,13 @@ func TestRulesAcceptValidData(t *testing.T) {
 func TestRuleEndBeforeStart(t *testing.T) {
 	tr := ok()
 	tr.Courses[0].Dates[0].End = "2025-12-31"
-	assertProblem(t, Rules(tr), "before start")
+	assertProblem(t, Rules(tr), "31 Dec 2025 is before the first day, 1 Jan 2026")
 }
 
 func TestRuleNonOnlineNeedsCity(t *testing.T) {
 	tr := ok()
 	tr.Courses[0].Dates[0].City = ""
-	assertProblem(t, Rules(tr), "city")
+	assertProblem(t, Rules(tr), "must not be empty unless the format is online")
 }
 
 func TestRuleOnlineDoesNotNeedCity(t *testing.T) {
@@ -54,7 +54,8 @@ func TestRuleDuplicateDateID(t *testing.T) {
 	d := tr.Courses[0].Dates[0]
 	d.Code = "B"
 	tr.Courses[0].Dates = append(tr.Courses[0].Dates, d)
-	assertProblem(t, Rules(tr), "duplicate date id")
+	// The suggestion is the house convention for that date, which is free.
+	assertProblem(t, Rules(tr), "a is already used by 1 Jan 2026 München — use msa-jan-2026")
 }
 
 func TestRuleDuplicateBookingCode(t *testing.T) {
@@ -62,7 +63,28 @@ func TestRuleDuplicateBookingCode(t *testing.T) {
 	d := tr.Courses[0].Dates[0]
 	d.ID = "b"
 	tr.Courses[0].Dates = append(tr.Courses[0].Dates, d)
-	assertProblem(t, Rules(tr), "duplicate booking code")
+	assertProblem(t, Rules(tr), "A is already used by 1 Jan 2026 München — use 26-01 MSA")
+}
+
+// Where the date follows the house convention, the suggestion is the next free
+// variant of the convention, not a suffix on whatever collided: the third
+// January run is told "-3", not "-2-2".
+func TestRuleDuplicateSuggestsTheFreeConventionalValue(t *testing.T) {
+	jan := func(id, code, start string) model.Date {
+		return model.Date{ID: id, Code: code, Start: start, End: start, Language: "de",
+			Format: "online", URL: "https://example.org", Status: "open"}
+	}
+	tr := model.Trainings{Courses: []model.Course{{
+		ID: "mas", ShortTitle: "MAS", Title: "MAS", URL: "https://example.org", Trainers: []string{"P"},
+		Dates: []model.Date{
+			jan("mas-jan-2027", "27-01 MAS", "2027-01-13"),
+			jan("mas-jan-2027-2", "27-01 MAS-2", "2027-01-20"),
+			jan("mas-jan-2027-2", "27-01 MAS-2", "2027-01-27"),
+		},
+	}}}
+	ps := Rules(tr)
+	assertProblem(t, ps, "mas-jan-2027-2 is already used by 20 Jan 2027 online — use mas-jan-2027-3")
+	assertProblem(t, ps, "27-01 MAS-2 is already used by 20 Jan 2027 online — use 27-01 MAS-3")
 }
 
 func TestSchemaRejectsBadLanguage(t *testing.T) {

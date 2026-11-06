@@ -7,12 +7,12 @@
   timeline_improve_online: no city line, the terms link, and the Berlin
   time-zone note that every English online course carries.
 
-  Written BEFORE the first online REQ4ARC exists, deliberately. The template
-  name is derived, not chosen: timeline_auto.html builds "<course id>_online"
-  for any date with format: online, so the first such date would otherwise fall
-  through timeline_course.html's unknown-type branch and render as an HTML
-  comment. That is exactly what happened to improve-apr-2027, which validated,
-  published to the feed and was invisible on both home pages.
+  History: written BEFORE the first online REQ4ARC existed, because a missing
+  template used to fall through to an HTML comment (improve-apr-2027 was
+  invisible on both home pages that way). That fallback is now the data-driven
+  timeline_card.html, so this file is no longer needed to keep a date visible;
+  it stays as the hand-made card for this course and overrides the standard
+  one, including its descriptions (blurb_de / blurb_en).
 
   The trainer line differs from the public card on purpose. The public REQ4ARC
   is the Hruschka/Starke pair; an online run is named per date, the way

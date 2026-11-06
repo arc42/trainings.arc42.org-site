@@ -1,0 +1,115 @@
+{%- comment -%}
+  The data-driven card: renders any course from _data/trainings.yml alone, so
+  a new course needs no template of its own. timeline_course.html falls back to
+  it for every type without a hand-made card; a hand-made timeline_<type>.html
+  keeps winning for its course while it exists.
+
+  Same container, classes and order as the hand-made cards (copied from
+  timeline_msa.html / timeline_improve.html), so it sits in the timeline
+  without seams. Status note, few-seats, price and credits arrive as finished
+  strings from timeline_auto.html, exactly as the hand-made cards get them.
+
+  include.course is the course, include.course_date the date (not "date":
+  that name already carries the date LABEL in the interface every card shares).
+
+  Every variable is tc_-prefixed and assigned on every render: includes share
+  the caller's scope, and the hand-made cards assign bare names (blurb,
+  trainer, info_label, register_url, anchor_id, ...) that would otherwise leak
+  from the previous card into this one.
+{%- endcomment -%}
+{%- assign tc_position_class = include.position | default: "right" -%}
+{%- assign tc_anchor_id = include.anchor_id -%}
+{%- assign tc_sold_out = include.sold_out | default: false -%}
+{%- assign tc_title = include.course.title | default: include.course.short_title | strip -%}
+{%- assign tc_cert = include.course.certification | strip -%}
+{%- assign tc_trainers = include.course_date.trainers | default: include.course.trainers -%}
+
+{%- comment -%}
+  Description: the page language's text if the course has one, else the other
+  language's, else none. A German text shown on the English page is still
+  German (the card already says "held in German"); what must never happen is
+  a sentence of unknown language, which is why the plain `blurb` is retired.
+{%- endcomment -%}
+{%- if include.page_lang == "de" -%}
+  {%- assign tc_blurb = include.course.blurb_de | default: include.course.blurb_en | strip -%}
+  {%- assign tc_trainer_join = " und " -%}
+  {%- assign tc_trainer_label = "Mit" -%}
+  {%- assign tc_info_url = include.course.url -%}
+  {%- assign tc_info_hreflang = "de" -%}
+  {%- assign tc_info_label = "Mehr Info" -%}
+  {%- assign tc_register_label = "Anmeldung" -%}
+  {%- assign tc_register_url = "/anmeldung/" -%}
+{%- else -%}
+  {%- assign tc_blurb = include.course.blurb_en | default: include.course.blurb_de | strip -%}
+  {%- assign tc_trainer_join = " and " -%}
+  {%- assign tc_trainer_label = "With" -%}
+  {%- comment -%}
+    An url_en that is the German url again (MAS: one systems42.org page for
+    both languages) is no English page: labelling it "More info" with
+    hreflang="en" would promise English and deliver whatever that page is.
+  {%- endcomment -%}
+  {%- assign tc_url_en = include.course.url_en | strip -%}
+  {%- assign tc_url_de = include.course.url | strip -%}
+  {%- if tc_url_en != "" and tc_url_en != tc_url_de -%}
+    {%- assign tc_info_url = tc_url_en -%}
+    {%- assign tc_info_hreflang = "en" -%}
+    {%- assign tc_info_label = "More info" -%}
+  {%- else -%}
+    {%- assign tc_info_url = include.course.url -%}
+    {%- assign tc_info_hreflang = "de" -%}
+    {%- assign tc_info_label = "More info (in German)" -%}
+  {%- endif -%}
+  {%- assign tc_register_label = "Register" -%}
+  {%- assign tc_register_url = "/registration/" -%}
+{%- endif -%}
+{%- assign tc_trainerline = "" -%}
+{%- if tc_trainers.size > 0 -%}{%- assign tc_trainerline = tc_trainers | join: tc_trainer_join -%}{%- endif -%}
+
+<div class="container {{ tc_position_class }}" id="{{ tc_anchor_id }}">
+    <div class="content{% if tc_sold_out %} content--sold-out{% endif %}">
+        {% if include.course_date.format == "online" %}{{ include.date }} (online)<br>{% elsif include.location %}{{ include.date }}, {{ include.location }}<br>{% else %}{{ include.date }}<br>{% endif %}
+        {% if include.page_lang == "de" %}
+          {% if include.delivery_lang == "en" %}<p class="training-language-note">Durchführung auf Englisch</p>{% endif %}
+        {% else %}
+          {% if include.delivery_lang == "de" %}<p class="training-language-note">held in German</p>{% else %}<p class="training-language-note">held in English</p>{% endif %}
+        {% endif %}
+        <h2 class="course-title">{{ tc_title | escape }}{% if tc_cert != "" %}<br>
+        ({{ tc_cert | escape }}){% endif %}
+        </h2>
+        {% if tc_blurb != "" %}
+        <p>
+            {{ tc_blurb | escape }}
+        </p>
+        {% endif %}
+        {% if tc_trainerline != "" %}
+        <p>{{ tc_trainer_label }} {{ tc_trainerline | escape }}</p>
+        {% endif %}
+
+        {% if tc_sold_out and include.status_note %}
+            <p class="timeline-sold-out">({{ include.status_note }})</p>
+        {% endif %}
+
+        {% if include.few_seats %}
+            <p class="timeline-few-seats">{{ include.few_seats }}</p>
+        {% endif %}
+
+        {%- comment -%} Credits are iSAQB credits: a course without a
+            certification shows nothing about iSAQB (G5), whatever the data
+            says about points. The admin app warns about that combination. {%- endcomment -%}
+        {% if include.credits and tc_cert != "" %}
+        <p class="date-small">
+            {% if include.page_lang == "de" %}iSAQB-Punkte{% else %}iSAQB credits{% endif %}: {{ include.credits }}
+        </p>
+        {% endif %}
+        {% if include.pricing %}
+        <p class="date-small">
+            {{ include.pricing }}
+        </p>
+        {% endif %}
+
+        {% if tc_info_url %}<a class="button" href="{{ tc_info_url }}" hreflang="{{ tc_info_hreflang }}">{{ tc_info_label }}</a>{% endif %}
+        {% unless include.hide_register %}
+            <a class="button buttonAnmeldung" href="{{ tc_register_url }}?kurs={{ tc_anchor_id }}">{{ include.waitlist_label | default: tc_register_label }}</a>
+        {% endunless %}
+    </div>
+</div>

@@ -7,12 +7,12 @@
   is: no city line, the terms link and the time-zone note that every online
   course carries, and the trainer named per date rather than baked in.
 
-  It exists because timeline_auto.html derives the template name as
-  "<course id>_online" for any date with format: online. improve-apr-2027
-  arrived through the admin app as the first online IMPROVE, and without this
-  file timeline_course.html fell through to its unknown-type branch: the date
-  validated, published to the feed, and rendered as an HTML comment. A booking
-  nobody could see.
+  History: it was added because improve-apr-2027, the first online IMPROVE,
+  arrived through the admin app while timeline_course.html still fell through
+  to an HTML comment for an unknown template: a booking nobody could see. That
+  fallback is now the data-driven timeline_card.html; this file stays as the
+  hand-made card for the course and overrides the standard one, including its
+  descriptions (blurb_de / blurb_en).
 {%- endcomment -%}
 {% assign position_class = include.position | default: "right" %}
 {% assign anchor_id = include.anchor_id | default: "improve-online" %}

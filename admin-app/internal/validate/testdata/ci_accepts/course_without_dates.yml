@@ -1,0 +1,27 @@
+courses:
+  - id: msa
+    short_title: "MSA"
+    title: "Certified Professional for Software Architecture - Foundation Level"
+    certification: "iSAQB CPSA-F"
+    url: "https://example.org/msa"
+    trainers:
+      - "Peter Hruschka"
+    dates:
+      - id: a
+        code: "A"
+        start: "2026-01-01"
+        end: "2026-01-02"
+        city: "München"
+        country: "DE"
+        language: de
+        format: public
+        url: "https://example.org/a"
+        status: open
+        price: {amount: 1000, currency: EUR}
+  - id: flex
+    short_title: "FLEX"
+    title: "Flexible Architecture Training"
+    url: "https://example.org/flex"
+    trainers:
+      - "Gernot Starke"
+    dates: []

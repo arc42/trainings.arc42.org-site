@@ -1,0 +1,36 @@
+# A course id with no hand-made card template (no _includes/timeline_mas.html,
+# no timeline_mas_online.html), with one public and one online date. CI used to
+# reject such a date in _data/trainings.yml; since the data-driven card renders
+# any course, both the Ruby validator and the admin app must accept it.
+courses:
+  - id: mas
+    short_title: "MAS"
+    title: "Mastering AI-Driven Specification"
+    blurb_de: >-
+      Ein Kurs ohne eigene Kartenvorlage.
+    url: "https://example.org/mas"
+    trainers:
+      - "Peter Hruschka"
+      - "Peter Gerstbach"
+    dates:
+      - id: mas-public
+        code: "MAS-PUBLIC"
+        start: "2027-01-19"
+        end: "2027-01-21"
+        city: "München"
+        country: "DE"
+        language: de
+        format: public
+        url: "https://example.org/mas-public"
+        status: open
+        price: {amount: 2400, currency: EUR}
+      - id: mas-online
+        code: "MAS-ONLINE"
+        start: "2027-01-26"
+        end: "2027-01-28"
+        country: "DE"
+        language: de
+        format: online
+        url: "https://example.org/mas-online"
+        status: open
+        price: {amount: 2100, currency: EUR}

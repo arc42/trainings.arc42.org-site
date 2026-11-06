@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -239,6 +241,18 @@ func templateFuncs() template.FuncMap {
 		"join": func(list any, sep string) string {
 			ss, _ := list.([]string)
 			return strings.Join(ss, sep)
+		},
+		// takenJSON hands form.js the ids or codes other dates already use,
+		// as a JSON array, so it can mirror model.NextFree.
+		"takenJSON": func(set any) (string, error) {
+			m, _ := set.(map[string]bool)
+			list := make([]string, 0, len(m))
+			for v := range m {
+				list = append(list, v)
+			}
+			sort.Strings(list)
+			b, err := json.Marshal(list)
+			return string(b), err
 		},
 		// dict lets one partial take several named values.
 		"dict": func(pairs ...any) map[string]any {

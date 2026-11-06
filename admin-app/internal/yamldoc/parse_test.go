@@ -103,3 +103,52 @@ func TestDateExtentOfLastEntryReachesEndOfCourse(t *testing.T) {
 		t.Errorf("extent = %d..%d, ok=%v; want 4..5", start, end, ok)
 	}
 }
+
+const descriptionsYAML = `courses:
+  - id: mas
+    short_title: "MAS"
+    title: "Master of Architecture"
+    blurb_de: >-
+      Ein deutscher Text.
+    blurb_en: >-
+      An English text.
+    show_on: ["www.arc42.de", "arc42.org"]
+    url: "https://example.org/mas"
+    trainers: ["A"]
+    dates: []
+  - id: old
+    short_title: "OLD"
+    title: "Old"
+    blurb: >-
+      Legacy text.
+    url: "https://example.org/old"
+    trainers: ["A"]
+    dates: []
+`
+
+func TestParseReadsDescriptionsAndShowOn(t *testing.T) {
+	doc, err := Parse([]byte(descriptionsYAML))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	c := doc.Model().Courses[0]
+	if c.BlurbDE != "Ein deutscher Text." || c.BlurbEN != "An English text." {
+		t.Errorf("blurbs = %q / %q", c.BlurbDE, c.BlurbEN)
+	}
+	if len(c.ShowOn) != 2 || c.ShowOn[0] != "www.arc42.de" || c.ShowOn[1] != "arc42.org" {
+		t.Errorf("show_on = %v", c.ShowOn)
+	}
+}
+
+// Drafts written before the key was retired may still carry "blurb:"; it is
+// read as the English text, and never written back.
+func TestParseReadsLegacyBlurbAsEnglish(t *testing.T) {
+	doc, err := Parse([]byte(descriptionsYAML))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	c := doc.Model().Courses[1]
+	if c.BlurbEN != "Legacy text." || c.BlurbDE != "" {
+		t.Errorf("legacy blurb = %q / %q", c.BlurbDE, c.BlurbEN)
+	}
+}

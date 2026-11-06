@@ -1,0 +1,10 @@
+{"courses":[
+ {"id":"msa","dates":[
+  {"id":"msa-feb-2099","start":"2099-02-01","end":"2099-02-03","status":"open"},
+  {"id":"msa-mar-2099","start":"2099-03-01","end":"2099-03-03","status":"open"},
+  {"id":"msa-apr-2099","start":"2099-04-01","end":"2099-04-03","status":"open"}]},
+ {"id":"mas","show_on":["www.arc42.de","arc42.org","www.systems42.org"],"dates":[
+  {"id":"mas-jan-2099","start":"2099-01-05","end":"2099-01-07","status":"open"}]},
+ {"id":"empty","dates":[]},
+ {"id":"nodates"}
+]}

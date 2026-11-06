@@ -10,13 +10,24 @@ type Course struct {
 	ID            string
 	ShortTitle    string
 	Title         string
-	Blurb         string
+	BlurbDE       string   // German card text; optional
+	BlurbEN       string   // English card text; optional
+	ShowOn        []string // consumer sites that list this course; nil = every site
 	Certification string
 	CreditPoints  *CreditPoints
 	URL           string
 	URLEn         string // optional: English detail page, https://trainings.arc42.org/courses/<id>/
 	Trainers      []string
 	Dates         []Date
+}
+
+// Blurb is the feed's generated "blurb": the English text, else the German
+// one. Consumers that predate the per-language texts keep reading one string.
+func (c Course) Blurb() string {
+	if c.BlurbEN != "" {
+		return c.BlurbEN
+	}
+	return c.BlurbDE
 }
 
 type Date struct {
@@ -95,49 +106,40 @@ var KnownTrainers = []string{
 	"Wolfgang Reimesch",
 }
 
-// Card templates in the SITE repository, mirrored here so the forms can warn
-// before a date is published rather than after.
-//
-// The site renders each date through _includes/timeline_<type>.html, where the
-// type is DERIVED and not chosen: the course id, plus "_online" when the format
-// is online. _includes/timeline_course.html dispatches on that name and falls
-// through to an HTML comment for a type it does not know. The fallback is
-// silent on purpose, so one missing template cannot break every other card, but
-// it means a perfectly valid date can publish to the feed and render as
-// nothing. improve-apr-2027 did exactly that: valid, in the feed, invisible on
-// both home pages, unbookable.
-//
-// This app cannot see the site's _includes directory, so these two sets are a
-// copy and can go stale. That is deliberate and low-risk: being wrong here
-// costs a missing or spurious ADVISORY warning, never a wrong file. The
-// authoritative check is scripts/validate_trainings.rb, which reads the actual
-// directory and fails the pull request.
-//
-// Adding a course? Add both templates to the site and both ids here.
-var (
-	coursesWithPublicCard = map[string]bool{"msa": true, "improve": true, "req4arc": true, "adoc": true}
-	coursesWithOnlineCard = map[string]bool{"msa": true, "improve": true, "req4arc": true, "adoc": true}
-)
-
-// HasCardTemplate reports whether the site can render a date of this course and
-// format. An empty courseID or format is treated as renderable: the form has
-// other, better complaints about those.
-func HasCardTemplate(courseID, format string) bool {
-	if courseID == "" || format == "" {
-		return true
-	}
-	if format == "online" {
-		return coursesWithOnlineCard[courseID]
-	}
-	return coursesWithPublicCard[courseID]
+// KnownSites is the list of consumer sites offered as "Shown on" checkboxes on
+// the course form. Like the trainer roster it is a convenience, not a
+// constraint: a site not yet listed can be typed in. The spelling is the one
+// scripts/verify_consumers.sh uses, plus www.systems42.org; one spelling
+// everywhere, because a course's show_on is matched against these names by
+// each consumer site. trainings.arc42.org is deliberately absent: registration
+// happens there, so it shows every course and ignores show_on.
+var KnownSites = []string{
+	"www.arc42.de",
+	"arc42.org",
+	"www.systems42.org",
+	"docs.arc42.org",
+	"faq.arc42.org",
+	"examples.arc42.org",
+	"softwareknigge.arc42.org",
+	"www.gernotstarke.de",
 }
 
-// HasAnyCardTemplate reports whether the site knows this course at all.
-func HasAnyCardTemplate(courseID string) bool {
-	if courseID == "" {
-		return true
-	}
-	return coursesWithPublicCard[courseID] || coursesWithOnlineCard[courseID]
+// HandMadeCards are the courses whose home-page card is still a hand-written
+// template in the site repository (_includes/timeline_<id>.html). Every other
+// course is rendered by the data-driven card, which shows the descriptions
+// from the data. A hand-made card ignores them, so for these courses the
+// course form says so instead of warning about descriptions.
+//
+// This app cannot see the site's _includes directory, so the list is a copy
+// and shrinks by hand as courses are switched to the standard card. Being
+// stale costs a wrong info line on the form, never a wrong file: the built
+// site is the authoritative check.
+var HandMadeCards = map[string]bool{"msa": true, "improve": true, "req4arc": true, "adoc": true}
+
+// HasHandMadeCard reports whether the site still renders this course through
+// its own hand-made card.
+func HasHandMadeCard(courseID string) bool {
+	return HandMadeCards[courseID]
 }
 
 // Formats and Languages back the form <select>s; Statuses is what the

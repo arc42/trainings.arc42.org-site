@@ -99,12 +99,17 @@ func renderCourseScalars(c model.Course, indent string) string {
 	put("id", c.ID)
 	put("short_title", c.ShortTitle)
 	put("title", c.Title)
-	if c.Blurb != "" {
-		b.WriteString(indent + "  blurb: >-\n")
-		for _, line := range wrapWords(c.Blurb, 68) {
+	putFolded := func(key, text string) {
+		if text == "" {
+			return
+		}
+		b.WriteString(indent + "  " + key + ": >-\n")
+		for _, line := range wrapWords(text, 68) {
 			b.WriteString(indent + "    " + line + "\n")
 		}
 	}
+	putFolded("blurb_de", c.BlurbDE)
+	putFolded("blurb_en", c.BlurbEN)
 	put("certification", c.Certification)
 	// Omitted entirely when the course has no credits. The previous shape wrote
 	// "credits: null" to keep the key present for a string field; a mapping has
@@ -128,6 +133,11 @@ func renderCourseScalars(c model.Course, indent string) string {
 	put("url_en", c.URLEn)
 	if len(c.Trainers) > 0 {
 		b.WriteString(indent + "  trainers: " + fmtList(c.Trainers) + "\n")
+	}
+	// An empty list is invalid in the data file ("absent" means every site),
+	// so it is left out rather than written as [].
+	if len(c.ShowOn) > 0 {
+		b.WriteString(indent + "  show_on: " + fmtList(c.ShowOn) + "\n")
 	}
 	return b.String()
 }

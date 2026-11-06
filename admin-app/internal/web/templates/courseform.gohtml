@@ -8,6 +8,7 @@
 
 {{template "problems" .Problems}}
 {{template "warnings" .Warnings}}
+{{template "notes" .Notes}}
 
 <form method="post" action="/courses/{{if .IsNew}}new{{else}}{{.Course.ID}}{{end}}" class="detail">
 
@@ -24,7 +25,7 @@
       <input name="short_title" value="{{.Course.ShortTitle}}" required
              aria-describedby="st-hint" placeholder="e.g. MSA">
       <small id="st-hint" class="hint">Used where space is tight: the dates table
-        and the timeline cards.</small>
+        and the home page cards.</small>
     </label>
     <label>Full title <span class="req" aria-hidden="true">*</span>
       <input name="title" value="{{.Course.Title}}" required
@@ -52,13 +53,49 @@
 
   {{template "trainers" dict "Selected" .Course.Trainers "Known" .KnownTrainers "Other" .OtherTrainers}}
 
+  {{/* Same pattern as the trainer roster: known sites as checkboxes, the
+       rest typed in. Unticked means every site, which is why there is no
+       "all sites" box: the YAML leaves show_on out, and an empty list would
+       mean a course shown nowhere. */}}
+  {{$shown := .Course.ShowOn}}
+  <fieldset class="group" aria-describedby="show-on-hint">
+    <legend>Shown on</legend>
+    {{/* No id on the first line on purpose: form.js folds every .hint[id]
+         behind a "?", and what an empty group means has to stay in view, or
+         unticking everything reads as "hide this course". */}}
+    <p class="hint">No box ticked: every site shows this course. trainings.arc42.org always shows every course.</p>
+    <p class="hint" id="show-on-hint">Tick the sites that should advertise this
+      course. A site not in the list goes in the last field.</p>
+    <ul class="checks">
+      {{range .KnownSites}}
+      <li><label class="check">
+        <input type="checkbox" name="show_on" value="{{.}}" {{if has $shown .}}checked{{end}}>
+        <span>{{.}}</span>
+      </label></li>
+      {{end}}
+    </ul>
+    <label>Other sites <small>comma-separated</small>
+      <input name="show_on_other" value="{{join .OtherSites ", "}}"
+             placeholder="e.g. www.example.org">
+    </label>
+  </fieldset>
+
+  {{/* One field per language, because the data-driven card shows the text in
+       the page's language and cannot tell which language a single text is in.
+       Either may stay empty: the card then shows the other one. */}}
   <fieldset class="group">
     <legend>Description</legend>
-    <label>Blurb
-      <textarea name="blurb" rows="4" aria-describedby="blurb-hint"
-                placeholder="e.g. Two expert trainers at all times, highly practical and pragmatic.">{{.Course.Blurb}}</textarea>
-      <small id="blurb-hint" class="hint">Two or three sentences. Appears on the
-        timeline card under the course name.</small>
+    <label>Description (German)
+      <textarea name="blurb_de" rows="4" aria-describedby="blurb-de-hint"
+                placeholder="e.g. Zwei erfahrene Trainer, durchgehend praxisnah und pragmatisch.">{{.Course.BlurbDE}}</textarea>
+      <small id="blurb-de-hint" class="hint">Two or three sentences in German.
+        Appears on the home page cards under the course name.</small>
+    </label>
+    <label>Description (English)
+      <textarea name="blurb_en" rows="4" aria-describedby="blurb-en-hint"
+                placeholder="e.g. Two expert trainers at all times, highly practical and pragmatic.">{{.Course.BlurbEN}}</textarea>
+      <small id="blurb-en-hint" class="hint">The same in English. If only one of
+        the two is filled in, both home pages show that one.</small>
     </label>
     <div class="row">
       <label>Certification

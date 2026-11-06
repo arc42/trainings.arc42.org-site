@@ -23,9 +23,11 @@ scheduler; a cron-job.org job pings `/healthz` then).
 
 Everything runs in Docker — no local Ruby needed. `make help` lists every
 target; [README §Local development](/README.md#local-development) explains them.
-The five that matter: `make dev` (server on :4260), `make site`, `make
+The ones that matter: `make dev` (server on :4260), `make site`, `make
 check-links` (html-proofer), `make app-check` and `make reg-check` (the Go
-tests, vet and gofmt that CI gates each app's deploy on).
+tests, vet and gofmt that CI gates each app's deploy on), plus `make
+check-cards` (every upcoming date has a card on both home pages) and `make
+check-consumers-test` (offline test of the consumer check).
 
 There is **no unit-test suite for the site**. Verification is `make site` plus
 assertions against the built HTML in `_site/`, and `make check-links`. When you
@@ -33,8 +35,8 @@ change a template, grep the built output to prove the change — do not claim a
 Liquid change works because it looks right in the source.
 
 `ruby scripts/validate_trainings.rb` validates `_data/trainings.yml`; CI runs it
-on changes to that file, the schema, `scripts/**` and the two registration
-includes (`.github/workflows/validate-trainings.yml`).
+on every pull request, and on pushes that change that file, the schema,
+`scripts/**` or the includes (`.github/workflows/validate-trainings.yml`).
 
 ## Contracts that break silently
 
@@ -52,9 +54,11 @@ and is wrong anyway.
   reaches the back office. Never decorate it; language hints go in the label.
 - **`_data/trainings.yml` is the single source of truth** for dates, and the
   admin app writes it by pull request. Booking codes must stay unique.
-- **No prose in `_data/trainings.yml`.** Every value there is rendered on the
-  German *and* the English pages, so a hand-written sentence is wrong on half
-  of them. `price`, `credit_points` and `seats_limited` are numbers and flags;
+- **No prose in `_data/trainings.yml` without a stated language.** Every plain
+  value there is rendered on the German *and* the English pages, so a
+  hand-written sentence is wrong on half of them. The one exception is the
+  description, which exists per language: `blurb_de` / `blurb_en` (the old
+  single `blurb` key is retired). `price`, `credit_points` and `seats_limited` are numbers and flags;
   the wording is built per language by `_includes/price-label.html`,
   `credits-label.html` and `money.html`. The retired string keys `pricing`,
   `credits` and `few_seats` are rejected by name in
@@ -71,18 +75,23 @@ and is wrong anyway.
   types (ADR-0004: additive is free, changing an existing field is not). Never
   "clean up" by deleting them, and never turn them back into stored data: they
   are computed against the build date, which is what stops them going stale.
-  An expired `early_bird` is omitted from the feed entirely.
-- **A card template's name is derived, not chosen.** `_includes/timeline_auto.html`
-  builds the type as `<course id>`, plus `_online` when `format: online`, and
-  `timeline_course.html` dispatches on it. An unknown type falls through to an
-  HTML comment: the date validates, publishes to `/api/trainings.json`, and is
-  invisible on both home pages. `improve-apr-2027` shipped that way. So a new
-  course, or a course's first online date, needs `timeline_<id>.html` /
-  `timeline_<id>_online.html` **and** a `when` case, before the date exists.
-  Two guardrails now enforce it: `scripts/validate_trainings.rb` checks the
-  actual `_includes/` directory and fails CI, and the admin app warns on the
-  form from the mirrored lists in `admin-app/internal/model/model.go` (keep
-  those in step when adding a course).
+  `blurb` joins them: it is generated from `blurb_en`, else `blurb_de`, else
+  omitted. An expired `early_bird` is omitted from the feed entirely.
+- **A new course needs no template.** `_includes/timeline_card.html` is the
+  data-driven card; `timeline_course.html` falls back to it for any course
+  without a hand-made `timeline_<id>[_online].html` (today `msa`, `improve`,
+  `req4arc`, `adoc`). A hand-made template overrides the data-driven card for
+  its course while it exists, and ignores `blurb_de`/`blurb_en`.
+  `scripts/validate_trainings.rb` no longer looks at `_includes/`; instead
+  `make check-cards` (`scripts/check_home_cards.rb`, a CI step) fails when an
+  upcoming date has no card on a built home page. The admin app keeps a copy
+  of the hand-made list in `admin-app/internal/model/model.go`
+  (`HandMadeCards`): shrink it when a course is migrated to the standard card.
+- **`show_on` is optional and the feed publishes it.** A list of consumer site
+  names; absent means every site, `[]` is an error. trainings.arc42.org ignores
+  it. The names are spelled once in the schema and mirrored in
+  `model.KnownSites`; `scripts/verify_consumers.sh` expects a course only on
+  the sites `show_on` lists (`make check-consumers-test` is its offline test).
 - **Jekyll includes share the caller's scope.** `assign` inside an include
   cannot shadow a caller's `for`-loop item, so every variable in
   `money.html`, `price-label.html` and `credits-label.html` is prefixed
