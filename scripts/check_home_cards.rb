@@ -21,7 +21,9 @@ pages.each_key do |p|
   pages[p] = File.read(p)
 end
 
-courses = YAML.safe_load(File.read(data), permitted_classes: [Date])["courses"] || []
+doc = YAML.safe_load(File.read(data), permitted_classes: [Date])
+courses = doc.is_a?(Hash) ? doc["courses"] : nil
+abort "#{data}: no `courses` list found (key missing, renamed or not an array)" unless courses.is_a?(Array)
 errors = []
 count = 0
 courses.each do |c|
@@ -29,13 +31,17 @@ courses.each do |c|
     next if d["status"] == "cancelled" || d["end"].to_s < today
     count += 1
     pages.each do |path, html|
-      next if html.include?(%(id="#{d["id"]}"))
+      # Left-anchored: registration-form.html emits data-id="<id>" per date.
+      next if html.match?(/(?<![\w-])id="#{Regexp.escape(d["id"].to_s)}"/)
       errors << "date #{d["id"]} (#{c["short_title"]}, #{d["start"]}) is not on #{path}"
     end
   end
 end
 
-if errors.empty?
+if count.zero?
+  # Legitimate: the home pages then show the "no dates scheduled" text.
+  warn "WARNING: no upcoming dates - nothing to check"
+elsif errors.empty?
   puts "OK: #{count} dates on both home pages"
 else
   puts errors
