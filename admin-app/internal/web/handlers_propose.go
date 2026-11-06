@@ -273,7 +273,7 @@ func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request, sess Sess
 		"Diff":          safeDiff(unifiedDiff(before, d.Doc.Bytes())),
 		"EntryProblems": entries,
 		"AppFaults":     faults,
-		"Notes":         undatedCourseNotes(d),
+		"Notes":         courseNotes(d),
 		"PRTitle":       prTitle(d.Changes),
 		"PRBody":        prBody(d.Changes, sess.Login),
 	})
@@ -325,25 +325,35 @@ func (s *Server) schemaProblems(r *http.Request, client *gh.Client, d *Draft) []
 	return problems
 }
 
-// undatedCourseNotes is an info line for each course this draft adds without a
-// date. Not a problem and not a warning: a course is entered before its first
-// date, and the operator only needs to know it will not show yet.
-func undatedCourseNotes(d *Draft) []string {
+// courseNotes are the info lines for each course this draft adds or changes:
+// the course form's own notes (validate.CourseNotes), and for a new course
+// without a date, that it will not show yet. Not problems and not warnings.
+// The course form shows its notes only when it is shown again, and a save
+// without warnings goes straight back to the list, so this page is the one
+// place a newly created course's notes are sure to be seen.
+func courseNotes(d *Draft) []string {
 	m := d.Doc.Model()
 	var notes []string
 	for _, ch := range d.Changes {
-		if ch.Kind != "added" || ch.AfterCourse == nil {
+		if ch.AfterCourse == nil {
 			continue
 		}
 		c, ok := m.FindCourse(ch.AfterCourse.ID)
-		if !ok || len(c.Dates) > 0 {
+		if !ok {
 			continue
 		}
 		name := c.ShortTitle
 		if name == "" {
 			name = c.ID
 		}
-		notes = append(notes, name+" has no dates yet. It will appear on the home pages once it has one.")
+		for _, n := range validate.CourseNotes(c) {
+			notes = append(notes, name+" — "+n)
+		}
+		// A course is entered before its first date; the operator only needs
+		// to know it will not show yet.
+		if ch.Kind == "added" && len(c.Dates) == 0 {
+			notes = append(notes, name+" has no dates yet. It will appear on the home pages once it has one.")
+		}
 	}
 	return notes
 }
@@ -387,7 +397,7 @@ func (s *Server) handleProposeSubmit(w http.ResponseWriter, r *http.Request, ses
 	if entries, faults := s.proposeProblems(r, client, d); len(entries) > 0 {
 		s.render(w, "propose.gohtml", map[string]any{
 			"Title": "Fix these first", "Draft": d, "Login": sess.Login, "Wide": true,
-			"EntryProblems": entries, "AppFaults": faults, "Notes": undatedCourseNotes(d),
+			"EntryProblems": entries, "AppFaults": faults, "Notes": courseNotes(d),
 			"PRTitle": r.PostFormValue("title"), "PRBody": r.PostFormValue("body"),
 		})
 		return

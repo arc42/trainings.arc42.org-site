@@ -810,3 +810,31 @@ func TestTwoDatesInOneMonthBothProposeAfterTheCourse(t *testing.T) {
 		t.Errorf("opened %d PRs, want exactly 1:\n%s", f2.Proposals(), body)
 	}
 }
+
+// A warning-free course save goes straight back to the course list, so the
+// course form's notes ("only a German description …") were never seen when a
+// course was created. The review page repeats them for every course the
+// draft adds or changes.
+func TestProposeShowsTheCourseNotes(t *testing.T) {
+	gh, _ := fakeGitHubFiles(t, map[string][]byte{
+		"_data/trainings.yml":       []byte(fixtureYAML),
+		"api/trainings.schema.json": realSchema(t),
+	})
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+	if rec, _, ok := postCourse(t, s, "/courses/new", newMASForm()); !ok {
+		t.Fatalf("course not saved:\n%s", rec.Body.String())
+	}
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
+	notes := between(rec.Body.String(), `<div class="notes"`, "</div>")
+	for _, want := range []string{
+		"MAS — Only a German description: the English home page shows it in German too.",
+		"MAS has no dates yet.",
+	} {
+		if !strings.Contains(notes, want) {
+			t.Errorf("the notes lack %q:\n%s", want, rec.Body.String())
+		}
+	}
+}
