@@ -832,3 +832,9 @@ table.report-fields tbody tr:last-child td { border-bottom: none; }
   font-size: 0.85rem;
   line-height: 1.5;
 }
+
+/* The course ID on the course form: a result made from the short title, not
+   a field. Shown in the face ids are typed in, with its hint always open. */
+.derived { margin: 0; font-weight: 600; }
+.derived output { font-family: var(--mono, ui-monospace, monospace); font-weight: 400; }
+.derived .hint { display: block; }

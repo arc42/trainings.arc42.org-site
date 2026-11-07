@@ -34,7 +34,9 @@ type formField struct {
 // here too. TestFormFieldsCoverForms enforces it, both ways.
 var formFields = map[string]formField{
 	// courseform.gohtml
-	"id":                          {"id", "Course ID", mustBeAnID},
+	// The course form has no id field: the id is made from the short title
+	// (web.courseIDFrom), so the short title is where a wrong one is fixed.
+	"id":                          {"short_title", "Short title", "makes a course ID that is not lower-case letters, digits and hyphens"},
 	"short_title":                 {"short_title", "Short title", ""},
 	"title":                       {"title", "Full title", ""},
 	"url":                         {"url", "Course URL", mustBeHTTPS},
