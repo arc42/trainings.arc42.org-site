@@ -14,9 +14,10 @@ header:
 ---
 
 <!-- course-actions has no CSS of its own on purpose: the .btn classes carry the styling (spec D6).
-     No "Course description (PDF)" button yet: there is no flyer PDF for this course. -->
+     The flyer is systems42's and lives on systems42.org: linked, not copied. -->
 <p class="course-actions">
   <a class="btn btn--primary" href="/registration/">Register</a>
+  <a class="btn btn--inverse" href="https://systems42.org/assets/flyer-MAISPEC-systems42-EN.pdf" target="_blank" rel="noopener noreferrer nofollow">Course description (PDF)</a>
   <a class="btn btn--inverse" href="/#training-dates">Dates</a>
   <a class="btn btn--inverse" href="https://www.arc42.de/terms-en/">Terms</a>
 </p>
