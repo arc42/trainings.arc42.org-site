@@ -438,7 +438,7 @@ have passed.
 
 Course descriptions in German live on arc42.de (`/info-<id>/`). English
 descriptions live here, one page per course, and are maintained by hand —
-there is deliberately no DE↔EN sync. To add one (today only `msa` has one):
+there is deliberately no DE↔EN sync. To add one (today `msa` and `maispec` have one):
 
 1. Create `_pages/courses/<id>.md` (`<id>` = the course id in
    `_data/trainings.yml`). Copy the front matter of `_pages/courses/msa.md`;
