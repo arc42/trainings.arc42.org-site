@@ -14,6 +14,10 @@ import (
 // typed twice. The course form now asks for the short title only and makes the
 // id from it, for as long as the id may still change.
 
+// followOutput is the course ID output marked for form.js to keep in step
+// with the short title.
+var followOutput = regexp.MustCompile(`<output[^>]*id="c-id"[^>]*data-follow`)
+
 func TestCourseIDFromShortTitle(t *testing.T) {
 	for in, want := range map[string]string{
 		"MAISPEC":       "maispec",
@@ -114,7 +118,7 @@ func TestShortTitleOfAnotherCourse(t *testing.T) {
 		t.Fatalf("a second course msa was saved:\n%s", d.Doc.Bytes())
 	}
 	problems := between(rec.Body.String(), `class="problems"`, "</div>")
-	if !strings.Contains(problems, "<b>Short title</b> — makes the course ID msa, which another course already has") {
+	if !strings.Contains(problems, "<b>Short title</b> — makes the course ID msa, which MSA already has") {
 		t.Errorf("no plain duplicate problem on the short title:\n%s", problems)
 	}
 }
@@ -135,6 +139,9 @@ func TestDraftOnlyCourseFollowsItsShortTitle(t *testing.T) {
 	}
 	if !strings.Contains(body, "only in your draft") {
 		t.Errorf("the hint does not say why the id still follows the short title:\n%s", body)
+	}
+	if !followOutput.MatchString(body) {
+		t.Errorf("form.js is not told that the id still follows the short title:\n%s", body)
 	}
 
 	// Without scripting the URL arrives as it was stored.
@@ -166,6 +173,11 @@ func TestCourseWithDatesKeepsItsIDWhenTheShortTitleChanges(t *testing.T) {
 		t.Fatalf("date not added:\n%s", rec.Body.String())
 	}
 
+	// form.js must not preview an id the server will not store.
+	if body := send(t, s, http.MethodGet, "/courses/maispec", nil).Body.String(); followOutput.MatchString(body) {
+		t.Errorf("the fixed id of a course with dates is marked as following the short title:\n%s", body)
+	}
+
 	form := courseForm("MAI-Spec")
 	form.Set("confirm_warnings", "1")
 	if rec := send(t, s, http.MethodPost, "/courses/maispec", form); rec.Code != http.StatusSeeOther {
@@ -186,6 +198,12 @@ func TestCourseOnMainKeepsItsIDWhenTheShortTitleChanges(t *testing.T) {
 	body := send(t, s, http.MethodGet, "/courses/msa", nil).Body.String()
 	if !regexp.MustCompile(`<output[^>]*id="c-id"[^>]*>msa</output>`).MatchString(body) {
 		t.Errorf("the fixed course ID is not shown:\n%s", body)
+	}
+	if followOutput.MatchString(body) {
+		t.Errorf("the id of a published course is marked as following the short title:\n%s", body)
+	}
+	if !strings.Contains(body, "Fixed: the course is published") {
+		t.Errorf("the hint does not say why the id is fixed:\n%s", body)
 	}
 
 	form := courseForm("MSA Plus")
@@ -216,6 +234,11 @@ func TestFormJSMakesTheCourseIDLikeTheServer(t *testing.T) {
 	}
 	inputs := []string{"MAISPEC", "Req4Arc", " MAI Spec ", "MAI_Spec", "AI/Spec", "C++ Basics",
 		"--X--", "Prüfung", "GRÖSSE", "Größe", "Café Èclair", "iSAQB: Expert", "!!!", "日本", ""}
+	// Every letter of the two tables, alone and between others, in both
+	// cases: a typo in one table is a different id for that letter.
+	for _, l := range strings.Split("ä ö ü ß æ œ à á â ã å ç è é ê ë ì í î ï ñ ò ó ô õ ø ù ú û ý ÿ", " ") {
+		inputs = append(inputs, "x"+l+"x", "X"+strings.ToUpper(l)+"X")
+	}
 	in, _ := json.Marshal(inputs)
 	out, err := exec.Command(node, "-e", string(fn)+
 		"console.log(JSON.stringify(JSON.parse(process.argv[1]).map(courseIdFrom)))", string(in)).CombinedOutput()

@@ -200,13 +200,20 @@ func TestCourseURLFollowsTheNormalisedID(t *testing.T) {
 		}
 	}
 
-	// A URL the operator chose is theirs, and is left alone.
-	form := courseForm("Flex")
-	form.Set("url", "https://www.arc42.de/info-FLEX-kurs/")
-	send(t, s, http.MethodPost, "/courses/new", form)
-	d, _ := s.drafts.Get("sid")
-	if c, _ := d.Doc.Model().FindCourse("flex"); c.URL != "https://www.arc42.de/info-FLEX-kurs/" {
-		t.Errorf("a hand-chosen URL was rewritten to %q", c.URL)
+	// A URL the operator chose is theirs, and is left alone, also one the
+	// course id could be made of: info-mai.spec/ is a page name, not a
+	// spelling of mai-spec.
+	for short, u := range map[string]string{
+		"Flex":    "https://www.arc42.de/info-FLEX-kurs/",
+		"MAI Pro": "https://www.arc42.de/info-mai.pro/",
+	} {
+		form := courseForm(short)
+		form.Set("url", u)
+		send(t, s, http.MethodPost, "/courses/new", form)
+		d, _ := s.drafts.Get("sid")
+		if c, _ := d.Doc.Model().FindCourse(courseIDFrom(short)); c.URL != u {
+			t.Errorf("the hand-chosen URL %s was rewritten to %q", u, c.URL)
+		}
 	}
 }
 

@@ -643,7 +643,7 @@ func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
 		"short_title": {"MSA"}, "title": {"Dup"},
 		"url": {"https://example.org/x"}, "trainer": {"Dr. Gernot Starke"},
 	}))
-	if !strings.Contains(rec.Body.String(), "<b>Short title</b> — makes the course ID msa, which another course already has") {
+	if !strings.Contains(rec.Body.String(), "<b>Short title</b> — makes the course ID msa, which MSA already has") {
 		t.Errorf("duplicate course id was accepted:\n%s", rec.Body.String())
 	}
 
@@ -1111,7 +1111,8 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 			"availability-hint", "price-hint", "alumni-hint", "currency-hint", "eb-hint", "ebu-hint",
 		}},
 		{"/courses/new", []string{
-			"st-hint", "ctitle-hint", // the course ID is no field: its hint stays open "curl-hint", "url-en-hint", "blurb-de-hint",
+			// No "cid-hint": the course ID is no field, and its hint stays open.
+			"st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-de-hint",
 			"blurb-en-hint", "show-on-hint",
 			"cert-hint", "credits-hint",
 		}},

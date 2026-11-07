@@ -34,7 +34,8 @@
         dates yet.{{end}}
         {{else if .DraftOnly}}Fixed while the course has dates, which reference
         it — remove its dates to change it.
-        {{else}}Fixed — the dates below reference it.{{end}}</small>
+        {{else}}Fixed: the course is published, and links and booking codes
+        use it.{{end}}</small>
     </p>
     <label>Full title <span class="req" aria-hidden="true">*</span>
       <input name="title" value="{{.Course.Title}}" required

@@ -196,8 +196,10 @@ func courseProblems(c model.Course, existing []model.Course, storedID string) []
 		problems = append(problems, validate.Problem{Field: "courses.id", Message: msg})
 	}
 	if courseIDTaken(existing, c.ID, storedID) {
-		problems = append(problems, validate.Problem{Field: "courses.id",
-			Message: "makes the course ID " + c.ID + ", which another course already has; choose a different short title"})
+		other, _ := model.Trainings{Courses: existing}.FindCourse(c.ID)
+		problems = append(problems, validate.Problem{Field: "courses.id", Message: fmt.Sprintf(
+			"makes the course ID %s, which %s already has. Two courses need short titles that differ in their letters or digits, e.g. by an added word",
+			c.ID, other.ShortTitle)})
 	}
 	for _, f := range []struct{ name, val string }{
 		{"short_title", c.ShortTitle}, {"title", c.Title}, {"url", c.URL},
@@ -245,16 +247,17 @@ const courseURLPrefix = "https://www.arc42.de/info-"
 // form.js derives the URL from the id it makes of the short title. Without
 // scripting the operator types the URL, likely as the short title is spelled
 // (info-Mai Spec/ for an id mai-spec), and a renamed draft course still sends
-// the URL of its old id (storedID). A URL that is the derivation of either is
-// rewritten to the stored id's; any other URL is the operator's choice and
-// left alone.
+// the URL of its old id (storedID). Those two are rewritten to the stored
+// id's. The match is normaliseID's, deliberately narrower than courseIDFrom:
+// info-mai.spec/ is a page name someone chose, not a spelling of mai-spec,
+// and is left alone like any other URL.
 func followID(u, id, storedID string) string {
 	rest, ok := strings.CutPrefix(u, courseURLPrefix)
 	if !ok {
 		return u
 	}
 	typed, ok := strings.CutSuffix(rest, "/")
-	if !ok || typed == id || (courseIDFrom(typed) != id && (storedID == "" || typed != storedID)) {
+	if !ok || typed == id || (normaliseID(typed) != id && (storedID == "" || typed != storedID)) {
 		return u
 	}
 	return courseURLPrefix + id + "/"
