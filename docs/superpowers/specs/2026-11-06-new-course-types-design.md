@@ -1,7 +1,11 @@
 # New course types without a developer
 
 **Date:** 2026-11-06
-**Status:** implemented on branch feature/new-course-types (6 Nov 2026)
+**Status:** implemented and merged (PR #79, 6 Nov 2026)
+**Course renamed (7 Nov 2026):** the course written as MAS / `mas` throughout
+this document goes live as **`maispec`** (booking codes `YY-MM MAISPEC`),
+because `mas` is easily misread as `msa`. The text below keeps the planning
+name; read `maispec` wherever it says MAS.
 **Scope:** `admin-app/` (pre-PR check, messages, warnings, course form),
 the site's timeline cards (`_includes/timeline_*.html`), `_data/trainings.yml`,
 `api/trainings.json` and `api/trainings.schema.json` (additive fields, one
