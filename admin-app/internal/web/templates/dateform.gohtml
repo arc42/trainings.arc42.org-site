@@ -16,7 +16,7 @@
       <select name="course_id" required>
         {{$cid := .CourseID}}
         {{range .Courses}}{{$d := defaultsOf .}}<option value="{{.ID}}"
-          data-code-token="{{codeToken .ID}}"
+          data-code-token="{{codeToken .}}"
           data-city="{{$d.City}}" data-country="{{$d.Country}}"
           data-price-amount="{{with $d.Price}}{{.Amount}}{{end}}"
           data-price-currency="{{with $d.Price}}{{.Currency}}{{end}}"
@@ -134,7 +134,7 @@
     </label>
     <label>Booking code
       <input name="code" id="f-code" value="{{.Date.Code}}"
-             aria-describedby="code-hint" placeholder="{{codeMask .CourseID}}"
+             aria-describedby="code-hint" placeholder="{{.Taken.CodeMask .CourseID}}"
              data-taken="{{takenJSON .Taken.Codes}}">
       <small id="code-hint" class="hint">Computed from the course, the year and
         month of the first day and the language ("-EN" for English), e.g.

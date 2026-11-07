@@ -1,6 +1,7 @@
 package model
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -21,32 +22,40 @@ import (
 // starting 2027-11-30 but booked as "27-12 MSA") is a genuine exception rather
 // than a typo — which is why the form offers an override instead of no field.
 
-// codeTokens overrides the default upper-cased course id where the published
-// booking codes disagree with it. Like KnownTrainers this is a convenience, not
-// a constraint — a course missing from here still derives a usable code, and
-// the operator can always overwrite the result.
-var codeTokens = map[string]string{
-	"req4arc": "Req4Arc",
-}
+// tokenShape is a short title that can stand in a booking code as it is:
+// letters and digits, words joined by single hyphens. No space, because the
+// space in "26-12 MSA" separates the month from the course.
+var tokenShape = regexp.MustCompile(`^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$`)
 
 // CodeToken is the course's abbreviation as it appears inside a booking code.
-func CodeToken(courseID string) string {
-	if t, ok := codeTokens[courseID]; ok {
-		return t
+// It is the short title, spelled as the operator spelled it ("Req4Arc"), as
+// long as the short title is the course id in other letter case: the case of
+// every course there is, because the id is made from the short title. When it
+// is not (a short title edited after the id was fixed, or one with a space)
+// the token is the id upper-cased, so new codes do not wander with the
+// wording. There used to be a table here with Req4Arc as its one entry; the
+// data already said the same.
+func CodeToken(c Course) string {
+	if tokenShape.MatchString(c.ShortTitle) && strings.ToLower(c.ShortTitle) == c.ID {
+		return c.ShortTitle
 	}
-	return strings.ToUpper(courseID)
+	return strings.ToUpper(c.ID)
 }
 
 // BookingCode derives the Formspark option value: "26-12 MSA", with an "-EN"
 // suffix when the course is taught in English. It returns "" when it has too
 // little to work with, so a half-filled form prefills nothing rather than
 // something wrong.
-func BookingCode(courseID, start, language string) string {
-	if courseID == "" || len(start) != len("YYYY-MM-DD") {
+func BookingCode(c Course, start, language string) string {
+	return bookingCode(CodeToken(c), start, language)
+}
+
+func bookingCode(token, start, language string) string {
+	if token == "" || len(start) != len("YYYY-MM-DD") {
 		return ""
 	}
 	year, month := start[2:4], start[5:7]
-	code := year + "-" + month + " " + CodeToken(courseID)
+	code := year + "-" + month + " " + token
 	if language == "en" {
 		code += "-EN"
 	}
@@ -100,16 +109,20 @@ func NextFree(base string, taken map[string]bool) string {
 }
 
 // Taken is the date ids and booking codes the file already uses, except those
-// of the date being edited: its own values are not a collision.
+// of the date being edited: its own values are not a collision. Tokens is
+// each course's CodeToken by id, so that what derives a date's code from a
+// course id alone (the date form, its warnings) spells it like the course.
 type Taken struct {
 	IDs, Codes map[string]bool
+	Tokens     map[string]string
 }
 
 // TakenExcept collects every date's id and code, leaving out the date with id
 // except ("" while creating one).
 func (t Trainings) TakenExcept(except string) Taken {
-	tk := Taken{IDs: map[string]bool{}, Codes: map[string]bool{}}
+	tk := Taken{IDs: map[string]bool{}, Codes: map[string]bool{}, Tokens: map[string]string{}}
 	for _, c := range t.Courses {
+		tk.Tokens[c.ID] = CodeToken(c)
 		for _, d := range c.Dates {
 			if except != "" && d.ID == except {
 				continue
@@ -125,9 +138,19 @@ func (tk Taken) DateID(courseID, start, language string) string {
 	return NextFree(DateID(courseID, start, language), tk.IDs)
 }
 
-// BookingCode is the package's BookingCode, moved on to the first free variant.
+// BookingCode is the package's BookingCode for the course with this id, moved
+// on to the first free variant.
 func (tk Taken) BookingCode(courseID, start, language string) string {
-	return NextFree(BookingCode(courseID, start, language), tk.Codes)
+	return NextFree(bookingCode(tk.token(courseID), start, language), tk.Codes)
+}
+
+// token is the course's CodeToken, or for an id no course has (yet), the id
+// upper-cased: the same fallback CodeToken uses.
+func (tk Taken) token(courseID string) string {
+	if t, ok := tk.Tokens[courseID]; ok {
+		return t
+	}
+	return strings.ToUpper(courseID)
 }
 
 // RegistrationURL derives the public link for a date. Every published date
@@ -205,10 +228,11 @@ func IDMask(courseID string) string {
 	return courseID + "-mmm-yyyy"
 }
 
-// CodeMask is the booking code shape: "YY-MM Req4Arc".
-func CodeMask(courseID string) string {
+// CodeMask is the booking code shape for the course with this id:
+// "YY-MM Req4Arc".
+func (tk Taken) CodeMask(courseID string) string {
 	if courseID == "" {
 		return "YY-MM CODE"
 	}
-	return "YY-MM " + CodeToken(courseID)
+	return "YY-MM " + tk.token(courseID)
 }

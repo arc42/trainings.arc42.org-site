@@ -190,7 +190,7 @@
         (language.value === "en" ? "-en" : ""), takenIDs);
     };
 
-    // Mirrors model.IDMask / model.CodeMask. The server renders these for the
+    // Mirrors model.IDMask / Taken.CodeMask. The server renders these for the
     // first paint; here they follow the dropdown, because a date id reading
     // "msa-..." while the selected course is Req4Arc is worse than no hint at
     // all. Masks, not examples: both fields fill themselves in the moment a

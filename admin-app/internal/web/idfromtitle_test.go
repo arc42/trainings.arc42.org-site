@@ -3,10 +3,15 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"arc42-trainings-admin/internal/model"
+	"arc42-trainings-admin/internal/yamldoc"
 )
 
 // A course's id and its short title were the same word in every course there
@@ -252,6 +257,48 @@ func TestFormJSMakesTheCourseIDLikeTheServer(t *testing.T) {
 	for i, v := range inputs {
 		if got[i] != courseIDFrom(v) {
 			t.Errorf("%q: form.js %q, server %q", v, got[i], courseIDFrom(v))
+		}
+	}
+}
+
+// The booking code of a new course's date is spelled like its short title,
+// with no table of exceptions: MAI-Spec dates are "27-03 MAI-Spec".
+func TestNewCourseDatesSpellTheShortTitle(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+	send(t, s, http.MethodPost, "/courses/new", courseForm("MAI-Spec"))
+
+	if body := send(t, s, http.MethodGet, "/dates/new", nil).Body.String(); !strings.Contains(body, `data-code-token="MAI-Spec"`) {
+		t.Errorf("the course option does not carry the short title as token:\n%s", body)
+	}
+	if rec := send(t, s, http.MethodPost, "/dates/new", dateFormFor("mai-spec")); rec.Code != http.StatusSeeOther {
+		t.Fatalf("date not added:\n%s", rec.Body.String())
+	}
+	d, _ := s.drafts.Get("sid")
+	c, _ := d.Doc.Model().FindCourse("mai-spec")
+	if len(c.Dates) != 1 || c.Dates[0].Code != "27-03 MAI-Spec" {
+		t.Errorf("dates = %+v, want one coded 27-03 MAI-Spec", c.Dates)
+	}
+}
+
+// What made the old exception table unnecessary, checked against the real
+// file: every published booking code carries its course's derived token.
+func TestPublishedCodesCarryTheDerivedToken(t *testing.T) {
+	src, err := os.ReadFile(filepath.Join("..", "..", "..", "_data", "trainings.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc, err := yamldoc.Parse(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range doc.Model().Courses {
+		token := model.CodeToken(c)
+		for _, d := range c.Dates {
+			if !strings.Contains(d.Code, token) {
+				t.Errorf("%s: code %q does not carry the token %q", c.ID, d.Code, token)
+			}
 		}
 	}
 }
