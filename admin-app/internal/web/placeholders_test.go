@@ -72,15 +72,18 @@ func isMask(v string) bool {
 // have to actually look like masks — including for a course whose booking
 // token is not just its id upper-cased, and for the blank new-date form.
 func TestTheDerivedMasksAreMasks(t *testing.T) {
+	taken := model.Trainings{Courses: []model.Course{
+		{ID: "msa", ShortTitle: "MSA"}, {ID: "req4arc", ShortTitle: "Req4Arc"},
+	}}.TakenExcept("")
 	for _, courseID := range []string{"", "msa", "req4arc"} {
 		if got := model.IDMask(courseID); !isMask(got) {
 			t.Errorf("IDMask(%q) = %q, which is not a recognised mask", courseID, got)
 		}
-		if got := model.CodeMask(courseID); !isMask(got) {
+		if got := taken.CodeMask(courseID); !isMask(got) {
 			t.Errorf("CodeMask(%q) = %q, which is not a recognised mask", courseID, got)
 		}
 	}
-	if got := model.CodeMask("req4arc"); got != "YY-MM Req4Arc" {
+	if got := taken.CodeMask("req4arc"); got != "YY-MM Req4Arc" {
 		t.Errorf("CodeMask should carry the course's own booking token, got %q", got)
 	}
 }

@@ -63,13 +63,18 @@ need neither a network nor a configuration file.
    propose* (the cross-field rules and the live schema, in plain words) on the
    draft with this one edit applied, and a problem with the course or date
    being saved stops the save on its form. Problems elsewhere in the draft do
-   not, unless this edit caused them. Ids are normalised rather than refused:
-   `MAISPEC` is saved as `maispec`, spaces and underscores become hyphens,
-   and only what is still not an id after that is a problem. A course added in
-   this draft keeps an editable id until it has dates, and can be removed from
-   the draft again, its dates with it, without discarding anything else. A
-   course on `main` keeps a fixed id and has no removal. The review page still
-   runs every check as the backstop.
+   not, unless this edit caused them. Date ids are normalised rather than
+   refused: capitals are lower-cased, spaces and underscores become hyphens,
+   and only what is still not an id after that is a problem. The course form
+   has no id field at all: the course id is made from the short title
+   (`MAISPEC` → `maispec`, `Req4Arc` → `req4arc`, `Prüfung` → `pruefung`,
+   any other run of non-letters one hyphen), shown live under it, and a
+   problem with it is reported on the short title. A course added in this
+   draft follows its short title until it has dates, and can be removed from
+   the draft again, its dates with it, without discarding anything else. After
+   that, and for every course on `main`, the id is fixed and editing the short
+   title changes only the text. A course on `main` has no removal. The review
+   page still runs every check as the backstop.
 
 4. **Review.** `GET /propose` re-reads the file from GitHub and shows a change
    report: one card per change, one row per field that actually moved, with the

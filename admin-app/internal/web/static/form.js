@@ -190,7 +190,7 @@
         (language.value === "en" ? "-en" : ""), takenIDs);
     };
 
-    // Mirrors model.IDMask / model.CodeMask. The server renders these for the
+    // Mirrors model.IDMask / Taken.CodeMask. The server renders these for the
     // first paint; here they follow the dropdown, because a date id reading
     // "msa-..." while the selected course is Req4Arc is worse than no hint at
     // all. Masks, not examples: both fields fill themselves in the moment a
@@ -279,20 +279,51 @@
     });
   });
 
-  /* ------------------------------------------------------- course form -- */
+  /* ------------------------------------------------------- course form --
+     The course ID is made from the short title while it may still change
+     (the output is marked data-follow); this shows it as it is typed, and
+     keeps a derived course URL in step. */
 
+  // Mirrors idLetters and courseIDFrom in checks.go: lower-case, spell out
+  // the letters an id cannot hold, every other run of anything outside a-z
+  // and 0-9 one hyphen, none at either end.
+  // TestFormJSMakesTheCourseIDLikeTheServer keeps the two in step.
+  var ID_LETTERS = {
+    "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss", "æ": "ae", "œ": "oe",
+    "à": "a", "á": "a", "â": "a", "ã": "a", "å": "a", "ç": "c",
+    "è": "e", "é": "e", "ê": "e", "ë": "e", "ì": "i", "í": "i", "î": "i", "ï": "i",
+    "ñ": "n", "ò": "o", "ó": "o", "ô": "o", "õ": "o", "ø": "o",
+    "ù": "u", "ú": "u", "û": "u", "ý": "y", "ÿ": "y"
+  };
+  function courseIdFrom(shortTitle) {
+    var spelled = shortTitle.toLowerCase().replace(/[^a-z0-9]/g, function (ch) {
+      return ID_LETTERS[ch] || ch;
+    });
+    return spelled.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  var shortTitle = document.getElementById("c-short");
   var cid = document.getElementById("c-id");
   var curl = document.getElementById("c-url");
-  if (cid && curl) {
-    // From the id the server will store, not the one in the field: with
-    // "Mai Spec" typed, the page is info-mai-spec/, never info-mai spec/.
-    // Mirrors followID in handlers_courses.go.
-    var derivedURL = function () {
-      var id = normaliseId(cid.value);
-      return id ? "https://www.arc42.de/info-" + id + "/" : "";
+  if (shortTitle && cid) {
+    var follows = cid.hasAttribute("data-follow");
+    var currentId = function () {
+      return follows ? courseIdFrom(shortTitle.value) : cid.textContent.trim();
     };
-    var urlState = claim(curl, derivedURL);
-    cid.addEventListener("input", function () { urlState.apply(); });
-    cid.addEventListener("change", function () { urlState.apply(); });
+    // From the id the server will store: "Mai Spec" has the page
+    // info-mai-spec/, never info-Mai Spec/. Mirrors followID in
+    // handlers_courses.go.
+    var urlState = curl && claim(curl, function () {
+      var id = currentId();
+      return id ? "https://www.arc42.de/info-" + id + "/" : "";
+    });
+    if (follows) {
+      var show = function () {
+        cid.textContent = currentId();
+        if (urlState) urlState.apply();
+      };
+      shortTitle.addEventListener("input", show);
+      show();
+    }
   }
 })();

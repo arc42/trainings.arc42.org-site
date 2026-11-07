@@ -596,7 +596,7 @@ func TestNewCourseFormRendersAndCreates(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(body, "New course") {
 		t.Fatalf("status %d, body:\n%s", rec.Code, body)
 	}
-	for _, want := range []string{`name="id"`, `name="short_title"`, `name="title"`,
+	for _, want := range []string{`name="short_title"`, `name="title"`,
 		`name="url"`, `name="trainer"`, `name="trainers_other"`, "</form>"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("new-course form is missing %s", want)
@@ -640,10 +640,10 @@ func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
 	// "msa" already exists in the fixture.
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", url.Values{
-		"id": {"msa"}, "short_title": {"Dup"}, "title": {"Dup"},
+		"short_title": {"MSA"}, "title": {"Dup"},
 		"url": {"https://example.org/x"}, "trainer": {"Dr. Gernot Starke"},
 	}))
-	if !strings.Contains(rec.Body.String(), "<b>Course ID</b> — msa is already used by another course") {
+	if !strings.Contains(rec.Body.String(), "<b>Short title</b> — makes the course ID msa, which MSA already has") {
 		t.Errorf("duplicate course id was accepted:\n%s", rec.Body.String())
 	}
 
@@ -658,11 +658,11 @@ func TestNewCourseRejectsDuplicateIDAndMissingTrainer(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", url.Values{
-		"short_title": {"FLEX"}, "title": {"Flexible"},
+		"short_title": {""}, "title": {"Flexible"},
 		"url": {"https://example.org/flex"}, "trainer": {"Dr. Gernot Starke"},
 	}))
-	if !strings.Contains(rec.Body.String(), "<b>Course ID</b> — must not be empty") {
-		t.Errorf("course without an id was accepted:\n%s", rec.Body.String())
+	if !strings.Contains(rec.Body.String(), "<b>Short title</b> — must not be empty") {
+		t.Errorf("course without a short title, and so without an id, was accepted:\n%s", rec.Body.String())
 	}
 }
 
@@ -1111,7 +1111,8 @@ func TestEveryRuleBearingFieldHasAHint(t *testing.T) {
 			"availability-hint", "price-hint", "alumni-hint", "currency-hint", "eb-hint", "ebu-hint",
 		}},
 		{"/courses/new", []string{
-			"cid-hint", "st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-de-hint",
+			// No "cid-hint": the course ID is no field, and its hint stays open.
+			"st-hint", "ctitle-hint", "curl-hint", "url-en-hint", "blurb-de-hint",
 			"blurb-en-hint", "show-on-hint",
 			"cert-hint", "credits-hint",
 		}},

@@ -161,10 +161,10 @@ func (s *Server) handleCourseForm(w http.ResponseWriter, r *http.Request, sess S
 }
 
 // courseIDState is what the course form needs to know about the id of the
-// stored course storedID: whether it may still change, and which hint says
-// why or why not. StoredID is the form's own address, which is not the id
-// field once a rename is being tried: posting a failed rename back to the new
-// id would edit a course that does not exist.
+// stored course storedID: whether it still follows the short title, and which
+// hint says why or why not. StoredID is the form's own address, which is not
+// the id once a rename is being tried: posting a failed rename back to the
+// new id would edit a course that does not exist.
 func courseIDState(d *Draft, storedID string) map[string]any {
 	return map[string]any{
 		"StoredID":   storedID,
@@ -178,21 +178,28 @@ func courseIDState(d *Draft, storedID string) map[string]any {
 // enforces these at propose time too, but catching them here keeps a broken
 // course out of the draft. storedID is the course being edited, "" for a new
 // one: its own id is not a duplicate of itself.
+//
+// The id is made from the short title, so its problems are reported on the
+// short title (validate's formFields), in words that say so. They use the
+// field "courses.id": the id is what is wrong, so it cannot also be what
+// Explain looks the course up by.
 func courseProblems(c model.Course, existing []model.Course, storedID string) []validate.Problem {
 	var problems []validate.Problem
 	field := "courses." + c.ID
-	if c.ID == "" {
-		problems = append(problems, validate.Problem{Field: "courses.id", Message: "must not be empty"})
+	// An empty short title is reported as that, below; this is the short
+	// title with nothing in it an id can be made of.
+	if c.ID == "" && strings.TrimSpace(c.ShortTitle) != "" {
+		problems = append(problems, validate.Problem{Field: "courses.id",
+			Message: "needs at least one letter a to z or digit: the course ID is made of them"})
 	}
-	// "courses.id", not field+".id": the id is what is wrong, so it cannot
-	// also be what Explain looks the course up by.
 	if msg := idProblem(c.ID); msg != "" {
 		problems = append(problems, validate.Problem{Field: "courses.id", Message: msg})
 	}
 	if courseIDTaken(existing, c.ID, storedID) {
-		problems = append(problems, validate.Problem{
-			Field: field + ".id", Message: c.ID + " is already used by another course",
-		})
+		other, _ := model.Trainings{Courses: existing}.FindCourse(c.ID)
+		problems = append(problems, validate.Problem{Field: "courses.id", Message: fmt.Sprintf(
+			"makes the course ID %s, which %s already has. Two courses need short titles that differ in their letters or digits, e.g. by an added word",
+			c.ID, other.ShortTitle)})
 	}
 	for _, f := range []struct{ name, val string }{
 		{"short_title", c.ShortTitle}, {"title", c.Title}, {"url", c.URL},
@@ -237,19 +244,20 @@ func courseIDTaken(existing []model.Course, id, storedID string) bool {
 const courseURLPrefix = "https://www.arc42.de/info-"
 
 // followID keeps a derived course URL in step with the id the server stores.
-// form.js derives the URL from the id as it is typed; with "Mai Spec" in the
-// field, a browser that submits before the field is normalised (or one
-// without scripting, where the operator copied the id into the URL) sends
-// info-Mai Spec/ for an id saved as mai-spec. A URL that is the derivation of
-// some spelling of this id is rewritten to the stored one; any other URL is
-// the operator's choice and left alone.
-func followID(u, id string) string {
+// form.js derives the URL from the id it makes of the short title. Without
+// scripting the operator types the URL, likely as the short title is spelled
+// (info-Mai Spec/ for an id mai-spec), and a renamed draft course still sends
+// the URL of its old id (storedID). Those two are rewritten to the stored
+// id's. The match is normaliseID's, deliberately narrower than courseIDFrom:
+// info-mai.spec/ is a page name someone chose, not a spelling of mai-spec,
+// and is left alone like any other URL.
+func followID(u, id, storedID string) string {
 	rest, ok := strings.CutPrefix(u, courseURLPrefix)
 	if !ok {
 		return u
 	}
 	typed, ok := strings.CutSuffix(rest, "/")
-	if !ok || typed == id || normaliseID(typed) != id {
+	if !ok || typed == id || (normaliseID(typed) != id && (storedID == "" || typed != storedID)) {
 		return u
 	}
 	return courseURLPrefix + id + "/"
@@ -289,25 +297,26 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	}
 	get := func(k string) string { return strings.TrimSpace(r.PostFormValue(k)) }
 	c := model.Course{
-		ID: normaliseID(get("id")), ShortTitle: get("short_title"), Title: get("title"),
+		ShortTitle: get("short_title"), Title: get("title"),
 		BlurbDE: get("blurb_de"), BlurbEN: get("blurb_en"),
 		Certification: get("certification"), CreditPoints: parseCreditPoints(get),
 		URL: get("url"), URLEn: get("url_en"),
 		Trainers: parseTrainers(r), ShowOn: parseShowOn(r),
 	}
-	c.URL = followID(c.URL, c.ID)
 	storedID := r.PathValue("id")
 	isNew := storedID == ""
+	// The id is made from the short title for as long as it may change: a
+	// new course, or one only in this draft and without dates. After that
+	// it is fixed and the short title is just text. The form has no id
+	// field; one posted anyway (a tab open since before) is not read.
+	c.ID = storedID
+	if isNew || d.CourseIDEditable(storedID) {
+		c.ID = courseIDFrom(c.ShortTitle)
+	}
+	c.URL = followID(c.URL, c.ID, storedID)
 	if !isNew {
 		if stored, ok := d.Doc.Model().FindCourse(storedID); ok && sameSites(stored.ShowOn, c.ShowOn) {
 			c.ShowOn = stored.ShowOn
-		}
-		// The form shows a fixed id read-only; this holds it fixed against a
-		// stale tab or a hand-made POST too. It keeps the stored id rather
-		// than refusing: a refusal would reshow the posted id, read-only, and
-		// leave the operator exactly as stuck as before.
-		if !d.CourseIDEditable(storedID) {
-			c.ID = storedID
 		}
 	}
 

@@ -101,7 +101,7 @@ func Rules(t model.Trainings) []Problem {
 				problems = append(problems, Problem{
 					Field: field + ".code",
 					Message: fmt.Sprintf("%s is already used by %s — use %s",
-						d.Code, when(first), model.NextFree(orElse(model.BookingCode(c.ID, d.Start, d.Language), d.Code), all.Codes)),
+						d.Code, when(first), model.NextFree(orElse(model.BookingCode(c, d.Start, d.Language), d.Code), all.Codes)),
 				})
 			} else {
 				seenCode[d.Code] = d

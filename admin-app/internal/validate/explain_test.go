@@ -274,7 +274,7 @@ func TestExplainPlacesAnIDWithADot(t *testing.T) {
 		{ID: "mai.spec", ShortTitle: "MAI", Dates: []model.Date{{ID: "mai.spec-mar-2027", Start: "2027-03-01"}}},
 	}}
 	for field, label := range map[string]string{
-		"courses.mai.spec.id":        "Course ID",
+		"courses.mai.spec.id":        "Short title",
 		"dates.mai.spec-mar-2027.id": "Date ID",
 	} {
 		p := Explain(m, Problem{Field: field, Message: "must be lower-case letters, digits and hyphens only"})

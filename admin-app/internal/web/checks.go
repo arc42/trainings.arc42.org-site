@@ -31,6 +31,32 @@ func normaliseID(s string) string {
 	return idRuns.ReplaceAllString(strings.ToLower(strings.TrimSpace(s)), "-")
 }
 
+// idLetters spells the letters an id cannot hold the way a German or French
+// course name would be written without them. Everything else outside a to z
+// and 0 to 9 separates words. form.js holds the same table (ID_LETTERS);
+// TestFormJSMakesTheCourseIDLikeTheServer keeps the two in step.
+var idLetters = strings.NewReplacer(
+	"ä", "ae", "ö", "oe", "ü", "ue", "ß", "ss", "æ", "ae", "œ", "oe",
+	"à", "a", "á", "a", "â", "a", "ã", "a", "å", "a", "ç", "c",
+	"è", "e", "é", "e", "ê", "e", "ë", "e", "ì", "i", "í", "i", "î", "i", "ï", "i",
+	"ñ", "n", "ò", "o", "ó", "o", "ô", "o", "õ", "o", "ø", "o",
+	"ù", "u", "ú", "u", "û", "u", "ý", "y", "ÿ", "y",
+)
+
+// idSeparators are the runs courseIDFrom turns into one hyphen.
+var idSeparators = regexp.MustCompile(`[^a-z0-9]+`)
+
+// courseIDFrom makes a course id of a short title: "MAISPEC" is maispec,
+// "Req4Arc" req4arc, "AI Spec" ai-spec, "Prüfung" pruefung. In every course
+// there is, id and short title were the same word typed twice, so the course
+// form asks for the short title only. Anything that is not a letter or digit
+// separates words, so nearly every short title makes a valid id; one with no
+// letter a to z or digit at all ("!!!") makes "", which the form reports.
+func courseIDFrom(shortTitle string) string {
+	id := idLetters.Replace(strings.ToLower(shortTitle))
+	return strings.Trim(idSeparators.ReplaceAllString(id, "-"), "-")
+}
+
 // idChars is the pattern api/trainings.schema.json applies to course and date
 // ids. Checked here as well, rather than only by the schema, because the
 // schema is fetched from GitHub and a fetch that fails must not let an id

@@ -14,32 +14,29 @@
 
   <fieldset class="group">
     <legend>Identity</legend>
-    <label>Course ID <span class="req" aria-hidden="true">*</span>
-      {{/* The pattern accepts what the server turns into an id (capitals,
-           spaces, underscores: normaliseID), so it never refuses what saving
-           would fix. The hyphen is escaped: browsers compile pattern= with
-           the RegExp v flag, where [a-z0-9-] is a syntax error, and an
-           invalid pattern is silently not checked at all.
-           TestIDPatternsValidInVMode keeps it that way. */}}
-      <input name="id" id="c-id" value="{{.Course.ID}}" required pattern="[A-Za-z0-9_ \-]+"
-             title="lower-case letters, digits and hyphens; spaces and underscores become hyphens"
-             autocapitalize="none" spellcheck="false" autocomplete="off" data-lowercase
-             aria-describedby="cid-hint" placeholder="e.g. msa" {{if not .IDEditable}}readonly{{end}}>
-      <small id="cid-hint" class="hint">Lower-case letters, digits and hyphens;
-        capitals, spaces and underscores are converted when you save.
-        {{if .IsNew}}Every date links to its course by this value.
-        {{else if .IDEditable}}Still editable: this course is only in your draft
-        and has no dates yet.
-        {{else if .DraftOnly}}Not editable while the course has dates, which
-        reference it — remove its dates to change it.
-        {{else}}Not editable — the dates below reference it.{{end}}</small>
-    </label>
     <label>Short title <span class="req" aria-hidden="true">*</span>
-      <input name="short_title" value="{{.Course.ShortTitle}}" required
+      <input name="short_title" id="c-short" value="{{.Course.ShortTitle}}" required
              aria-describedby="st-hint" placeholder="e.g. MSA">
       <small id="st-hint" class="hint">Used where space is tight: the dates table
         and the home page cards.</small>
     </label>
+    {{/* No id field: in every course there is, the id was the short title in
+         lower case, typed a second time. The server makes it from the short
+         title (courseIDFrom) while it may still change, and form.js shows the
+         result live in the output below (data-follow). The hint carries no id
+         on purpose: form.js would fold it behind a "?", and where the id comes
+         from has to stay in view. */}}
+    <p class="derived">Course ID:
+      <output id="c-id" for="c-short" {{if .IDEditable}}data-follow{{end}}>{{.Course.ID}}</output>
+      <small class="hint">{{if .IDEditable}}Made from the short title{{if .IsNew}}.
+        Used in links, date IDs and booking codes, and fixed once the course
+        has dates.{{else}} while this course is only in your draft and has no
+        dates yet.{{end}}
+        {{else if .DraftOnly}}Fixed while the course has dates, which reference
+        it — remove its dates to change it.
+        {{else}}Fixed: the course is published, and links and booking codes
+        use it.{{end}}</small>
+    </p>
     <label>Full title <span class="req" aria-hidden="true">*</span>
       <input name="title" value="{{.Course.Title}}" required
              aria-describedby="ctitle-hint"

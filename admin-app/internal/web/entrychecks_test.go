@@ -41,13 +41,14 @@ func realSchemaServer(t *testing.T, yaml string) *Server {
 	return testServer(t, gh.URL)
 }
 
-// courseForm is a complete new-course form for the given id.
-func courseForm(id string) url.Values {
+// courseForm is a complete course form with the given short title, the
+// course URL derived from it as form.js would.
+func courseForm(shortTitle string) url.Values {
 	f := newMASForm()
-	f.Set("id", id)
-	f.Set("short_title", "MAI-SPEC")
+	f.Del("id")
+	f.Set("short_title", shortTitle)
 	f.Set("title", "Spezifikation mit KI")
-	f.Set("url", "https://www.arc42.de/info-maispec/")
+	f.Set("url", "https://www.arc42.de/info-"+courseIDFrom(shortTitle)+"/")
 	return f
 }
 
@@ -58,64 +59,6 @@ func dateFormFor(courseID string) url.Values {
 		"course_id": {courseID}, "start": {"2027-03-01"}, "end": {"2027-03-02"},
 		"city": {"München"}, "country": {"DE"}, "language": {"de"}, "format": {"public"},
 		"availability": {"open"}, "confirm_warnings": {"1"},
-	}
-}
-
-// idInput is the course form's id control, the whole tag.
-var idInput = regexp.MustCompile(`<input name="id" id="c-id"[^>]*>`)
-
-func TestCourseFormNormalisesID(t *testing.T) {
-	gh, _ := fakeGitHub(t)
-	defer gh.Close()
-	s := testServer(t, gh.URL)
-
-	rec := send(t, s, http.MethodPost, "/courses/new", courseForm(" MAISPEC "))
-	if rec.Code != http.StatusSeeOther {
-		t.Fatalf("POST -> %d, want the save to go through:\n%s", rec.Code, rec.Body.String())
-	}
-	d, _ := s.drafts.Get("sid")
-	if _, ok := d.Doc.Model().FindCourse("maispec"); !ok {
-		t.Fatalf("no course maispec in the draft:\n%s", d.Doc.Bytes())
-	}
-	if strings.Contains(string(d.Doc.Bytes()), "MAISPEC") {
-		t.Errorf("the id was stored as typed:\n%s", d.Doc.Bytes())
-	}
-
-	// Spaces and underscores become one hyphen each run.
-	rec = send(t, s, http.MethodPost, "/courses/new", courseForm("Mai_ Spec"))
-	if rec.Code != http.StatusSeeOther {
-		t.Fatalf("POST -> %d:\n%s", rec.Code, rec.Body.String())
-	}
-	if _, ok := d.Doc.Model().FindCourse("mai-spec"); !ok {
-		t.Errorf("Mai_ Spec was not stored as mai-spec:\n%s", d.Doc.Bytes())
-	}
-}
-
-func TestCourseFormRejectsInvalidIDAfterNormalising(t *testing.T) {
-	for _, id := range []string{"mai/spec", "mäispec", "mai.spec"} {
-		t.Run(id, func(t *testing.T) {
-			gh, _ := fakeGitHub(t)
-			defer gh.Close()
-			s := testServer(t, gh.URL)
-
-			form := courseForm(id)
-			form.Set("confirm_warnings", "1") // a problem is not a warning
-			rec := send(t, s, http.MethodPost, "/courses/new", form)
-			if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {
-				t.Fatalf("a course with id %q was saved:\n%s", id, d.Doc.Bytes())
-			}
-			body := rec.Body.String()
-			problems := between(body, `class="problems"`, "</div>")
-			if !strings.Contains(problems, "<b>Course ID</b> — ") {
-				t.Fatalf("no problem labelled Course ID:\n%s", body)
-			}
-			// Plain words: no regular expression, no place in the file.
-			for _, bad := range []string{"[a-z", "^", "courses.", "courses/"} {
-				if strings.Contains(problems, bad) {
-					t.Errorf("the problem shows %q:\n%s", bad, problems)
-				}
-			}
-		})
 	}
 }
 
@@ -132,7 +75,7 @@ func TestCourseSaveRunsProposeChecks(t *testing.T) {
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
-	form := courseForm("maispec")
+	form := courseForm("MAISPEC")
 	form.Set("title", "spezifikation mit KI")
 	form.Set("confirm_warnings", "1")
 	rec := send(t, s, http.MethodPost, "/courses/new", form)
@@ -151,7 +94,7 @@ func TestCourseURLMustBeHTTPS(t *testing.T) {
 		for _, u := range []string{"http://www.arc42.de/info-maispec/", "ftp://example.org/maispec"} {
 			gh, _ := fakeGitHub(t) // the trivial schema: this is not the schema's check
 			s := testServer(t, gh.URL)
-			form := courseForm("maispec")
+			form := courseForm("MAISPEC")
 			form.Set(field, u)
 			form.Set("confirm_warnings", "1")
 			rec := send(t, s, http.MethodPost, "/courses/new", form)
@@ -177,20 +120,20 @@ func TestCourseFormReportsAllProblemsAtOnce(t *testing.T) {
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
-	for _, id := range []string{"mai/spec", "msa", ""} { // invalid, taken, missing
+	for _, id := range []string{"!!!", "MSA", ""} { // no id, taken, missing
 		form := courseForm(id)
 		form.Set("title", "spezifikation mit KI")
 		form.Set("url", "http://www.arc42.de/info-maispec/")
 		form.Del("trainer")
 		form.Set("confirm_warnings", "1")
 		body := send(t, s, http.MethodPost, "/courses/new", form).Body.String()
-		for _, label := range []string{"Course ID", "Course URL", "Trainers", "Full title"} {
+		for _, label := range []string{"Short title", "Course URL", "Trainers", "Full title"} {
 			if !strings.Contains(body, "<b>"+label+"</b> — ") {
 				t.Errorf("id %q: no problem on %s in the same round:\n%s", id, label, between(body, `class="problems"`, "</div>"))
 			}
 		}
-		if n := strings.Count(between(body, `class="problems"`, "</div>"), "<b>Course ID</b>"); n != 1 {
-			t.Errorf("id %q: Course ID named %d times, want once", id, n)
+		if n := strings.Count(between(body, `class="problems"`, "</div>"), "<b>Short title</b>"); n != 1 {
+			t.Errorf("short title %q: named %d times, want once", id, n)
 		}
 	}
 }
@@ -218,7 +161,7 @@ func TestSchemaFetchFailureNeverBlocksASave(t *testing.T) {
 	log.SetOutput(&logged)
 	defer log.SetOutput(os.Stderr)
 
-	if rec := send(t, s, http.MethodPost, "/courses/new", courseForm("maispec")); rec.Code != http.StatusSeeOther {
+	if rec := send(t, s, http.MethodPost, "/courses/new", courseForm("MAISPEC")); rec.Code != http.StatusSeeOther {
 		t.Errorf("course save -> %d, want it saved:\n%s", rec.Code, rec.Body.String())
 	}
 	if rec := send(t, s, http.MethodPost, "/dates/new", dateFormFor("maispec")); rec.Code != http.StatusSeeOther {
@@ -229,16 +172,16 @@ func TestSchemaFetchFailureNeverBlocksASave(t *testing.T) {
 	}
 }
 
-// form.js derives the course URL from the id. It has to derive it from the id
-// the server will store, or "Mai Spec" is saved as mai-spec with a page at
-// info-mai spec/.
+// form.js derives the course URL from the id it makes of the short title.
+// Without scripting the URL is typed by hand, likely as the short title is
+// spelled: "Mai Spec" must not be saved as mai-spec with a page at
+// info-Mai Spec/.
 func TestCourseURLFollowsTheNormalisedID(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
 
-	// What the browser sends: the id as typed, the URL derived from it (with
-	// scripting, lower-cased as typed; or as typed by hand).
+	// What the browser sends: the short title, and a URL typed after it.
 	for raw, id := range map[string]string{
 		"Mai Spec": "mai-spec", "mai lab": "mai-lab", " Mai_Talk ": "mai-talk",
 	} {
@@ -257,13 +200,20 @@ func TestCourseURLFollowsTheNormalisedID(t *testing.T) {
 		}
 	}
 
-	// A URL the operator chose is theirs, and is left alone.
-	form := courseForm("Flex")
-	form.Set("url", "https://www.arc42.de/info-FLEX-kurs/")
-	send(t, s, http.MethodPost, "/courses/new", form)
-	d, _ := s.drafts.Get("sid")
-	if c, _ := d.Doc.Model().FindCourse("flex"); c.URL != "https://www.arc42.de/info-FLEX-kurs/" {
-		t.Errorf("a hand-chosen URL was rewritten to %q", c.URL)
+	// A URL the operator chose is theirs, and is left alone, also one the
+	// course id could be made of: info-mai.spec/ is a page name, not a
+	// spelling of mai-spec.
+	for short, u := range map[string]string{
+		"Flex":    "https://www.arc42.de/info-FLEX-kurs/",
+		"MAI Pro": "https://www.arc42.de/info-mai.pro/",
+	} {
+		form := courseForm(short)
+		form.Set("url", u)
+		send(t, s, http.MethodPost, "/courses/new", form)
+		d, _ := s.drafts.Get("sid")
+		if c, _ := d.Doc.Model().FindCourse(courseIDFrom(short)); c.URL != u {
+			t.Errorf("the hand-chosen URL %s was rewritten to %q", u, c.URL)
+		}
 	}
 }
 
@@ -396,13 +346,9 @@ func TestDraftOnlyCourseIDEditableWithoutDates(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
-	send(t, s, http.MethodPost, "/courses/new", courseForm("maispec"))
+	send(t, s, http.MethodPost, "/courses/new", courseForm("MAISPEC"))
 
 	body := send(t, s, http.MethodGet, "/courses/maispec", nil).Body.String()
-	tag := idInput.FindString(body)
-	if tag == "" || strings.Contains(tag, "readonly") {
-		t.Errorf("the id of a course only in the draft is not editable: %s", tag)
-	}
 	if !strings.Contains(body, "only in your draft") {
 		t.Errorf("the hint does not say why the id is editable:\n%s", body)
 	}
@@ -415,15 +361,12 @@ func TestDraftOnlyCourseIDReadOnlyWithDates(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
-	send(t, s, http.MethodPost, "/courses/new", courseForm("maispec"))
+	send(t, s, http.MethodPost, "/courses/new", courseForm("MAISPEC"))
 	if rec := send(t, s, http.MethodPost, "/dates/new", dateFormFor("maispec")); rec.Code != http.StatusSeeOther {
 		t.Fatalf("date not added:\n%s", rec.Body.String())
 	}
 
 	body := send(t, s, http.MethodGet, "/courses/maispec", nil).Body.String()
-	if tag := idInput.FindString(body); !strings.Contains(tag, "readonly") {
-		t.Errorf("the id of a course with dates is editable: %s", tag)
-	}
 	if !strings.Contains(body, "remove its dates to change it") {
 		t.Errorf("the hint does not say how to change the id:\n%s", body)
 	}
@@ -432,8 +375,8 @@ func TestDraftOnlyCourseIDReadOnlyWithDates(t *testing.T) {
 		t.Errorf("no way to remove the course from the draft:\n%s", body)
 	}
 
-	// A posted id cannot rename it either: its dates reference it.
-	form := courseForm("other")
+	// A new short title does not rename it: its dates reference it.
+	form := courseForm("OTHER")
 	form.Set("confirm_warnings", "1")
 	send(t, s, http.MethodPost, "/courses/maispec", form)
 	d, _ := s.drafts.Get("sid")
@@ -448,16 +391,13 @@ func TestCourseOnMainIDReadOnly(t *testing.T) {
 	s := testServer(t, gh.URL)
 
 	body := send(t, s, http.MethodGet, "/courses/msa", nil).Body.String()
-	if tag := idInput.FindString(body); !strings.Contains(tag, "readonly") {
-		t.Errorf("the id of a published course is editable: %s", tag)
-	}
 	if strings.Contains(body, "/courses/msa/delete") {
 		t.Error("a published course offers removal")
 	}
 
 	// Nor can a hand-made POST rename or remove it.
 	send(t, s, http.MethodPost, "/courses/msa", url.Values{
-		"id": {"msa-neu"}, "short_title": {"MSA"}, "title": {"Mastering Software Architectures"},
+		"id": {"msa-neu"}, "short_title": {"MSA Neu"}, "title": {"Mastering Software Architectures"},
 		"url": {"https://example.org/msa"}, "trainer": {"Dr. Gernot Starke"},
 		"confirm_warnings": {"1"},
 	})
@@ -472,9 +412,9 @@ func TestRenameDraftOnlyCourse(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := testServer(t, gh.URL)
-	send(t, s, http.MethodPost, "/courses/new", courseForm("maispec-x"))
+	send(t, s, http.MethodPost, "/courses/new", courseForm("MAISPEC-X"))
 
-	rec := send(t, s, http.MethodPost, "/courses/maispec-x", courseForm("maispec"))
+	rec := send(t, s, http.MethodPost, "/courses/maispec-x", courseForm("MAISPEC"))
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("rename -> %d:\n%s", rec.Code, rec.Body.String())
 	}
@@ -502,7 +442,7 @@ func TestRemoveDraftOnlyCourse(t *testing.T) {
 	gh, _ := fakeGitHub(t)
 	defer gh.Close()
 	s := dirtyServer(t, gh.URL) // msa-a marked full: the change that must survive
-	send(t, s, http.MethodPost, "/courses/new", courseForm("maispec"))
+	send(t, s, http.MethodPost, "/courses/new", courseForm("MAISPEC"))
 	if rec := send(t, s, http.MethodPost, "/dates/new", dateFormFor("maispec")); rec.Code != http.StatusSeeOther {
 		t.Fatalf("date not added:\n%s", rec.Body.String())
 	}
@@ -517,7 +457,7 @@ func TestRemoveDraftOnlyCourse(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET confirm -> %d:\n%s", rec.Code, body)
 	}
-	for _, want := range []string{"MAI-SPEC", "27-03 MAI", `action="/courses/maispec/delete"`, "draft"} {
+	for _, want := range []string{"MAISPEC", "27-03 MAISPEC", `action="/courses/maispec/delete"`, "draft"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("confirmation does not show %q:\n%s", want, body)
 		}
@@ -639,7 +579,7 @@ func TestIDInputsHelpWhileTyping(t *testing.T) {
 	s := testServer(t, gh.URL)
 
 	tag := regexp.MustCompile(`<input name="id"[^>]*>`)
-	for _, target := range []string{"/courses/new", "/dates/new"} {
+	for _, target := range []string{"/dates/new"} { // the course form has no id field
 		input := tag.FindString(send(t, s, http.MethodGet, target, nil).Body.String())
 		for _, want := range []string{`autocapitalize="none"`, `spellcheck="false"`, "data-lowercase",
 			// The browser shows the title when the pattern refuses a value.
