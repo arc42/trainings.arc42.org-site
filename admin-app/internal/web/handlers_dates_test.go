@@ -1016,18 +1016,20 @@ func TestCourseWarningsGateTheFirstSave(t *testing.T) {
 	s := testServer(t, gh.URL)
 
 	form := url.Values{
-		"id": {"flex"}, "short_title": {"FLEX"},
-		"title":    {"FLEX: Flexible Architectures"},
-		"url":      {"http://example.org/flex"}, // plain http
-		"blurb_en": {"A course about flexible architectures."},
-		"trainer":  {"Dr. Gernot Starke"},
+		"id":    {"flex"},
+		"title": {"FLEX: Flexible Architectures"},
+		"url":   {"https://example.org/flex"},
+		// Too long for the card: a warning, not a problem.
+		"short_title": {"FLEX: Flexible Architectures for everyone"},
+		"blurb_en":    {"A course about flexible architectures."},
+		"trainer":     {"Dr. Gernot Starke"},
 	}
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodPost, "/courses/new", form))
 	body := rec.Body.String()
 
-	if !strings.Contains(body, "https") || !strings.Contains(body, "Save anyway") {
-		t.Errorf("the http url warning did not gate the save:\n%s", body)
+	if !strings.Contains(body, "is long for the home page card") || !strings.Contains(body, "Save anyway") {
+		t.Errorf("the short title warning did not gate the save:\n%s", body)
 	}
 	if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {
 		t.Error("a warned course save was applied on the first submit")

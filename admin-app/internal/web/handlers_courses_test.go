@@ -249,16 +249,16 @@ func TestWarningsShowTheFormLabel(t *testing.T) {
 	s := testServer(t, gh.URL)
 
 	form := newMASForm()
-	form.Set("url", "http://www.arc42.de/info-mas/")
+	form.Set("short_title", "Methodische Architektur-Skills für alle")
 	rec, _, saved := postCourse(t, s, "/courses/new", form)
 	if saved {
 		t.Fatal("a warned save went through on the first submit")
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "<b>Course URL</b> — links must start with https://") {
+	if !strings.Contains(body, "<b>Short title</b> — 39 characters is long for the home page card") {
 		t.Errorf("warning not shown under its form label:\n%s", body)
 	}
-	if strings.Contains(body, "<b>url</b>") {
+	if strings.Contains(body, "<b>short_title</b>") {
 		t.Error("warning shown under the control name")
 	}
 	// The reshow keeps the note too.

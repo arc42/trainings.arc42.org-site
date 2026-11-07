@@ -118,6 +118,7 @@
     <label>Date ID
       {{/* Pattern and attributes as on the course id: see courseform.gohtml. */}}
       <input name="id" value="{{.Date.ID}}" pattern="[A-Za-z0-9_ \-]+"
+             title="lower-case letters, digits and hyphens; spaces and underscores become hyphens"
              autocapitalize="none" spellcheck="false" autocomplete="off" data-lowercase
              aria-describedby="id-hint" placeholder="{{idMask .CourseID}}"
              data-taken="{{takenJSON .Taken.IDs}}">

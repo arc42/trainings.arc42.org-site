@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -129,7 +130,12 @@ func (s *Server) editProblems(r *http.Request, client *gh.Client, before, after 
 	for _, p := range prior {
 		had[problemKey(p)] = true
 	}
-	now, _ := checkModel(after, schema, err)
+	now, faults := checkModel(after, schema, err)
+	for _, p := range faults {
+		// Not the operator's to fix and not blocking; the review page shows
+		// it again. The log is what tells Gernot a save went unchecked.
+		log.Printf("save: not fully checked, saved anyway: %s", p.Detail)
+	}
 
 	var out []validate.Problem
 	seen := map[string]bool{}
@@ -167,13 +173,4 @@ func (s *Server) editProblems(r *http.Request, client *gh.Client, before, after 
 // problem "new" when the course's short title is edited.
 func problemKey(p validate.Problem) string {
 	return p.Link + "\x00" + p.Label + "\x00" + p.Message
-}
-
-// onThisForm drops the Where of problems shown on the entry's own form, where
-// it would only repeat the page title.
-func onThisForm(ps []validate.Problem) []validate.Problem {
-	for i := range ps {
-		ps[i].Where = ""
-	}
-	return ps
 }

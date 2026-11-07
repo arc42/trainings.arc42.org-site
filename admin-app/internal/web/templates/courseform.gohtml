@@ -22,6 +22,7 @@
            invalid pattern is silently not checked at all.
            TestIDPatternsValidInVMode keeps it that way. */}}
       <input name="id" id="c-id" value="{{.Course.ID}}" required pattern="[A-Za-z0-9_ \-]+"
+             title="lower-case letters, digits and hyphens; spaces and underscores become hyphens"
              autocapitalize="none" spellcheck="false" autocomplete="off" data-lowercase
              aria-describedby="cid-hint" placeholder="e.g. msa" {{if not .IDEditable}}readonly{{end}}>
       <small id="cid-hint" class="hint">Lower-case letters, digits and hyphens;

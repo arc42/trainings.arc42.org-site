@@ -1,14 +1,20 @@
 package web
 
 import (
+	"bytes"
+	"encoding/json"
 	"io/fs"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
+
+	"arc42-trainings-admin/internal/ghfake"
 )
 
 // These tests pin "checked where it is entered": the course MAISPEC that the
@@ -113,21 +119,184 @@ func TestCourseFormRejectsInvalidIDAfterNormalising(t *testing.T) {
 	}
 }
 
-// A Course URL "ftp://…" passes the browser (it is a URL), the course form's
-// own checks (it is not empty) and the warnings (it is not http://). Only the
-// schema's ^https:// catches it, which used to mean the review page.
+// The save runs the live schema, not a copy of it: a constraint only the
+// schema has (here a made-up one on the full title) stops a course save, in
+// the field's words. Every constraint the real schema puts on a course field is
+// also checked by the form itself by now, so the real one cannot show this.
 func TestCourseSaveRunsProposeChecks(t *testing.T) {
-	s := realSchemaServer(t, fixtureYAML)
+	gh, _ := fakeGitHubFiles(t, map[string][]byte{
+		"_data/trainings.yml": []byte(fixtureYAML),
+		"api/trainings.schema.json": []byte(`{"type": "object", "properties": {"courses": {"type": "array",
+			"items": {"properties": {"title": {"type": "string", "pattern": "^[A-Z]"}}}}}}`),
+	})
+	defer gh.Close()
+	s := testServer(t, gh.URL)
 
 	form := courseForm("maispec")
-	form.Set("url", "ftp://example.org/maispec")
+	form.Set("title", "spezifikation mit KI")
 	form.Set("confirm_warnings", "1")
 	rec := send(t, s, http.MethodPost, "/courses/new", form)
 	if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {
 		t.Fatalf("a course the review page rejects was saved:\n%s", d.Doc.Bytes())
 	}
-	if !strings.Contains(rec.Body.String(), "<b>Course URL</b> — must start with https://") {
+	if !strings.Contains(rec.Body.String(), "<b>Full title</b> — is not in the expected form") {
 		t.Errorf("the schema problem is not on the form:\n%s", rec.Body.String())
+	}
+}
+
+// A course URL that is not https is the form's own problem, not a warning and
+// not the schema's: it blocks even when the schema cannot be fetched.
+func TestCourseURLMustBeHTTPS(t *testing.T) {
+	for field, label := range map[string]string{"url": "Course URL", "url_en": "English course page (optional)"} {
+		for _, u := range []string{"http://www.arc42.de/info-maispec/", "ftp://example.org/maispec"} {
+			gh, _ := fakeGitHub(t) // the trivial schema: this is not the schema's check
+			s := testServer(t, gh.URL)
+			form := courseForm("maispec")
+			form.Set(field, u)
+			form.Set("confirm_warnings", "1")
+			rec := send(t, s, http.MethodPost, "/courses/new", form)
+			gh.Close()
+			if d, ok := s.drafts.Get("sid"); ok && d.Dirty() {
+				t.Errorf("%s %s was saved", field, u)
+			}
+			if !strings.Contains(rec.Body.String(), "<b>"+label+"</b> — must start with https://") {
+				t.Errorf("%s %s: no problem labelled %s:\n%s", field, u, label, rec.Body.String())
+			}
+		}
+	}
+}
+
+// One round: the form's own checks and the schema's are reported together, so
+// the operator does not fix one problem only to be shown the next.
+func TestCourseFormReportsAllProblemsAtOnce(t *testing.T) {
+	gh, _ := fakeGitHubFiles(t, map[string][]byte{
+		"_data/trainings.yml": []byte(fixtureYAML),
+		"api/trainings.schema.json": []byte(`{"type": "object", "properties": {"courses": {"type": "array",
+			"items": {"properties": {"title": {"type": "string", "pattern": "^[A-Z]"}}}}}}`),
+	})
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	for _, id := range []string{"mai/spec", "msa", ""} { // invalid, taken, missing
+		form := courseForm(id)
+		form.Set("title", "spezifikation mit KI")
+		form.Set("url", "http://www.arc42.de/info-maispec/")
+		form.Del("trainer")
+		form.Set("confirm_warnings", "1")
+		body := send(t, s, http.MethodPost, "/courses/new", form).Body.String()
+		for _, label := range []string{"Course ID", "Course URL", "Trainers", "Full title"} {
+			if !strings.Contains(body, "<b>"+label+"</b> — ") {
+				t.Errorf("id %q: no problem on %s in the same round:\n%s", id, label, between(body, `class="problems"`, "</div>"))
+			}
+		}
+		if n := strings.Count(between(body, `class="problems"`, "</div>"), "<b>Course ID</b>"); n != 1 {
+			t.Errorf("id %q: Course ID named %d times, want once", id, n)
+		}
+	}
+}
+
+// The schema is fetched from GitHub on every save. When that fails, the app
+// could not check, which is its fault and not the operator's: the save goes
+// through (the review page and CI check again), and the log says so.
+func TestSchemaFetchFailureNeverBlocksASave(t *testing.T) {
+	f := ghfake.New(ghfake.Options{
+		Repo: "arc42/site", Login: "gernotstarke", CanPush: true,
+		Files:        map[string][]byte{"_data/trainings.yml": []byte(fixtureYAML)},
+		OnUnexpected: func(method, path string) { t.Errorf("unexpected %s %s", method, path) },
+	})
+	gh := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/api/trainings.schema.json") {
+			http.Error(w, `{"message":"Server Error"}`, http.StatusInternalServerError)
+			return
+		}
+		f.Handler().ServeHTTP(w, r)
+	}))
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	var logged bytes.Buffer
+	log.SetOutput(&logged)
+	defer log.SetOutput(os.Stderr)
+
+	if rec := send(t, s, http.MethodPost, "/courses/new", courseForm("maispec")); rec.Code != http.StatusSeeOther {
+		t.Errorf("course save -> %d, want it saved:\n%s", rec.Code, rec.Body.String())
+	}
+	if rec := send(t, s, http.MethodPost, "/dates/new", dateFormFor("maispec")); rec.Code != http.StatusSeeOther {
+		t.Errorf("date save -> %d, want it saved:\n%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(logged.String(), "could not fetch the schema") {
+		t.Errorf("the skipped check was not logged: %q", logged.String())
+	}
+}
+
+// form.js derives the course URL from the id. It has to derive it from the id
+// the server will store, or "Mai Spec" is saved as mai-spec with a page at
+// info-mai spec/.
+func TestCourseURLFollowsTheNormalisedID(t *testing.T) {
+	gh, _ := fakeGitHub(t)
+	defer gh.Close()
+	s := testServer(t, gh.URL)
+
+	// What the browser sends: the id as typed, the URL derived from it (with
+	// scripting, lower-cased as typed; or as typed by hand).
+	for raw, id := range map[string]string{
+		"Mai Spec": "mai-spec", "mai lab": "mai-lab", " Mai_Talk ": "mai-talk",
+	} {
+		form := courseForm(raw)
+		form.Set("url", "https://www.arc42.de/info-"+strings.TrimSpace(raw)+"/")
+		if rec := send(t, s, http.MethodPost, "/courses/new", form); rec.Code != http.StatusSeeOther {
+			t.Fatalf("%q -> %d:\n%s", raw, rec.Code, rec.Body.String())
+		}
+		d, _ := s.drafts.Get("sid")
+		c, ok := d.Doc.Model().FindCourse(id)
+		if !ok {
+			t.Fatalf("%q: no course %s:\n%s", raw, id, d.Doc.Bytes())
+		}
+		if want := "https://www.arc42.de/info-" + id + "/"; c.URL != want {
+			t.Errorf("%q: URL = %q, want %q", raw, c.URL, want)
+		}
+	}
+
+	// A URL the operator chose is theirs, and is left alone.
+	form := courseForm("Flex")
+	form.Set("url", "https://www.arc42.de/info-FLEX-kurs/")
+	send(t, s, http.MethodPost, "/courses/new", form)
+	d, _ := s.drafts.Get("sid")
+	if c, _ := d.Doc.Model().FindCourse("flex"); c.URL != "https://www.arc42.de/info-FLEX-kurs/" {
+		t.Errorf("a hand-chosen URL was rewritten to %q", c.URL)
+	}
+}
+
+// form.js lower-cases while typing and normalises like the server when the
+// field is left. The two must agree; checked when node is installed.
+func TestFormJSNormalisesLikeTheServer(t *testing.T) {
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node not installed")
+	}
+	js, err := assets.ReadFile("static/form.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := regexp.MustCompile(`(?s)function normaliseId\(.*?\n  \}\n`).Find(js)
+	if fn == nil {
+		t.Fatal("form.js has no normaliseId function")
+	}
+	inputs := []string{" MAISPEC ", "Mai Spec", "mai__ _spec", "Mai\tSpec", "a-b_c d", "mäi/spec", "x"}
+	in, _ := json.Marshal(inputs)
+	out, err := exec.Command(node, "-e", string(fn)+
+		"console.log(JSON.stringify(JSON.parse(process.argv[1]).map(normaliseId)))", string(in)).CombinedOutput()
+	if err != nil {
+		t.Fatalf("node: %v: %s", err, out)
+	}
+	var got []string
+	if err := json.Unmarshal(out, &got); err != nil {
+		t.Fatalf("node said %s", out)
+	}
+	for i, v := range inputs {
+		if got[i] != normaliseID(v) {
+			t.Errorf("%q: form.js %q, server %q", v, got[i], normaliseID(v))
+		}
 	}
 }
 
@@ -472,7 +641,9 @@ func TestIDInputsHelpWhileTyping(t *testing.T) {
 	tag := regexp.MustCompile(`<input name="id"[^>]*>`)
 	for _, target := range []string{"/courses/new", "/dates/new"} {
 		input := tag.FindString(send(t, s, http.MethodGet, target, nil).Body.String())
-		for _, want := range []string{`autocapitalize="none"`, `spellcheck="false"`, "data-lowercase"} {
+		for _, want := range []string{`autocapitalize="none"`, `spellcheck="false"`, "data-lowercase",
+			// The browser shows the title when the pattern refuses a value.
+			`title="lower-case letters, digits and hyphens; spaces and underscores become hyphens"`} {
 			if !strings.Contains(input, want) {
 				t.Errorf("%s: the id field lacks %s: %s", target, want, input)
 			}

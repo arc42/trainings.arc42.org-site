@@ -189,18 +189,23 @@ func courseProblems(c model.Course, existing []model.Course, storedID string) []
 	if msg := idProblem(c.ID); msg != "" {
 		problems = append(problems, validate.Problem{Field: "courses.id", Message: msg})
 	}
-	for _, ex := range existing {
-		if c.ID != "" && ex.ID == c.ID && ex.ID != storedID {
-			problems = append(problems, validate.Problem{
-				Field: field + ".id", Message: c.ID + " is already used by another course",
-			})
-		}
+	if courseIDTaken(existing, c.ID, storedID) {
+		problems = append(problems, validate.Problem{
+			Field: field + ".id", Message: c.ID + " is already used by another course",
+		})
 	}
 	for _, f := range []struct{ name, val string }{
 		{"short_title", c.ShortTitle}, {"title", c.Title}, {"url", c.URL},
 	} {
 		if strings.TrimSpace(f.val) == "" {
 			problems = append(problems, validate.Problem{Field: field + "." + f.name, Message: "must not be empty"})
+		}
+	}
+	// The schema says ^https:// too, but a link is published as it is typed,
+	// and this check must not depend on the schema fetch succeeding.
+	for _, f := range []struct{ name, val string }{{"url", c.URL}, {"url_en", c.URLEn}} {
+		if f.val != "" && !strings.HasPrefix(f.val, "https://") {
+			problems = append(problems, validate.Problem{Field: field + "." + f.name, Message: "must start with https://"})
 		}
 	}
 	if len(c.Trainers) == 0 {
@@ -216,6 +221,38 @@ func courseProblems(c model.Course, existing []model.Course, storedID string) []
 		}
 	}
 	return problems
+}
+
+// courseIDTaken reports whether another course than storedID already has id.
+func courseIDTaken(existing []model.Course, id, storedID string) bool {
+	for _, ex := range existing {
+		if id != "" && ex.ID == id && ex.ID != storedID {
+			return true
+		}
+	}
+	return false
+}
+
+// courseURLPrefix is how form.js derives a course URL from the id.
+const courseURLPrefix = "https://www.arc42.de/info-"
+
+// followID keeps a derived course URL in step with the id the server stores.
+// form.js derives the URL from the id as it is typed; with "Mai Spec" in the
+// field, a browser that submits before the field is normalised (or one
+// without scripting, where the operator copied the id into the URL) sends
+// info-Mai Spec/ for an id saved as mai-spec. A URL that is the derivation of
+// some spelling of this id is rewritten to the stored one; any other URL is
+// the operator's choice and left alone.
+func followID(u, id string) string {
+	rest, ok := strings.CutPrefix(u, courseURLPrefix)
+	if !ok {
+		return u
+	}
+	typed, ok := strings.CutSuffix(rest, "/")
+	if !ok || typed == id || normaliseID(typed) != id {
+		return u
+	}
+	return courseURLPrefix + id + "/"
 }
 
 // parseCreditPoints reads the three iSAQB category counts. All three empty (or
@@ -258,6 +295,7 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 		URL: get("url"), URLEn: get("url_en"),
 		Trainers: parseTrainers(r), ShowOn: parseShowOn(r),
 	}
+	c.URL = followID(c.URL, c.ID)
 	storedID := r.PathValue("id")
 	isNew := storedID == ""
 	if !isNew {
@@ -287,15 +325,17 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 		s.render(w, "courseform.gohtml", data)
 	}
 
+	// The form's own checks and everything Review & propose would say about
+	// this course, in one round. A course with no id, or another course's,
+	// cannot be told apart from that course in the model, so it is checked
+	// under an id no course can have; its id problem is the form's own.
 	before := d.Doc.Model()
-	// A course with no id, or another course's, cannot be placed in the model
-	// unambiguously, so the form's own checks go first and alone.
-	if problems := courseProblems(c, before.Courses, storedID); len(problems) > 0 {
-		reshow("Fix these first", onThisForm(validate.ExplainAll(before, problems)), nil)
-		return
+	probe := c
+	if c.ID == "" || courseIDTaken(before.Courses, c.ID, storedID) {
+		probe.ID = "\x00"
 	}
-	// Then everything Review & propose would say about this course.
-	if problems := s.editProblems(r, client, before, withCourse(before, storedID, c), "/courses/"+c.ID, nil); len(problems) > 0 {
+	local := courseProblems(c, before.Courses, storedID)
+	if problems := s.editProblems(r, client, before, withCourse(before, storedID, probe), "/courses/"+probe.ID, local); len(problems) > 0 {
 		reshow("Fix these first", problems, nil)
 		return
 	}

@@ -98,12 +98,6 @@ func TestCourseWarnings(t *testing.T) {
 		t.Errorf("expected a short_title warning, got %q", got)
 	}
 
-	insecure := ok
-	insecure.URL = "http://www.arc42.de/info-msa/"
-	if got := fields(CourseWarnings(insecure)); !strings.Contains(got, "url") {
-		t.Errorf("expected an http url warning, got %q", got)
-	}
-
 	// msa has a hand-made card that ignores the descriptions, so the empty
 	// case is checked on a course that renders through the standard card.
 	bare := ok
@@ -143,24 +137,8 @@ func TestPastStartIsOnlyWarnedForNewDates(t *testing.T) {
 	}
 }
 
-// url_en arrived after the warning rules were written, so it was the one URL
-// on either form that could be plain http without anyone saying so.
-func TestEnglishCourseURLIsHeldToTheSameRuleAsTheMainOne(t *testing.T) {
-	c := model.Course{
-		ID: "msa", ShortTitle: "MSA",
-		Title: "Mastering Software Architectures", URL: "https://www.arc42.de/info-msa/",
-		BlurbEN: "Two expert trainers at all times, highly practical and pragmatic.",
-		URLEn:   "http://trainings.arc42.org/courses/msa/",
-	}
-	if got := fields(CourseWarnings(c)); !strings.Contains(got, "url_en") {
-		t.Errorf("expected an http url_en warning, got %q", got)
-	}
-	// Empty is the normal case — most courses have no English page.
-	c.URLEn = ""
-	if got := fields(CourseWarnings(c)); strings.Contains(got, "url_en") {
-		t.Errorf("an absent English page must not warn, got %q", got)
-	}
-}
+// No https rule here any more, for either course URL: a link that is not
+// https is a blocking problem on the course form (web.TestCourseURLMustBeHTTPS).
 
 // The old message named arc42.de's form, which no longer takes registrations.
 func TestStatusWarningNamesTheRightSite(t *testing.T) {
@@ -273,7 +251,6 @@ func TestOnlyGermanDescriptionNote(t *testing.T) {
 func TestWarningsCarryFormLabels(t *testing.T) {
 	c := masCourse()
 	c.ShortTitle = "Methodische Architektur-Skills für alle"
-	c.URL, c.URLEn = "http://www.arc42.de/info-mas/", "http://trainings.arc42.org/courses/mas/"
 	ws := CourseWarnings(c)
 	c.BlurbEN = strings.Repeat("x", maxBlurb+1)
 	ws = append(ws, CourseWarnings(c)...)
@@ -315,27 +292,12 @@ func TestWarningsCarryFormLabels(t *testing.T) {
 			}
 		}
 	}
-	for _, f := range []string{"short_title", "url", "url_en", "blurb_en", "start", "end",
+	for _, f := range []string{"short_title", "blurb_en", "start", "end",
 		"city", "country", "availability", "code", "id"} {
 		if !seen[f] {
 			t.Errorf("no warning on %q fired, so its label went unchecked", f)
 		}
 	}
-}
-
-func TestHTTPWarningSaysWhatToType(t *testing.T) {
-	c := masCourse()
-	c.BlurbDE = "Methodik für Architekten."
-	c.URL = "http://www.arc42.de/info-mas/"
-	for _, w := range CourseWarnings(c) {
-		if w.Field == "url" {
-			if w.Message != "links must start with https://" {
-				t.Errorf("message = %q", w.Message)
-			}
-			return
-		}
-	}
-	t.Error("no warning for a plain http course URL")
 }
 
 // A second MAS run in January 2027 is "27-01 MAS-2", because "27-01 MAS" is
