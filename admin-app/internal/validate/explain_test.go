@@ -265,3 +265,21 @@ func TestFormFieldsCoverForms(t *testing.T) {
 		}
 	}
 }
+
+// An id is the operator's entry and may hold a dot before it is checked. The
+// property is the last segment of a Field, never what follows the first dot,
+// or "mai.spec" read as course "mai", property "spec.id": an app fault.
+func TestExplainPlacesAnIDWithADot(t *testing.T) {
+	m := model.Trainings{Courses: []model.Course{
+		{ID: "mai.spec", ShortTitle: "MAI", Dates: []model.Date{{ID: "mai.spec-mar-2027", Start: "2027-03-01"}}},
+	}}
+	for field, label := range map[string]string{
+		"courses.mai.spec.id":        "Course ID",
+		"dates.mai.spec-mar-2027.id": "Date ID",
+	} {
+		p := Explain(m, Problem{Field: field, Message: "must be lower-case letters, digits and hyphens only"})
+		if p.Kind != EntryProblem || p.Label != label {
+			t.Errorf("%s: Kind = %v, Label = %q, want an entry problem on %q", field, p.Kind, p.Label, label)
+		}
+	}
+}

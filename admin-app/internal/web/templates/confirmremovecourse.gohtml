@@ -1,0 +1,26 @@
+{{define "confirmremovecourse.gohtml"}}{{template "layout" .}}{{end}}
+{{define "content"}}
+{{$c := .Course}}
+<h1>Remove this course from the draft?</h1>
+
+<dl class="record">
+  <dt>Short title</dt><dd>{{$c.ShortTitle}}</dd>
+  <dt>Full title</dt><dd>{{$c.Title}}</dd>
+  <dt>Course ID</dt><dd><code>{{$c.ID}}</code></dd>
+  {{/* The dates go with the course, so they are named here: this is the
+       last look at them before they leave the draft. */}}
+  <dt>Dates</dt><dd>{{with $c.Dates}}{{range $i, $d := .}}{{if $i}}, {{end}}{{$d.Code}} ({{$d.Start}}){{end}}{{else}}none{{end}}</dd>
+</dl>
+
+<p class="notice-inline">This course was added in <strong>your draft</strong>
+  and is not published. Removing it takes it out of the draft again{{with $c.Dates}},
+  together with its {{len .}} date{{if ne (len .) 1}}s{{end}}{{end}}. Every other
+  change in the draft stays as it is.</p>
+
+<div class="actions">
+  <form method="post" action="/courses/{{$c.ID}}/delete">
+    <button class="danger">Yes, remove {{$c.ShortTitle}}</button>
+  </form>
+  <a href="/courses/{{$c.ID}}">Cancel</a>
+</div>
+{{end}}

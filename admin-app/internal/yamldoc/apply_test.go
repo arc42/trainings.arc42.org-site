@@ -359,3 +359,34 @@ func TestUpdateCourseReplacesLegacyBlurb(t *testing.T) {
 		t.Errorf("legacy key not migrated:\n%s", out)
 	}
 }
+
+// Removing a course that AddCourse appended, with a date AddDate put into it,
+// gives back the file as it was: the draft's "remove this course" must not
+// leave a blank line or a stray key behind in the pull request.
+func TestDeleteCourseUndoesAddCourse(t *testing.T) {
+	doc, err := Parse([]byte(twoDates))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if err := doc.AddCourse(model.Course{
+		ID: "flex", ShortTitle: "FLEX", Title: "Flexible Architectures",
+		URL: "https://example.org/flex", Trainers: []string{"Dr. Gernot Starke"},
+	}); err != nil {
+		t.Fatalf("AddCourse: %v", err)
+	}
+	if err := doc.AddDate("flex", model.Date{
+		ID: "flex-mar-2027", Code: "27-03 FLEX", Start: "2027-03-01", End: "2027-03-02",
+		Language: "de", Format: "online", URL: "https://example.org/f", Status: "open",
+	}); err != nil {
+		t.Fatalf("AddDate: %v", err)
+	}
+	if err := doc.DeleteCourse("flex"); err != nil {
+		t.Fatalf("DeleteCourse: %v", err)
+	}
+	if got := string(doc.Bytes()); got != twoDates {
+		t.Errorf("file after add and delete differs from the original:\n%s", got)
+	}
+	if err := doc.DeleteCourse("flex"); err == nil {
+		t.Error("deleting a course that is not there reported no error")
+	}
+}

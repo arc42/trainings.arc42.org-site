@@ -134,7 +134,7 @@ func parseDateForm(r *http.Request, isNew bool, taken model.Taken) (model.Date, 
 	get := func(k string) string { return strings.TrimSpace(r.PostFormValue(k)) }
 	courseID := get("course_id")
 	d := model.Date{
-		ID: get("id"), Code: get("code"), Start: get("start"), End: get("end"),
+		ID: normaliseID(get("id")), Code: get("code"), Start: get("start"), End: get("end"),
 		City: get("city"), Country: strings.ToUpper(get("country")),
 		Language: get("language"), Format: get("format"),
 		Price: parsePrice(get),
@@ -210,8 +210,8 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 
 	// Validate the prospective document before touching the draft, so a
 	// rejected edit leaves no trace.
-	probe := d.Doc.Model()
-	probe = applyToModel(probe, nd, courseID, isNew, r.PathValue("id"))
+	before := d.Doc.Model()
+	probe := applyToModel(before, nd, courseID, isNew, r.PathValue("id"))
 
 	reshow := func(title string, problems []validate.Problem, warnings []validate.Warning) {
 		m := d.Doc.Model()
@@ -224,8 +224,17 @@ func (s *Server) handleDateSave(w http.ResponseWriter, r *http.Request, sess Ses
 		})
 	}
 
-	if problems := validate.Rules(probe); len(problems) > 0 {
-		reshow("Fix these first", validate.ExplainAll(probe, problems), nil)
+	// The booking code is not normalised: it reaches the back office byte for
+	// byte. The id is, and what is still wrong with it after that is the
+	// form's own check, so it holds even when the schema cannot be fetched.
+	var local []validate.Problem
+	if msg := idProblem(nd.ID); msg != "" {
+		local = append(local, validate.Problem{Field: "dates." + nd.ID + ".id", Message: msg})
+	}
+	// Everything Review & propose would say about this date: the rules and
+	// the schema, on the draft with this edit applied.
+	if problems := s.editProblems(r, client, before, probe, "/dates/"+nd.ID, local); len(problems) > 0 {
+		reshow("Fix these first", problems, nil)
 		return
 	}
 

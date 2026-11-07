@@ -171,3 +171,30 @@ func TestARemovalAfterAnAddStillHasValues(t *testing.T) {
 		t.Error("the removal reported no fields at all")
 	}
 }
+
+// A course added and then edited in the same draft is still one addition, and
+// its card lists every field it has, not the difference between the two saves.
+func TestAnAdditionEditedStaysWhole(t *testing.T) {
+	d := newTestDraft(t)
+	nc := model.Course{ID: "flex", ShortTitle: "FLEX", Title: "Flexible", URL: "https://example.org/flex",
+		Trainers: []string{"Dr. Gernot Starke"}}
+	if err := d.AddCourse(nc); err != nil {
+		t.Fatalf("AddCourse: %v", err)
+	}
+	nc.Title = "Flexible Architectures"
+	if err := d.UpdateCourse("flex", nc); err != nil {
+		t.Fatalf("UpdateCourse: %v", err)
+	}
+	if len(d.Changes) != 1 || d.Changes[0].Kind != "added" {
+		t.Fatalf("Changes = %+v", d.Changes)
+	}
+	keys := map[string]bool{}
+	for _, f := range d.Changes[0].Fields() {
+		keys[f.Key] = true
+	}
+	for _, k := range []string{"id", "short_title", "title", "url", "trainers"} {
+		if !keys[k] {
+			t.Errorf("the addition's card has no %s row: %+v", k, d.Changes[0].Fields())
+		}
+	}
+}

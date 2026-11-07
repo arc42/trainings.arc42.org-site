@@ -145,3 +145,24 @@ func (d *Doc) AddCourse(nc model.Course) error {
 	d.replaceLines(start, end, existing+"\n"+RenderCourse(nc, indent))
 	return nil
 }
+
+// DeleteCourse removes one course entry, its dates included. It exists for a
+// course added in the same draft (the admin app offers nothing else), so it
+// mirrors AddCourse: AddCourse writes a blank separator line and then the
+// course, and that separator goes too, which leaves the file byte for byte as
+// it was before the course was added.
+func (d *Doc) DeleteCourse(id string) error {
+	start, end, _, ok := d.courseExtent(id)
+	if !ok {
+		return fmt.Errorf("delete course %q: not found", id)
+	}
+	src := d.lines()
+	switch {
+	case start > 1 && strings.TrimSpace(src[start-2]) == "":
+		start--
+	case end < len(src) && strings.TrimSpace(src[end]) == "":
+		end++
+	}
+	d.replaceLines(start, end, "")
+	return nil
+}

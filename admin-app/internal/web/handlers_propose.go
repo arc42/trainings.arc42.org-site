@@ -284,45 +284,18 @@ func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request, sess Sess
 // fault means the app failed to check the draft, not that the draft is wrong,
 // and holding the proposal back would leave the operator with nothing to do:
 // CI checks the pull request again, and stays the authority on it.
+//
+// Every form save runs the same check first (editProblems), so an entry
+// problem here is a backstop: a draft made before that, or a hand-made POST.
 func (s *Server) proposeProblems(r *http.Request, client *gh.Client, d *Draft) (entries, faults []validate.Problem) {
-	m := d.Doc.Model()
-	// Rules first: where a rule and the schema object to the same field (a
-	// public date without a city), the rule's message is the one written for
-	// this case, and the operator needs to hear about the field once.
-	all := append(validate.Rules(m), s.schemaProblems(r, client, d)...)
-	seen := map[string]bool{}
-	for _, p := range validate.ExplainAll(m, all) {
-		if p.Kind == validate.AppProblem {
-			// The page asks the operator for a screenshot; the log is the
-			// copy that does not depend on them sending one.
-			log.Printf("propose: app fault: %s", p.Detail)
-			faults = append(faults, p)
-			continue
-		}
-		if key := p.Link + "\x00" + p.Label; !seen[key] {
-			seen[key] = true
-			entries = append(entries, p)
-		}
+	schema, err := s.fetchSchema(r, client)
+	entries, faults = checkModel(d.Doc.Model(), schema, err)
+	for _, p := range faults {
+		// The page asks the operator for a screenshot; the log is the copy
+		// that does not depend on them sending one.
+		log.Printf("propose: app fault: %s", p.Detail)
 	}
 	return entries, faults
-}
-
-// schemaProblems validates against the repository's own schema, fetched live so
-// it cannot drift from what CI will enforce.
-func (s *Server) schemaProblems(r *http.Request, client *gh.Client, d *Draft) []validate.Problem {
-	schema, _, _, err := client.ReadFile(r.Context(), schemaPath)
-	if err != nil {
-		return []validate.Problem{validate.AppFault("could not fetch the schema: " + err.Error())}
-	}
-	feed, err := validate.FeedJSON(d.Doc.Model())
-	if err != nil {
-		return []validate.Problem{validate.AppFault("could not render the feed: " + err.Error())}
-	}
-	problems, err := validate.Schema(schema, feed)
-	if err != nil {
-		return []validate.Problem{validate.AppFault(err.Error())}
-	}
-	return problems
 }
 
 // courseNotes are the info lines for each course this draft adds or changes:

@@ -40,6 +40,47 @@
 
   Array.prototype.forEach.call(document.querySelectorAll(".hint[id]"), attachHelp);
 
+  /* ------------------------------------------------------- lower case --
+     Ids are lower case. A field marked data-lowercase shows that as it is
+     typed rather than complaining at the save: "MAISPEC" becomes "maispec"
+     under the operator's fingers, and once the field is left, "Mai Spec"
+     becomes "mai-spec", exactly what the server will store. The server
+     normalises the same way, so with scripting off nothing is lost but this
+     preview. Registered before the course form's own listeners. */
+
+  // Mirrors normaliseID in checks.go: trim, lower-case, each run of spaces
+  // and underscores one hyphen. \s is spelled out because Go's \s is ASCII
+  // only. TestFormJSNormalisesLikeTheServer keeps the two in step.
+  function normaliseId(v) {
+    return v.trim().toLowerCase().replace(/[ \t\n\f\r_]+/g, "-");
+  }
+
+  function lowerAsTyped(el) {
+    el.addEventListener("input", function () {
+      var typed = el.value;
+      var lower = typed.toLowerCase();
+      if (typed === lower) return;
+      // Keep the caret where it was. A few characters lower-case to a
+      // different length (İ); then it moves by the difference, which still
+      // leaves it next to what was just typed.
+      var shift = lower.length - typed.length;
+      var start = el.selectionStart, end = el.selectionEnd;
+      el.value = lower;
+      if (start === null || end === null) return;
+      try {
+        el.setSelectionRange(Math.max(0, start + shift), Math.max(0, end + shift));
+      } catch (e) { /* not a text control; the value is right regardless */ }
+    });
+    // Spaces become hyphens only on leaving the field: converting them while
+    // typing would turn "mai " into "mai-" before the next word is there.
+    el.addEventListener("change", function () {
+      var id = normaliseId(el.value);
+      if (id !== el.value) el.value = id;
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("input[data-lowercase]"), lowerAsTyped);
+
   /* ------------------------------------------------------------ helpers -- */
 
   // A field is "ours" to fill in until the operator types in it. Anything they
@@ -243,10 +284,15 @@
   var cid = document.getElementById("c-id");
   var curl = document.getElementById("c-url");
   if (cid && curl) {
+    // From the id the server will store, not the one in the field: with
+    // "Mai Spec" typed, the page is info-mai-spec/, never info-mai spec/.
+    // Mirrors followID in handlers_courses.go.
     var derivedURL = function () {
-      return cid.value ? "https://www.arc42.de/info-" + cid.value + "/" : "";
+      var id = normaliseId(cid.value);
+      return id ? "https://www.arc42.de/info-" + id + "/" : "";
     };
     var urlState = claim(curl, derivedURL);
     cid.addEventListener("input", function () { urlState.apply(); });
+    cid.addEventListener("change", function () { urlState.apply(); });
   }
 })();

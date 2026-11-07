@@ -113,14 +113,9 @@ func CourseWarnings(c model.Course) []Warning {
 	if n := len([]rune(c.ShortTitle)); n > maxShortTitle {
 		add("short_title", "Short title", "%d characters is long for the home page card; %d or fewer fits", n, maxShortTitle)
 	}
-	if isPlainHTTP(c.URL) {
-		add("url", "Course URL", "links must start with https://")
-	}
-	// url_en is optional — most courses have no English page — but when it is
-	// given it is a published link like any other.
-	if isPlainHTTP(c.URLEn) {
-		add("url_en", "English course page", "links must start with https://")
-	}
+	// No https warning any more: a course link that is not https is a
+	// blocking problem on the course form (courseProblems), as the schema
+	// would make it on the review page.
 
 	// A hand-made card ignores the descriptions in the data, so any warning
 	// about them would be untrue; CourseNotes says so instead.
@@ -182,10 +177,4 @@ func spanDays(start, end string) (int, bool) {
 		return 0, false
 	}
 	return int(e.Sub(s).Hours() / 24), true
-}
-
-// isPlainHTTP reports a URL that is given but not secure. An empty URL is not
-// a problem here — whether it is required at all is a blocking rule's job.
-func isPlainHTTP(u string) bool {
-	return strings.HasPrefix(u, "http://")
 }

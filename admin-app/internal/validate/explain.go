@@ -110,7 +110,7 @@ func plainMessage(keyword string, f formField) (msg string, ok bool) {
 func Explain(t model.Trainings, p Problem) Problem {
 	switch {
 	case strings.HasPrefix(p.Field, "dates."):
-		id, prop, _ := strings.Cut(strings.TrimPrefix(p.Field, "dates."), ".")
+		id, prop, _ := cutProp(strings.TrimPrefix(p.Field, "dates."))
 		for _, c := range t.Courses {
 			for _, d := range c.Dates {
 				if d.ID == id {
@@ -122,7 +122,7 @@ func Explain(t model.Trainings, p Problem) Problem {
 
 	case strings.HasPrefix(p.Field, "courses."):
 		rest := strings.TrimPrefix(p.Field, "courses.")
-		id, prop, ok := strings.Cut(rest, ".")
+		id, prop, ok := cutProp(rest)
 		if !ok {
 			id, prop = "", rest // "courses.id": the id itself is missing
 		}
@@ -137,6 +137,18 @@ func Explain(t model.Trainings, p Problem) Problem {
 		return explainPointer(t, p)
 	}
 	return asAppFault(p)
+}
+
+// cutProp splits "<id>.<prop>" at the last dot. A property name never holds
+// one, while an id can, before it has been checked: "mai.spec" is exactly the
+// kind of entry these problems are about, and cut at the first dot it read as
+// course "mai" with a property "spec.id" no form has.
+func cutProp(s string) (id, prop string, ok bool) {
+	i := strings.LastIndex(s, ".")
+	if i < 0 {
+		return s, "", false
+	}
+	return s[:i], s[i+1:], true
 }
 
 func explainPointer(t model.Trainings, p Problem) Problem {

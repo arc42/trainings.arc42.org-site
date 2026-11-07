@@ -59,6 +59,18 @@ need neither a network nor a configuration file.
    site's `_includes/`; delete a course from it when it moves to the standard
    card. Being stale costs a wrong info line, nothing more.
 
+   **Checked where it is entered.** A save runs the same checks as *Review &
+   propose* (the cross-field rules and the live schema, in plain words) on the
+   draft with this one edit applied, and a problem with the course or date
+   being saved stops the save on its form. Problems elsewhere in the draft do
+   not, unless this edit caused them. Ids are normalised rather than refused:
+   `MAISPEC` is saved as `maispec`, spaces and underscores become hyphens,
+   and only what is still not an id after that is a problem. A course added in
+   this draft keeps an editable id until it has dates, and can be removed from
+   the draft again, its dates with it, without discarding anything else. A
+   course on `main` keeps a fixed id and has no removal. The review page still
+   runs every check as the backstop.
+
 4. **Review.** `GET /propose` re-reads the file from GitHub and shows a change
    report: one card per change, one row per field that actually moved, with the
    old value beside the new one. The unified YAML diff is still there, one
@@ -124,7 +136,8 @@ below.
 | `GET /` | The flat date list |
 | `GET /dates/new`, `GET /dates/{id}`, `POST /dates/{id}` | Add, duplicate (`?from=`) and edit a date |
 | `GET /dates/{id}/delete`, `POST /dates/{id}/delete` | The confirmation page, then the removal — the GET deliberately changes nothing |
-| `GET /courses`, `GET /courses/new`, `GET /courses/{id}`, `POST /courses/…` | The courses. There is no course delete: a course owns its dates, so removing one would silently take them along |
+| `GET /courses`, `GET /courses/new`, `GET /courses/{id}`, `POST /courses/…` | The courses |
+| `GET /courses/{id}/delete`, `POST /courses/{id}/delete` | Only for a course added in this draft: the confirmation, then taking it and its dates back out. A course on `main` cannot be removed: it owns its dates, so removing one would silently take them along |
 | `GET /propose`, `POST /propose` | The change report and publish screen, and the publish itself |
 | `POST /discard` | Throw the draft away |
 | `GET /keepalive` | The draft bar's 60-second htmx ping |

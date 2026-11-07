@@ -69,11 +69,34 @@ func TestDumpPreview(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// A course added in this draft: its id is still editable and it can be
+	// removed again. Then the same course with a date, where the id is fixed.
+	s3 := testServer(t, gh.URL)
+	s3.Routes().ServeHTTP(httptest.NewRecorder(),
+		signedIn(t, s3, http.MethodPost, "/courses/new", courseForm("maispec")))
+	dumpPage(t, s3, dir, "course-draft.html", "/courses/maispec")
+	dumpPage(t, s3, dir, "course-remove.html", "/courses/maispec/delete")
+	s3.Routes().ServeHTTP(httptest.NewRecorder(),
+		signedIn(t, s3, http.MethodPost, "/dates/new", dateFormFor("maispec")))
+	dumpPage(t, s3, dir, "course-draft-dates.html", "/courses/maispec")
+
 	css, err := assets.ReadFile("static/app.css")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(dir+"/static/app.css", css, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func dumpPage(t *testing.T, s *Server, dir, name, target string) {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, target, nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("%s -> %d: %s", target, rec.Code, rec.Body.String())
+	}
+	if err := os.WriteFile(dir+"/"+name, rec.Body.Bytes(), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

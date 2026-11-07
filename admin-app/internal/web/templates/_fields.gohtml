@@ -26,12 +26,14 @@
 
 {{/* problems expects the []validate.Problem slice directly, explained
      (validate.Explain), so each names its field by the label on this form.
-     Never .String or .Field: those are the field's place in the file. */}}
+     Never .String or .Field: those are the field's place in the file. Where
+     is empty for a problem on the entry being edited (onThisForm) and names
+     the other entry for one this edit caused there (editProblems). */}}
 {{define "problems"}}
 {{if .}}
 <div class="problems" role="alert">
   <h2>Fix these before saving</h2>
-  <ul>{{range .}}<li>{{with .Label}}<b>{{.}}</b> — {{end}}{{.Message}}</li>{{end}}</ul>
+  <ul>{{range .}}<li>{{with .Where}}{{.}}: {{end}}{{with .Label}}<b>{{.}}</b> — {{end}}{{.Message}}</li>{{end}}</ul>
 </div>
 {{end}}
 {{end}}
