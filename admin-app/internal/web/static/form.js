@@ -40,6 +40,34 @@
 
   Array.prototype.forEach.call(document.querySelectorAll(".hint[id]"), attachHelp);
 
+  /* ------------------------------------------------------- lower case --
+     Ids are lower case. A field marked data-lowercase shows that as it is
+     typed rather than complaining at the save: "MAISPEC" becomes "maispec"
+     under the operator's fingers. The server normalises the same way
+     (normaliseID), so with scripting off nothing is lost but this preview.
+     Registered before the course form's own listener, so the course URL is
+     derived from the lower-case value. */
+
+  function lowerAsTyped(el) {
+    el.addEventListener("input", function () {
+      var typed = el.value;
+      var lower = typed.toLowerCase();
+      if (typed === lower) return;
+      // Keep the caret where it was. A few characters lower-case to a
+      // different length (İ); then it moves by the difference, which still
+      // leaves it next to what was just typed.
+      var shift = lower.length - typed.length;
+      var start = el.selectionStart, end = el.selectionEnd;
+      el.value = lower;
+      if (start === null || end === null) return;
+      try {
+        el.setSelectionRange(Math.max(0, start + shift), Math.max(0, end + shift));
+      } catch (e) { /* not a text control; the value is right regardless */ }
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("input[data-lowercase]"), lowerAsTyped);
+
   /* ------------------------------------------------------------ helpers -- */
 
   // A field is "ours" to fill in until the operator types in it. Anything they

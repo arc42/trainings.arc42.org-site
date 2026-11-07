@@ -671,32 +671,32 @@ func TestProposePageNoLongerClaimsCI(t *testing.T) {
 	}
 }
 
-// http:// on the course URL is only a warning on the course form, so it can
-// reach the review. The schema's answer is a regular expression; the operator
-// gets the field and plain words.
+// The schema's answer is a regular expression; the operator gets the field and
+// plain words. The course form now refuses an http:// course URL itself
+// (TestCourseSaveRunsProposeChecks), so the problem is in the file already, the
+// way a hand edit or a draft from before that check would bring it here, and an
+// unrelated date edit makes the draft worth reviewing.
 func TestProposeSchemaProblemSpeaksPlainly(t *testing.T) {
 	gh, fake := fakeGitHubFiles(t, map[string][]byte{
-		"_data/trainings.yml":       []byte(fixtureYAML),
+		"_data/trainings.yml": []byte(strings.Replace(fixtureYAML,
+			`url: "https://example.org/msa"`, `url: "http://example.org/msa"`, 1)),
 		"api/trainings.schema.json": realSchema(t),
 	})
 	defer gh.Close()
-	s := testServer(t, gh.URL)
-	form := newMASForm()
-	form.Set("url", "http://www.arc42.de/info-mas/")
-	form.Set("confirm_warnings", "1")
-	if rec, _, ok := postCourse(t, s, "/courses/new", form); !ok {
-		t.Fatalf("course not saved:\n%s", rec.Body.String())
+	s := dirtyServer(t, gh.URL)
+	if d, ok := s.drafts.Get("sid"); !ok || !d.Dirty() {
+		t.Fatal("the date edit was held back by the course's problem")
 	}
 
 	rec := httptest.NewRecorder()
 	s.Routes().ServeHTTP(rec, signedIn(t, s, http.MethodGet, "/propose", nil))
 	body := rec.Body.String()
 	list := between(body, "Fix these in your entries", "CI would reject them too.")
-	if !strings.Contains(list, "MAS — Course URL: must start with https://") {
+	if !strings.Contains(list, "MSA — Course URL: must start with https://") {
 		t.Errorf("the problem is not in plain words:\n%s", body)
 	}
-	// "courses/1", a pointer; "/courses/mas" is the Edit link and fine.
-	for _, leak := range []string{"pattern", "^", "courses/1"} {
+	// "courses/0", a pointer; "/courses/msa" is the Edit link and fine.
+	for _, leak := range []string{"pattern", "^", "courses/0"} {
 		if strings.Contains(list, leak) {
 			t.Errorf("problem list shows %q:\n%s", leak, list)
 		}

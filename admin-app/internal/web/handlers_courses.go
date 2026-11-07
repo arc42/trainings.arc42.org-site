@@ -136,6 +136,9 @@ func (s *Server) handleCourseForm(w http.ResponseWriter, r *http.Request, sess S
 		data["Course"] = model.Course{}
 		data["OtherTrainers"] = nil
 		data["OtherSites"] = nil
+		for k, v := range courseIDState(d, "") {
+			data[k] = v
+		}
 		s.render(w, "courseform.gohtml", data)
 		return
 	}
@@ -144,6 +147,9 @@ func (s *Server) handleCourseForm(w http.ResponseWriter, r *http.Request, sess S
 			data["Title"] = "Edit " + c.ShortTitle
 			data["IsNew"] = false
 			data["Course"] = c
+			for k, v := range courseIDState(d, id) {
+				data[k] = v
+			}
 			data["OtherTrainers"] = otherTrainers(c.Trainers)
 			data["OtherSites"] = otherSites(c.ShowOn)
 			data["Notes"] = validate.CourseNotes(c)
@@ -154,17 +160,37 @@ func (s *Server) handleCourseForm(w http.ResponseWriter, r *http.Request, sess S
 	http.NotFound(w, r)
 }
 
-// courseProblems checks what HTML validation cannot: uniqueness of the id, and
-// that a course actually names a trainer. The feed schema enforces both at
-// propose time, but catching them here keeps a broken course out of the draft.
-func courseProblems(c model.Course, existing []model.Course, isNew bool) []validate.Problem {
+// courseIDState is what the course form needs to know about the id of the
+// stored course storedID: whether it may still change, and which hint says
+// why or why not. StoredID is the form's own address, which is not the id
+// field once a rename is being tried: posting a failed rename back to the new
+// id would edit a course that does not exist.
+func courseIDState(d *Draft, storedID string) map[string]any {
+	return map[string]any{
+		"StoredID":   storedID,
+		"DraftOnly":  storedID != "" && d.AddedCourse(storedID),
+		"IDEditable": storedID == "" || d.CourseIDEditable(storedID),
+	}
+}
+
+// courseProblems checks what HTML validation cannot: the id's form and
+// uniqueness, and that a course actually names a trainer. The feed schema
+// enforces these at propose time too, but catching them here keeps a broken
+// course out of the draft. storedID is the course being edited, "" for a new
+// one: its own id is not a duplicate of itself.
+func courseProblems(c model.Course, existing []model.Course, storedID string) []validate.Problem {
 	var problems []validate.Problem
 	field := "courses." + c.ID
 	if c.ID == "" {
 		problems = append(problems, validate.Problem{Field: "courses.id", Message: "must not be empty"})
 	}
+	// "courses.id", not field+".id": the id is what is wrong, so it cannot
+	// also be what Explain looks the course up by.
+	if msg := idProblem(c.ID); msg != "" {
+		problems = append(problems, validate.Problem{Field: "courses.id", Message: msg})
+	}
 	for _, ex := range existing {
-		if isNew && ex.ID == c.ID {
+		if c.ID != "" && ex.ID == c.ID && ex.ID != storedID {
 			problems = append(problems, validate.Problem{
 				Field: field + ".id", Message: c.ID + " is already used by another course",
 			})
@@ -226,31 +252,51 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	}
 	get := func(k string) string { return strings.TrimSpace(r.PostFormValue(k)) }
 	c := model.Course{
-		ID: get("id"), ShortTitle: get("short_title"), Title: get("title"),
+		ID: normaliseID(get("id")), ShortTitle: get("short_title"), Title: get("title"),
 		BlurbDE: get("blurb_de"), BlurbEN: get("blurb_en"),
 		Certification: get("certification"), CreditPoints: parseCreditPoints(get),
 		URL: get("url"), URLEn: get("url_en"),
 		Trainers: parseTrainers(r), ShowOn: parseShowOn(r),
 	}
-	isNew := r.PathValue("id") == ""
+	storedID := r.PathValue("id")
+	isNew := storedID == ""
 	if !isNew {
-		if stored, ok := d.Doc.Model().FindCourse(r.PathValue("id")); ok && sameSites(stored.ShowOn, c.ShowOn) {
+		if stored, ok := d.Doc.Model().FindCourse(storedID); ok && sameSites(stored.ShowOn, c.ShowOn) {
 			c.ShowOn = stored.ShowOn
+		}
+		// The form shows a fixed id read-only; this holds it fixed against a
+		// stale tab or a hand-made POST too. It keeps the stored id rather
+		// than refusing: a refusal would reshow the posted id, read-only, and
+		// leave the operator exactly as stuck as before.
+		if !d.CourseIDEditable(storedID) {
+			c.ID = storedID
 		}
 	}
 
 	reshow := func(title string, problems []validate.Problem, warnings []validate.Warning) {
-		s.render(w, "courseform.gohtml", map[string]any{
+		data := map[string]any{
 			"Title": title, "Course": c, "Draft": d, "Login": sess.Login,
 			"IsNew": isNew, "Problems": problems, "Warnings": warnings,
 			"KnownTrainers": model.KnownTrainers, "OtherTrainers": otherTrainers(c.Trainers),
 			"KnownSites": model.KnownSites, "OtherSites": otherSites(c.ShowOn),
 			"Notes": validate.CourseNotes(c),
-		})
+		}
+		for k, v := range courseIDState(d, storedID) {
+			data[k] = v
+		}
+		s.render(w, "courseform.gohtml", data)
 	}
 
-	if problems := courseProblems(c, d.Doc.Model().Courses, isNew); len(problems) > 0 {
-		reshow("Fix these first", validate.ExplainAll(d.Doc.Model(), problems), nil)
+	before := d.Doc.Model()
+	// A course with no id, or another course's, cannot be placed in the model
+	// unambiguously, so the form's own checks go first and alone.
+	if problems := courseProblems(c, before.Courses, storedID); len(problems) > 0 {
+		reshow("Fix these first", onThisForm(validate.ExplainAll(before, problems)), nil)
+		return
+	}
+	// Then everything Review & propose would say about this course.
+	if problems := s.editProblems(r, client, before, withCourse(before, storedID, c), "/courses/"+c.ID, nil); len(problems) > 0 {
+		reshow("Fix these first", problems, nil)
 		return
 	}
 
@@ -266,10 +312,80 @@ func (s *Server) handleCourseSave(w http.ResponseWriter, r *http.Request, sess S
 	if isNew {
 		err = d.AddCourse(c)
 	} else {
-		err = d.UpdateCourse(r.PathValue("id"), c)
+		err = d.UpdateCourse(storedID, c)
 	}
 	if err != nil {
 		s.fail(w, "could not apply the course edit", err)
+		return
+	}
+	http.Redirect(w, r, "/courses", http.StatusSeeOther)
+}
+
+// withCourse is m with the course form's edit applied, for checking. The form
+// does not carry the dates, so an edited course keeps the ones it has.
+func withCourse(m model.Trainings, storedID string, c model.Course) model.Trainings {
+	out := model.Trainings{}
+	for _, ex := range m.Courses {
+		if storedID != "" && ex.ID == storedID {
+			nc := c
+			nc.Dates = ex.Dates
+			out.Courses = append(out.Courses, nc)
+			continue
+		}
+		out.Courses = append(out.Courses, ex)
+	}
+	if storedID == "" {
+		out.Courses = append(out.Courses, c)
+	}
+	return out
+}
+
+// handleCourseRemoveConfirm asks before a course added in this draft is taken
+// out again, the way a date's removal is asked about: it is a GET, changes
+// nothing, and names what goes, the dates included. A course on main has no
+// removal; a course owns its dates, and removing a published one would take
+// them along without a word.
+func (s *Server) handleCourseRemoveConfirm(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
+	d, err := s.loadDraft(r.Context(), sess, client)
+	if err != nil {
+		s.fail(w, "could not read the training dates from GitHub", err)
+		return
+	}
+	id := r.PathValue("id")
+	c, ok := d.Doc.Model().FindCourse(id)
+	if !ok {
+		// Already gone: a second tab, or the back button after removing it.
+		http.Redirect(w, r, "/courses", http.StatusSeeOther)
+		return
+	}
+	if !d.AddedCourse(id) {
+		http.Redirect(w, r, "/courses/"+id, http.StatusSeeOther)
+		return
+	}
+	s.render(w, "confirmremovecourse.gohtml", map[string]any{
+		"Title": "Remove " + c.ShortTitle + " from the draft?", "Draft": d, "Login": sess.Login,
+		"Course": c,
+	})
+}
+
+func (s *Server) handleCourseRemove(w http.ResponseWriter, r *http.Request, sess Session, client *gh.Client) {
+	d, err := s.loadDraft(r.Context(), sess, client)
+	if err != nil {
+		s.fail(w, "could not read the training dates from GitHub", err)
+		return
+	}
+	id := r.PathValue("id")
+	if _, ok := d.Doc.Model().FindCourse(id); !ok {
+		http.Redirect(w, r, "/courses", http.StatusSeeOther)
+		return
+	}
+	if !d.AddedCourse(id) {
+		// Only a hand-made POST gets here: the form offers no removal.
+		http.Redirect(w, r, "/courses/"+id, http.StatusSeeOther)
+		return
+	}
+	if err := d.RemoveAddedCourse(id); err != nil {
+		s.fail(w, "could not remove the course", err)
 		return
 	}
 	http.Redirect(w, r, "/courses", http.StatusSeeOther)

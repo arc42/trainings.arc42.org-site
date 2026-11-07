@@ -116,7 +116,9 @@
   <fieldset class="group">
     <legend>Identifiers</legend>
     <label>Date ID
-      <input name="id" value="{{.Date.ID}}" pattern="[a-z0-9-]+"
+      {{/* Pattern and attributes as on the course id: see courseform.gohtml. */}}
+      <input name="id" value="{{.Date.ID}}" pattern="[A-Za-z0-9_ \-]+"
+             autocapitalize="none" spellcheck="false" autocomplete="off" data-lowercase
              aria-describedby="id-hint" placeholder="{{idMask .CourseID}}"
              data-taken="{{takenJSON .Taken.IDs}}">
       {{if .IsNew}}<small id="id-hint" class="hint">Computed from the course,

@@ -10,15 +10,27 @@
 {{template "warnings" .Warnings}}
 {{template "notes" .Notes}}
 
-<form method="post" action="/courses/{{if .IsNew}}new{{else}}{{.Course.ID}}{{end}}" class="detail">
+<form method="post" action="/courses/{{if .IsNew}}new{{else}}{{.StoredID}}{{end}}" class="detail">
 
   <fieldset class="group">
     <legend>Identity</legend>
     <label>Course ID <span class="req" aria-hidden="true">*</span>
-      <input name="id" id="c-id" value="{{.Course.ID}}" required pattern="[a-z0-9-]+"
-             aria-describedby="cid-hint" placeholder="e.g. msa" {{if not .IsNew}}readonly{{end}}>
-      <small id="cid-hint" class="hint">Lower-case letters, digits and hyphens.
+      {{/* The pattern accepts what the server turns into an id (capitals,
+           spaces, underscores: normaliseID), so it never refuses what saving
+           would fix. The hyphen is escaped: browsers compile pattern= with
+           the RegExp v flag, where [a-z0-9-] is a syntax error, and an
+           invalid pattern is silently not checked at all.
+           TestIDPatternsValidInVMode keeps it that way. */}}
+      <input name="id" id="c-id" value="{{.Course.ID}}" required pattern="[A-Za-z0-9_ \-]+"
+             autocapitalize="none" spellcheck="false" autocomplete="off" data-lowercase
+             aria-describedby="cid-hint" placeholder="e.g. msa" {{if not .IDEditable}}readonly{{end}}>
+      <small id="cid-hint" class="hint">Lower-case letters, digits and hyphens;
+        capitals, spaces and underscores are converted when you save.
         {{if .IsNew}}Every date links to its course by this value.
+        {{else if .IDEditable}}Still editable: this course is only in your draft
+        and has no dates yet.
+        {{else if .DraftOnly}}Not editable while the course has dates, which
+        reference it — remove its dates to change it.
         {{else}}Not editable — the dates below reference it.{{end}}</small>
     </label>
     <label>Short title <span class="req" aria-hidden="true">*</span>
@@ -129,5 +141,10 @@
 
   {{template "actions" dict "Warnings" .Warnings "IsNew" .IsNew "Cancel" "/courses"}}
 </form>
+{{/* Only for a course this draft added: nothing published refers to it yet.
+     A link to a confirmation, like a date's Remove, never a direct POST. */}}
+{{if .DraftOnly}}
+<p class="remove-course"><a href="/courses/{{.StoredID}}/delete">Remove this course from the draft</a></p>
+{{end}}
 <script src="/static/form.js" defer></script>
 {{end}}

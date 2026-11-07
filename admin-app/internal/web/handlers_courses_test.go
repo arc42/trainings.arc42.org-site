@@ -111,7 +111,7 @@ func TestCourseFormRejectsBadSiteName(t *testing.T) {
 	c := model.Course{ID: "mas", ShortTitle: "MAS", Title: "MAS", URL: "https://x.org",
 		Trainers: []string{"A"}, ShowOn: []string{"Not A Site"}}
 	var got []string
-	for _, p := range courseProblems(c, nil, true) {
+	for _, p := range courseProblems(c, nil, "") {
 		if p.Field == "courses.mas.show_on" {
 			got = append(got, p.Message)
 		}

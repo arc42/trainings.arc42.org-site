@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -110,7 +111,12 @@ func (d *Draft) record(c Change) {
 			c.BeforeCourse = old.BeforeCourse
 		}
 		if old.Kind == "added" && c.Kind == "updated" {
+			// Still an addition, and an addition has no before. The edit's own
+			// before is the entry as it was first added; kept, it turned the
+			// "added" card into the difference between two drafts of it, and a
+			// renamed new course showed its id and nothing else.
 			c.Kind = "added"
+			c.Before, c.BeforeCourse = nil, nil
 		}
 		d.Changes[i] = c
 		return
@@ -181,19 +187,80 @@ func (d *Draft) AddCourse(nc model.Course) error {
 	return nil
 }
 
+// UpdateCourse rewrites a course's own fields. nc.ID differing from id is a
+// rename, which the course form allows only for a course this draft added and
+// that has no dates yet (CourseIDEditable): nothing published refers to it.
 func (d *Draft) UpdateCourse(id string, nc model.Course) error {
 	before, found := d.Doc.Model().FindCourse(id)
 	if err := d.Doc.UpdateCourse(id, nc); err != nil {
 		return err
 	}
+	if nc.ID != id {
+		// The records follow the course, or the report and the pull request
+		// title would go on naming an id that is no longer in the file.
+		for i := range d.Changes {
+			if d.Changes[i].CourseID != id {
+				continue
+			}
+			d.Changes[i].CourseID = nc.ID
+			if d.Changes[i].DateID == "course:"+id {
+				d.Changes[i].DateID = "course:" + nc.ID
+			}
+		}
+	}
 	c := Change{
-		Kind: "updated", DateID: "course:" + id, AfterCourse: &nc,
-		CourseID: id, CourseShortTitle: nc.ShortTitle, Summary: nc.ShortTitle,
+		Kind: "updated", DateID: "course:" + nc.ID, AfterCourse: &nc,
+		CourseID: nc.ID, CourseShortTitle: nc.ShortTitle, Summary: nc.ShortTitle,
 	}
 	if found {
 		c.BeforeCourse = &before
 	}
 	d.record(c)
+	return nil
+}
+
+// AddedCourse reports whether a course exists only in this draft: added here,
+// and not on main. Nothing published can refer to such a course yet, which is
+// what lets the operator still rename it or take it out again.
+func (d *Draft) AddedCourse(id string) bool {
+	for _, c := range d.Changes {
+		if c.Kind == "added" && c.AfterCourse != nil && c.CourseID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// CourseIDEditable reports whether the course form may change a course's id:
+// only for a course this draft added, and only while it has no dates, because
+// a date's id, booking code and registration link are all derived from it.
+func (d *Draft) CourseIDEditable(id string) bool {
+	if !d.AddedCourse(id) {
+		return false
+	}
+	c, ok := d.Doc.Model().FindCourse(id)
+	return ok && len(c.Dates) == 0
+}
+
+// RemoveAddedCourse takes a course this draft added back out of it, together
+// with its dates and every record of either, and leaves the rest of the draft
+// as it is. Without it, a new course with a mistake in it could only be got
+// rid of by discarding the whole draft. Every date of such a course was added
+// in this draft too: a date is never moved between courses.
+func (d *Draft) RemoveAddedCourse(id string) error {
+	if !d.AddedCourse(id) {
+		return fmt.Errorf("remove course %q: it was not added in this draft", id)
+	}
+	if err := d.Doc.DeleteCourse(id); err != nil {
+		return err
+	}
+	var kept []Change
+	for _, c := range d.Changes {
+		if c.CourseID != id {
+			kept = append(kept, c)
+		}
+	}
+	d.Changes = kept
 	return nil
 }
 

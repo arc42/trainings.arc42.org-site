@@ -51,6 +51,7 @@ var pages = []string{
 	"list.gohtml", "dateform.gohtml", "login.gohtml", "denied.gohtml", "error.gohtml",
 	"propose.gohtml", "conflict.gohtml", "published.gohtml",
 	"courselist.gohtml", "courseform.gohtml", "confirmdelete.gohtml",
+	"confirmremovecourse.gohtml",
 }
 
 func NewServer(cfg config.Config, apiBase, publicURL string) (*Server, error) {
@@ -113,6 +114,8 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("GET /courses/{id}", s.authed(s.handleCourseForm))
 	mux.Handle("POST /courses/new", s.authed(s.handleCourseSave))
 	mux.Handle("POST /courses/{id}", s.authed(s.handleCourseSave))
+	mux.Handle("GET /courses/{id}/delete", s.authed(s.handleCourseRemoveConfirm))
+	mux.Handle("POST /courses/{id}/delete", s.authed(s.handleCourseRemove))
 	mux.Handle("GET /propose", s.authed(s.handlePropose))
 	mux.Handle("POST /propose", s.authed(s.handleProposeSubmit))
 	mux.Handle("POST /discard", s.authed(s.handleDiscard))
