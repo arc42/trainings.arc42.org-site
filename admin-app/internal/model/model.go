@@ -152,7 +152,7 @@ var (
 
 // Availabilities back the one "Availability" <select> on the date form. The
 // file and the feed keep two fields for it, status and seats_limited, because
-// four consumer sites read both (ADR-0004: an existing field never changes).
+// both are published in the feed (ADR-0004: an existing field never changes).
 // The form used to offer them separately, and that allowed "fully booked" and
 // "only a few seats left" on the same date. One choice cannot contradict
 // itself. Ordered from most to least bookable, which is how a date moves.

@@ -83,7 +83,7 @@ softwareknigge.arc42.org|chrono|https://softwareknigge.arc42.org/05-diktator.htm
 www.gernotstarke.de|trainer=Gernot Starke|https://www.gernotstarke.de/training|daily}"
 
 # Ids that begin with a course id but are not dates. Empty today: every such id
-# on all four sites is a date. If a consumer ever adds one (say id="msa-intro"),
+# on every consumer site is a date. If a consumer ever adds one (say id="msa-intro"),
 # put it here rather than weakening the check for everything else.
 ALLOWLIST="${ALLOWLIST:-}"
 

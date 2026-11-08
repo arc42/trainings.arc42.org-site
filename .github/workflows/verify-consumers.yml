@@ -11,7 +11,7 @@ on:
     workflows: ["Notify consumer sites"]
     types: [completed]
   schedule:
-    - cron: "0 7 * * 1"   # Mondays 07:00 UTC, after the last consumer's weekly refresh (05:17)
+    - cron: "0 7 * * 1"   # Mondays 07:00 UTC, after the last consumer's weekly refresh (softwareknigge, 06:17)
   workflow_dispatch:
 jobs:
   verify:

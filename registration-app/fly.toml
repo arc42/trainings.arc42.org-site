@@ -41,8 +41,8 @@ primary_region = "ams"
   # tab, change this line. The second tab, Zustellung, is fixed in the code
   # (sheet.DeliveryTab).
   SHEET_TAB = "Registrations"
-  # Set with `fly secrets import`, never here: TOKEN_KEY, BREVO_API_KEY (or
-  # the MJ_ pair), TURSO_AUTH_TOKEN are secret; BACKOFFICE_TO is a personal
+  # Set with `fly secrets import`, never here: TOKEN_KEY, BREVO_API_KEY,
+  # TURSO_AUTH_TOKEN are secret; BACKOFFICE_TO is a personal
   # mail address, and this repository is public. MAILER and
   # TURSO_DATABASE_URL are secrets too, so a switch needs no commit.
 

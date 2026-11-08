@@ -159,7 +159,7 @@ an authenticated maintainer clicking the button on GitHub. That is the
 app's primary security boundary: if the app's session key, OAuth secret or
 hosting were ever fully compromised, the worst an attacker gets is an
 unmerged pull request sitting in the queue — not a change on the live site.
-Nothing downstream (the site's own timelines, the JSON feed, the four
+Nothing downstream (the site's own timelines, the JSON feed, the
 consumer sites) reacts to anything short of a merge, so a bad PR is inert
 until a human approves it.
 
