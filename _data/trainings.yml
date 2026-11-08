@@ -191,20 +191,6 @@ courses:
     url: "https://www.arc42.de/info-improve/"
     trainers: ["Carola Lilienthal", "Gernot Starke"]
     dates:
-      - id: improve-nov-2026
-        code: "26-11 IMPROVE"
-        start: "2026-11-24"
-        end: "2026-11-26"
-        city: "Hamburg"
-        country: "DE"
-        language: de
-        format: public
-        price:
-          amount: 2200
-          currency: EUR
-          alumni: 2050
-        url: "https://trainings.arc42.org/#improve-nov-2026"
-        status: waitlist
       - id: improve-jun-2027
         code: "27-06 IMPROVE"
         start: "2027-06-22"
@@ -343,4 +329,33 @@ courses:
           currency: EUR
           alumni: 1750
         url: "https://trainings.arc42.org/#adoc-oct-2027"
+        status: open
+
+  - id: maispec
+    short_title: "maispec"
+    title: "Mastering AI-Driven Specification"
+    blurb_de: >-
+      Eine Spezifikation für Requirements und Architektur als Basis für
+      agentisches Software-Engineering.
+    blurb_en: >-
+      One specification for requirements and architecture as the
+      foundation for agentic software engineering
+    url: "https://www.arc42.de/info-maispec/"
+    trainers: ["Dr. Peter Hruschka", "Dr. Gernot Starke", "Peter Gerstbach"]
+    show_on: ["www.arc42.de", "arc42.org", "www.systems42.org"]
+    dates:
+      - id: maispec-jan-2027
+        code: "27-01 maispec"
+        start: "2027-01-28"
+        end: "2027-01-29"
+        city: "Wien"
+        country: "DE"
+        language: de
+        format: public
+        trainers: ["Peter Gerstbach", "Peter Hruschka"]
+        price:
+          amount: 1500
+          currency: EUR
+          alumni: 1350
+        url: "https://trainings.arc42.org/#maispec-jan-2027"
         status: open
