@@ -342,7 +342,7 @@ courses:
       foundation for agentic software engineering
     url: "https://www.arc42.de/info-maispec/"
     trainers: ["Dr. Peter Hruschka", "Dr. Gernot Starke", "Peter Gerstbach"]
-    show_on: ["www.arc42.de", "arc42.org", "www.systems42.org"]
+    show_on: ["www.arc42.de", "arc42.org", "www.systems42.org", "docs.arc42.org", "examples.arc42.org"]
     dates:
       - id: maispec-jan-2027
         code: "27-01 maispec"
