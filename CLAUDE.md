@@ -70,8 +70,8 @@ and is wrong anyway.
   `timeline_course.html` must forward `pricing=` to every template it
   dispatches to; three of the six did not, which was invisible until the price
   moved into the data.
-- **`/api/trainings.json` publishes the retired keys too, generated.** Four
-  consumers render them verbatim, so they keep their old names and old string
+- **`/api/trainings.json` publishes the retired keys too, generated.** Consumers
+  render them verbatim, so they keep their old names and old string
   types (ADR-0004: additive is free, changing an existing field is not). Never
   "clean up" by deleting them, and never turn them back into stored data: they
   are computed against the build date, which is what stops them going stale.
