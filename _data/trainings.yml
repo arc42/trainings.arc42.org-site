@@ -359,3 +359,20 @@ courses:
           alumni: 1350
         url: "https://trainings.arc42.org/#maispec-jan-2027"
         status: open
+
+      - id: maispec-feb-2027-en
+        code: "27-02 maispec-EN"
+        start: "2027-02-02"
+        end: "2027-02-03"
+        language: en
+        format: online
+        trainers: ["Peter Gerstbach", "Peter Hruschka"]
+        price:
+          amount: 1500
+          currency: EUR
+          alumni: 1350
+          early_bird:
+            amount: 1350
+            until: "2026-12-11"
+        url: "https://trainings.arc42.org/#maispec-feb-2027-en"
+        status: open
