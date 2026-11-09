@@ -357,6 +357,9 @@ courses:
           amount: 1500
           currency: EUR
           alumni: 1350
+          early_bird:
+            amount: 1350
+            until: "2026-12-18"
         url: "https://trainings.arc42.org/#maispec-jan-2027"
         status: open
 
