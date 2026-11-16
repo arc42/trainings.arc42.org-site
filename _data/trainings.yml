@@ -60,22 +60,6 @@ courses:
     url_en: "https://trainings.arc42.org/courses/msa/"
     trainers: ["Peter Hruschka", "Gernot Starke"]
     dates:
-      - id: msa-dez-2026
-        code: "26-12 MSA"
-        start: "2026-12-01"
-        end: "2026-12-04"
-        city: "München"
-        country: "DE"
-        language: de
-        format: public
-        price:
-          amount: 2890
-          currency: EUR
-          early_bird:
-            amount: 2690
-            until: "2026-08-08"
-        url: "https://trainings.arc42.org/#msa-dez-2026"
-        status: waitlist
       - id: msa-mar-2027
         code: "27-03 MSA"
         start: "2027-03-02"
@@ -206,21 +190,6 @@ courses:
           alumni: 2050
         url: "https://trainings.arc42.org/#improve-jun-2027"
         status: open
-      - id: improve-nov-2027
-        code: "27-11 IMPROVE"
-        start: "2027-11-23"
-        end: "2027-11-25"
-        city: "Hamburg"
-        country: "DE"
-        language: de
-        format: public
-        price:
-          amount: 2200
-          currency: EUR
-          alumni: 2050
-        url: "https://trainings.arc42.org/#improve-nov-2027"
-        status: open
-
       - id: improve-apr-2027
         code: "27-04 IMPROVE-EN"
         start: "2027-04-13"
@@ -232,6 +201,21 @@ courses:
           amount: 2100
           currency: EUR
         url: "https://trainings.arc42.org/#improve-apr-2027"
+        status: open
+
+      - id: improve-nov-2027
+        code: "27-11 IMPROVE"
+        start: "2027-11-30"
+        end: "2027-12-02"
+        city: "Hamburg"
+        country: "DE"
+        language: de
+        format: public
+        trainers: ["Dr. Carola Lilienthal", "Dr. Gernot Starke"]
+        price:
+          amount: 2200
+          currency: EUR
+        url: "https://trainings.arc42.org/#improve-nov-2027"
         status: open
   - id: req4arc
     short_title: "Req4Arc"
