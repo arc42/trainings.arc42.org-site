@@ -124,21 +124,22 @@ courses:
             until: "2027-05-14"
         url: "https://trainings.arc42.org/#msa-sep-2027"
         status: open
-      - id: msa-dez-2027
-        code: "27-12 MSA"
-        start: "2027-11-30"
-        end: "2027-12-03"
+      - id: msa-nov-2027
+        code: "27-11 MSA"
+        start: "2027-11-23"
+        end: "2027-11-26"
         city: "München"
         country: "DE"
         language: de
         format: public
+        trainers: ["Dr. Peter Hruschka", "Dr. Gernot Starke"]
         price:
           amount: 2890
           currency: EUR
           early_bird:
             amount: 2690
             until: "2027-07-30"
-        url: "https://trainings.arc42.org/#msa-dez-2027"
+        url: "https://trainings.arc42.org/#msa-nov-2027"
         status: open
 
       - id: msa-27-02-online
